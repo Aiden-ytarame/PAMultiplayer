@@ -28,12 +28,12 @@ namespace YtaramMultiplayer.Server
 
            NetPeerConfiguration config = new NetPeerConfiguration("PAServer");
             config.MaximumConnections = 4;
-            config.Port = 3306;
+            config.Port = 1234;
             config.EnableUPnP = true;
           
             netServer = new NetServer(config);
             netServer.Start();
-            netServer.UPnP.ForwardPort(3306, "GameStuff");
+            netServer.UPnP.ForwardPort(1234, "GameStuff");
  
               
             thread = new Thread(Listen);
