@@ -17,10 +17,11 @@ There is no UI to specify a host Ip or Port for now and there wasn't any signifi
 There's problems with closing the server and disconnecting a player.
 
 ## **Instalation**
+**(WIP)**
 
 ## **How to use**
 
-** (To host, you currently have to change your port on Server.cs)**
+**(To host, you currently have to change your port on Server.cs)**
 
 ### Host
 
