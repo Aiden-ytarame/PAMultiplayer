@@ -34,10 +34,10 @@ There's problems with closing the server and disconnecting a player.
 
 ### Join 
 
-** (To join, you currently have to change your port and Server IP on PlayerPatcher.cs) **
+**(To join, you currently have to change your port and Server IP on PlayerPatcher.cs)**
 
 * start any arcade level. (preferably the same as the host)
 
 when a client joins, it should* automatically restart the level for everyone.
 
-* NOTE: Pausing does not sync to other players, please do not pause unless you're gonna quit the level.
+**NOTE: Pausing does not sync to other players, please do not pause unless you're gonna quit the level.**
