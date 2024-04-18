@@ -1,14 +1,20 @@
-Work in progress.
+#**Project Arrhythmia Multiplayer**
 
-Use on Project Arrhythmia Alpha version.
+**Work In Progress**
+
+A multiplayer mod for Project arrhythmia Alpha.
+
+*Client Authorative 
+*May require Port Forwarding
+
+
+
 
 There is no UI for now.
 
 There was no significant multiplayer tests.
 
 Requires Lidgren.
-
-Client authorative, may require port forwarding. 
 
 
 (To host, you currently have to change your port on Server.cs)
