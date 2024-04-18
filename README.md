@@ -4,29 +4,31 @@
 
 A multiplayer mod for Project arrhythmia Alpha.
 
+Made using lidgren networking under the MIT license
+
 * Client Authorative 
 * May require Port Forwarding
 
 
+## **Progress**
+
+There is no UI for now and there wasn't any significant multiplayer tests.
 
 
-There is no UI for now.
+## **Instalation**
 
-There was no significant multiplayer tests.
+## **How to use**
 
-Requires Lidgren.
+* (To host, you currently have to change your port on Server.cs)
 
+To host, open the game, go to settings->Gameplay and toggle Host Server On.(note: the game might save the host server option on when quitting, may require to manually disable to join as clien)
 
-(To host, you currently have to change your port on Server.cs)
+then start any arcade level to start a server.
 
-To host, open the game, go to settings->Gameplay and toggle Host Server On.
+* (To join, you currently have to change your port and Server IP on PlayerPatcher.cs)
 
-then start playing any arcade level. 
-
-(To join, you currently have to change your port and Server IP on PlayerPatcher.cs)
-
-to join, just start a level on arcade(Same level as host is recomended bruh).
+to join, start any arcade level. (preferably the same as the host)
 
 when a client joins, it should* automatically restart the level for everyone.
 
-Pausing does not sync to other players, please do not pause unless you're gonna quit the level.
+* NOTE: Pausing does not sync to other players, please do not pause unless you're gonna quit the level.
