@@ -33,7 +33,7 @@ namespace YtaramMultiplayer.Packets
 
         public override void ServerProcessPacket(NetIncomingMessage message)
         {
-            //Inst supposed to recive anything
+            //Inst supposed to recieve anything
         }
 
         protected override void PacketToNetOut(NetOutgoingMessage message)
