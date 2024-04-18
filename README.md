@@ -20,8 +20,7 @@ There's problems with closing the server and disconnecting a player.
 ## **Instalation**
 **(WIP)**
 
-* Install the BepInEx bleeding Edge il2cpp build. 
-
+* Download the [BepInEx bleeding Edge il2cpp build.](https://docs.bepinex.dev/master/articles/user_guide/installation/index.html#where-to-download-bepinex)
 * Follow the BepInEx installation process available in their documentation.
 
 * Place the PAMultiplayer.dll and lidgren-networking.dll in the generated BepInNex->Plugins folder.
