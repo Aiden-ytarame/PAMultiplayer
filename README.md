@@ -4,7 +4,7 @@
 
 A multiplayer mod for Project arrhythmia Alpha.
 
-Uses BePinEx.
+Uses BepInEx.
 
 Made using lidgren networking under the MIT license.
 
@@ -19,6 +19,14 @@ There's problems with closing the server and disconnecting a player.
 
 ## **Instalation**
 **(WIP)**
+
+* Install the BepInEx bleeding Edge il2cpp build. 
+
+* Follow the BepInEx installation process available in their documentation.
+
+* Place the PAMultiplayer.dll and lidgren-networking.dll in the generated BepInNex->Plugins folder.
+
+* Enjoy!
 
 ## **How to use**
 
