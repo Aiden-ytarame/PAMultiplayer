@@ -4,11 +4,12 @@
 
 A multiplayer mod for Project arrhythmia Alpha.
 
-Made using lidgren networking under the MIT license
+Uses BePinEx.
+
+Made using lidgren networking under the MIT license.
 
 * Client Authorative 
 * May require Port Forwarding
-
 
 ## **Progress**
 
