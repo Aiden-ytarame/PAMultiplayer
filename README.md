@@ -1,11 +1,11 @@
-#**Project Arrhythmia Multiplayer**
+# **Project Arrhythmia Multiplayer**
 
 **Work In Progress**
 
 A multiplayer mod for Project arrhythmia Alpha.
 
-*Client Authorative 
-*May require Port Forwarding
+* Client Authorative 
+* May require Port Forwarding
 
 
 
