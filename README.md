@@ -29,16 +29,17 @@ There's problems with closing the server and disconnecting a player.
 
 ## **How to use**
 
-**(To host, you currently have to change your port on Server.cs)**
-
 ### Host
+
+**(To host, you currently have to change your port on Server.cs)**
 
 * open the game 
 * Go to settings->Gameplay
 * Toggle Host Server On.
 * Start any arcade level to start a server.
+* Might require your to setup port forwarding on your router.
 
-(note: the game might save the host server option on when quitting, may require to manually disable to join as clien)
+(note: the game might save the host server option on when quitting, may require to manually disable the host server on start up)
 
 
 ### Join 
