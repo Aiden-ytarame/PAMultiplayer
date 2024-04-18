@@ -12,22 +12,31 @@ Made using lidgren networking under the MIT license
 
 ## **Progress**
 
-There is no UI for now and there wasn't any significant multiplayer tests.
+There is no UI to specify a host Ip or Port for now and there wasn't any significant multiplayer tests.
 
+There's problems with closing the server and disconnecting a player.
 
 ## **Instalation**
 
 ## **How to use**
 
-* (To host, you currently have to change your port on Server.cs)
+** (To host, you currently have to change your port on Server.cs)**
 
-To host, open the game, go to settings->Gameplay and toggle Host Server On.(note: the game might save the host server option on when quitting, may require to manually disable to join as clien)
+### Host
 
-then start any arcade level to start a server.
+* open the game 
+* Go to settings->Gameplay
+* Toggle Host Server On.
+* Start any arcade level to start a server.
 
-* (To join, you currently have to change your port and Server IP on PlayerPatcher.cs)
+(note: the game might save the host server option on when quitting, may require to manually disable to join as clien)
 
-to join, start any arcade level. (preferably the same as the host)
+
+### Join 
+
+** (To join, you currently have to change your port and Server IP on PlayerPatcher.cs) **
+
+* start any arcade level. (preferably the same as the host)
 
 when a client joins, it should* automatically restart the level for everyone.
 
