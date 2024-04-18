@@ -1,5 +1,7 @@
 Work in progress.
 
+Use on Project Arrhythmia Alpha version.
+
 There is no UI for now.
 
 There was no significant multiplayer tests.
