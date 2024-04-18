@@ -21,7 +21,7 @@ namespace YtaramMultiplayer.Packets
 
         public override void ServerProcessPacket(NetIncomingMessage message)
         {
-            //Isnt supposed to recive anything
+            //Isnt supposed to recieve anything
         }
 
         protected override void PacketToNetOut(NetOutgoingMessage message)
