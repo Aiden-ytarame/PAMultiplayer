@@ -71,16 +71,10 @@ namespace YtaramMultiplayer.Server
                         case NetIncomingMessageType.Data:
                             string TypeStr = message.ReadString();
                             Type PacketType = Type.GetType(TypeStr);
-                            Plugin.Instance.Log.LogWarning(TypeStr);
                            
                             try
                             {
-                                Plugin.Instance.Log.LogWarning(PacketType.Name);
-                                object newPacket = Activator.CreateInstance(PacketType);//.ServerProcessPacket(message);              
-                                Packet newPP = (Packet)newPacket;
-                          
-                                newPP.ServerProcessPacket(message);
-
+                                ((Packet)Activator.CreateInstance(PacketType)).ServerProcessPacket(message);              
                             }
                             catch(Exception ex)
                             {                               
