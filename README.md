@@ -11,9 +11,9 @@ Made using lidgren networking under the MIT license.
 * Client Authorative 
 * May require Port Forwarding
 
-## **Progress**
+## **Known Issues**
 
-There is no UI to specify a host Ip or Port for now and there wasn't any significant multiplayer tests.
+The server Ip and Port disapears after leaving and re opening the main menu.
 
 There's problems with closing the server and disconnecting a player.
 
@@ -23,7 +23,7 @@ There's problems with closing the server and disconnecting a player.
 * Download the [BepInEx bleeding Edge il2cpp build.](https://docs.bepinex.dev/master/articles/user_guide/installation/index.html)
 * Follow the BepInEx installation process available in their documentation.
 
-* Place the PAMultiplayer.dll and lidgren-networking.dll in the generated BepInNex->Plugins folder.
+* Extract the PAMultiplayer.ZIP file in the generated BepInNex->Plugins folder.
 
 * Enjoy!
 
@@ -31,11 +31,10 @@ There's problems with closing the server and disconnecting a player.
 
 ### Host
 
-**(To host, you currently have to change your port on Server.cs)**
-
 * open the game 
 * Go to settings->Gameplay
 * Toggle Host Server On.
+* Type a Port
 * Start any arcade level to start a server.
 * Might require your to setup port forwarding on your router.
 
@@ -44,8 +43,8 @@ There's problems with closing the server and disconnecting a player.
 
 ### Join 
 
-**(To join, you currently have to change your port and Server IP on PlayerPatcher.cs)**
-
+* Go to settings->Gameplay
+* Type the Host Ip address, and port.
 * start any arcade level. (preferably the same as the host)
 
 when a client joins, it should* automatically restart the level for everyone.
