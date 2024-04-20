@@ -13,9 +13,11 @@ Made using lidgren networking under the MIT license.
 
 ## **Known Issues**
 
+It doesnt spawn Players in.
+
 There's problems with closing the server and disconnecting a player.
 
-Not regeneration health on level restart.
+Not regenerating health on level restart.
 
 Desync issues when dying close to a checkpoint
 
