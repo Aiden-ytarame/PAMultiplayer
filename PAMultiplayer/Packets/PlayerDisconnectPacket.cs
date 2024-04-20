@@ -19,12 +19,14 @@ namespace YtaramMultiplayer.Packets
             var player = StaticManager.Players[Player].PlayerObject;
             player.PlayerDeath();
             VGPlayerManager.Inst.players.Remove(StaticManager.Players[Player]);
+            StaticManager.PlayerPositions.Remove(Player);
             StaticManager.Players.Remove(Player);
 
         }
 
         public override void ServerProcessPacket(NetIncomingMessage message)
         {
+            return;
             Player = message.ReadString();
             Server.Server server = Server.Server.Inst;        
             server.Players.Remove(Player);

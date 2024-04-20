@@ -1,15 +1,8 @@
 ﻿
 using HarmonyLib;
 using UnityEngine;
-using UnityEditor;
 using YtaramMultiplayer.Client;
 using Lidgren.Network;
-using System.Collections;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
-using BepInEx.Unity.IL2CPP.Utils;
-using UnityEngine.Assertions.Must;
-
-
 
 namespace YtaramMultiplayer.Patch
 {
@@ -20,6 +13,7 @@ namespace YtaramMultiplayer.Patch
         [HarmonyPrefix]
         static bool Hit_Pre(ref VGPlayer __instance)
         {       
+            VGPlayerManager.Inst.pla
 
             if (__instance.PlayerID == 0)
             {
@@ -47,15 +41,13 @@ namespace YtaramMultiplayer.Patch
                 return;
             }
 
+
               if (StaticManager.SpawnPending)
               {
-
-                
                 StaticManager.SpawnPending = false;
                 VGPlayerManager.Inst.RespawnPlayers();
                 GameManager2.Inst.RewindToCheckpoint(0, true);
-
-            }
+              }
 
             if (StaticManager.Players == null)
                 return;
@@ -125,8 +117,41 @@ namespace YtaramMultiplayer.Patch
 
 
         }
-    
 
+        //interpolate player positions
+        void Update()
+        {
+            var PosEnu = StaticManager.PlayerPositions.GetEnumerator();
+            Vector2 newPos;
+            while (PosEnu.MoveNext())
+            {
+
+                Rigidbody2D rb = StaticManager.Players[PosEnu.Current.Key].PlayerObject?.Player_Rigidbody;
+                if (!rb)
+                    continue;
+
+                newPos = PosEnu.Current.Value;
+                float Magnetude = (newPos - rb.position).sqrMagnitude;
+                if (Magnetude > 10) // no idea if these numbers are correct
+                {
+                    Plugin.Instance.Log.LogWarning("Corrected Pos");
+                    rb.position = newPos;
+                    continue;
+                }
+
+                if (Magnetude < 2)
+                {
+                    if (rb.position != newPos)
+                        rb.position = Vector2.Lerp(rb.position, newPos, 20 * Time.deltaTime);
+
+                    return;
+                }
+
+                rb.position = Vector2.LerpUnclamped(rb.position, newPos, 20 * Time.deltaTime);
+
+            }
+        }
+    
         void OnDisable()
         {
             StaticManager.IsMultiplayer = false;

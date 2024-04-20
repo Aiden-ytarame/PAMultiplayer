@@ -47,15 +47,15 @@ namespace YtaramMultiplayer.Server
                 NetIncomingMessage message;
                 while ((message = NetServer.ReadMessage()) != null)
                 {
-               
-                    switch(message.MessageType)
+
+                    List<NetConnection> all = NetServer.Connections;
+                    switch (message.MessageType)
                     {
                         case NetIncomingMessageType.StatusChanged:
                             NetConnectionStatus status = (NetConnectionStatus)message.ReadByte();
                             string reason = message.ReadString();
                             if(status == NetConnectionStatus.Connected)
                             {
-                                List<NetConnection> all = NetServer.Connections;
                                 var player = NetUtility.ToHexString(message.SenderConnection.RemoteUniqueIdentifier);
                                 Players.Add(player);
                                 SendLocalPlayerPacket(message.SenderConnection, player);
@@ -64,9 +64,12 @@ namespace YtaramMultiplayer.Server
                             }
                             if (status == NetConnectionStatus.Disconnected)
                             {
-                                var player = NetUtility.ToHexString(message.SenderConnection.RemoteUniqueIdentifier);
+                                var _player = NetUtility.ToHexString(message.SenderConnection.RemoteUniqueIdentifier);
+                                Players.Remove(_player);
 
-                                //SendPlayerDisconected(all, new PlayerDisconnectsPacket() { Player = player });
+                                NetOutgoingMessage outMessage = NetServer.CreateMessage();
+                                new PlayerDisconnectPacket() { Player = _player }.PacketToNetOutgoing(outMessage);
+                                NetServer.SendMessage(outMessage, all, NetDeliveryMethod.ReliableOrdered, 0);
                             }
                             break;
                         case NetIncomingMessageType.Data:

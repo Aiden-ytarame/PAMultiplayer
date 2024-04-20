@@ -18,6 +18,7 @@ public class Plugin : BasePlugin
 
     public override void Load()
     {
+        
         ClassInjector.RegisterTypeInIl2Cpp<NetworkManager>();
         ClassInjector.RegisterTypeInIl2Cpp<UpdateIpAndPort>();
         

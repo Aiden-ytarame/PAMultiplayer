@@ -1,8 +1,6 @@
 ﻿using Lidgren.Network;
-using System.Collections.Generic;
 using UnityEngine;
 using YtaramMultiplayer.Client;
-using YtaramMultiplayer.Server;
 
 namespace YtaramMultiplayer.Packets
 {
@@ -26,7 +24,12 @@ namespace YtaramMultiplayer.Packets
                 if (StaticManager.Players[Player].PlayerObject)
                 {
                     Plugin.Instance.Log.LogError("WORKED");
-                    StaticManager.Players[Player].PlayerObject.Player_Rigidbody.transform.position = new Vector2(X, Y);
+                    if (!StaticManager.PlayerPositions.ContainsKey(Player))
+                    {
+                        StaticManager.PlayerPositions.Add(Player, new Vector2(X, Y));
+                        return;
+                    }
+                    StaticManager.PlayerPositions[Player] = new Vector2(X, Y);                  
                 }
             }
         }
@@ -40,6 +43,7 @@ namespace YtaramMultiplayer.Packets
             NetServer netServer = Server.Server.Inst.NetServer;
             NetOutgoingMessage NewMessage = netServer.CreateMessage();
             PacketToNetOutgoing(NewMessage);
+
             netServer.SendMessage(NewMessage, netServer.Connections, NetDeliveryMethod.Unreliable, 0);
         }
 

@@ -2,12 +2,9 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.Localization.PropertyVariants;
-using Il2CppSystem;
 using YtaramMultiplayer.Client;
-using UnityEngine.UI;
-using Il2CppInterop.Runtime;
 using BepInEx;
-using YtaramMultiplayer.Server;
+
 namespace YtaramMultiplayer.Patch
 {
     [HarmonyPatch(typeof(VGPlayer))]

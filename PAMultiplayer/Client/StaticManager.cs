@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using YtaramMultiplayer.Server;
+using UnityEngine.SceneManagement;
+using UnityEngine;
 
 namespace YtaramMultiplayer.Client
 {
@@ -10,6 +11,7 @@ namespace YtaramMultiplayer.Client
         public static Client Client;
         public static Server.Server Server;
         public static Dictionary<string, VGPlayerManager.VGPlayerData> Players;
+        public static Dictionary<string, Vector2> PlayerPositions = new Dictionary<string, Vector2>();
         public static string ServerIp = "";
         public static string ServerPort = "";
         public static bool SpawnPending = false;
@@ -34,6 +36,11 @@ namespace YtaramMultiplayer.Client
                 Plugin.Instance.Log.LogFatal("Error while trying to InitClient");
                 Plugin.Instance.Log.LogFatal(ex);
             }
+        }
+
+        public static void TestEvent(Scene sccene, LoadSceneMode mode)
+        {
+
         }
     }
 }

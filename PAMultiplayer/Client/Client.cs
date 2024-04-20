@@ -1,10 +1,8 @@
-﻿
-using Il2CppSystem.Collections;
-using Lidgren.Network;
+﻿using Lidgren.Network;
 using YtaramMultiplayer.Packets;
 using System;
-using System.Collections;
 using UnityEngine;
+
 namespace YtaramMultiplayer.Client
 {
     public class Client : MonoBehaviour
