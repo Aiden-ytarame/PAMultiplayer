@@ -20,9 +20,8 @@ There's problems with closing the server and disconnecting a player.
 ## **Instalation**
 **(WIP)**
 
-* Download the [BepInEx bleeding Edge il2cpp build.](https://docs.bepinex.dev/master/articles/user_guide/installation/index.html)
-* Follow the BepInEx installation process available in their documentation.
-
+* Download the [BepInEx bleeding Edge il2cpp build.](https://builds.bepinex.dev/projects/bepinex_be)
+* Follow the BepInEx installation guide available on their [Github](https://github.com/BepInEx/BepInEx).
 * Extract the PAMultiplayer.ZIP file in the generated BepInNex->Plugins folder.
 
 * Enjoy!
