@@ -7,6 +7,7 @@ using Lidgren.Network;
 using System.Collections;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using BepInEx.Unity.IL2CPP.Utils;
+using UnityEngine.Assertions.Must;
 
 
 
@@ -18,10 +19,11 @@ namespace YtaramMultiplayer.Patch
         [HarmonyPatch(nameof(VGPlayer.PlayerHit))]
         [HarmonyPrefix]
         static bool Hit_Pre(ref VGPlayer __instance)
-        {
+        {       
+
             if (__instance.PlayerID == 0)
             {
-                if (StaticManager.Client != null && StaticManager.Client.NetClient != null)
+                if (StaticManager.IsMultiplayer && StaticManager.Client.NetClient != null)
                     StaticManager.Client.SendDamage();
                 return true;
             }
@@ -35,11 +37,12 @@ namespace YtaramMultiplayer.Patch
 
         }
 
+
         [HarmonyPatch(nameof(VGPlayer.Update))]
         [HarmonyPrefix]
         static void Update_Pre(ref VGPlayer __instance)
         {
-            if (StaticManager.Client == null || StaticManager.Client.NetClient == null || StaticManager.Client.NetClient.ConnectionStatus == NetConnectionStatus.Disconnected)
+            if (!StaticManager.IsMultiplayer || StaticManager.Client.NetClient == null || StaticManager.Client.NetClient.ConnectionStatus == NetConnectionStatus.Disconnected)
             { 
                 return;
             }
@@ -47,21 +50,12 @@ namespace YtaramMultiplayer.Patch
               if (StaticManager.SpawnPending)
               {
 
-                var Enu = VGPlayerManager.Inst.players.GetEnumerator();
-
-                while (Enu.MoveNext())
-                {
-                    Enu.Current.PlayerObject.ClearEvents();
-                    Enu.Current.PlayerObject.PlayerDeath();
-
-                }
-
-                if (GameManager2.Inst)
-                    GameManager2.Inst.RewindToCheckpoint(0, true);
-
+                
                 StaticManager.SpawnPending = false;
                 VGPlayerManager.Inst.RespawnPlayers();
-              }
+                GameManager2.Inst.RewindToCheckpoint(0, true);
+
+            }
 
             if (StaticManager.Players == null)
                 return;
@@ -107,50 +101,39 @@ namespace YtaramMultiplayer.Patch
 
     public class NetworkManager : MonoBehaviour
     {
-        bool Inited = true;
-        void OnEnable() 
+        void OnEnable()
         {
 
-            if(DataManager.inst.GetSettingBool("online_host"))
+            if (DataManager.inst.GetSettingBool("online_host"))
             {
 
                 if (StaticManager.Server == null || StaticManager.Server.NetServer.Status == NetPeerStatus.NotRunning)
                 {
-                    Plugin.Instance.Log.LogError("Init Server");
                     StaticManager.Server = new Server.Server();
                 }
             }
-            if (StaticManager.Client == null || StaticManager.Client.NetClient.ConnectionStatus == NetConnectionStatus.Disconnected)
+
+
+            if (!DataManager.inst.GetSettingBool("online_host"))
             {
-                if (!DataManager.inst.GetSettingBool("online_host"))
-                {
-                    if (StaticManager.ServerIp == "")
-                        return;
-                  //  Inited = false;
-                   // return;
-                }
-                Plugin.Instance.Log.LogError("Init Client");
-                StaticManager.InitClient("PAServer");
+                if (StaticManager.ServerIp == "")
+                    return;
             }
-        
+            Plugin.Instance.Log.LogError("Init Client");
+            StaticManager.IsMultiplayer = true;
+            StaticManager.InitClient("PAServer");
+
+
         }
-   
-        void Update()
-        {
-            if (!Inited && StaticManager.Server.NetServer.Status == NetPeerStatus.Running)
-            {
-                Plugin.Instance.Log.LogError("Init Delayed Client");
-                StaticManager.InitClient("PAServer");
-                Inited = true;
-            }
-        }
+    
 
         void OnDisable()
         {
-            if (StaticManager.Client != null && StaticManager.Client.NetClient.ConnectionStatus == NetConnectionStatus.Connected)
+            StaticManager.IsMultiplayer = false;
+            if (StaticManager.IsMultiplayer && StaticManager.Client.NetClient.ConnectionStatus == NetConnectionStatus.Connected)
                 StaticManager.Client.SendDisconnect();
 
-            if (StaticManager.Server == null || StaticManager.Server.NetServer.Status == NetPeerStatus.Running)
+            if (StaticManager.Server != null && StaticManager.Server.NetServer.Status == NetPeerStatus.Running)
                 StaticManager.Server.NetServer.Shutdown("Ended");
         }
 

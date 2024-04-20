@@ -8,8 +8,8 @@ namespace YtaramMultiplayer.Packets
 {
     public class PlayerRotationPacket : Packet
     {
-        public string Player;
-        public float Z;
+        public string Player { get; set; }
+        public float Z { get; set; }
         public override void ClientProcessPacket(NetIncomingMessage message)
         {
             Player = message.ReadString();
@@ -17,8 +17,13 @@ namespace YtaramMultiplayer.Packets
 
             if (Player == StaticManager.LocalPlayer)
                 return;
-
-            StaticManager.Players[Player].PlayerObject.Player_Rigidbody.transform.eulerAngles = new Vector3(0, 0, Z);
+            if (StaticManager.Players.ContainsKey(Player))
+            {
+                if (StaticManager.Players[Player].PlayerObject)
+                {
+                    StaticManager.Players[Player].PlayerObject.Player_Rigidbody.transform.eulerAngles = new Vector3(0, 0, Z);
+                }
+            }
         }
 
         public override void ServerProcessPacket(NetIncomingMessage message)

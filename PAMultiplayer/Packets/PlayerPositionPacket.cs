@@ -8,9 +8,9 @@ namespace YtaramMultiplayer.Packets
 {
     public class PlayerPositionPacket : Packet
     {
-        public string Player;
-        public float X;
-        public float Y;
+        public string Player { get; set; }
+        public float X { get; set; }
+        public float Y { get; set; }
         public override void ClientProcessPacket(NetIncomingMessage message)
         {
             Player = message.ReadString();
@@ -19,10 +19,18 @@ namespace YtaramMultiplayer.Packets
 
             if (Player == StaticManager.LocalPlayer)
                 return;
-
-            StaticManager.Players[Player].PlayerObject.Player_Rigidbody.transform.position = new Vector2(X, Y);
+            Plugin.Instance.Log.LogInfo("TRY");
+            if (StaticManager.Players.ContainsKey(Player))
+            {
+                Plugin.Instance.Log.LogWarning("Contains");
+                if (StaticManager.Players[Player].PlayerObject)
+                {
+                    Plugin.Instance.Log.LogError("WORKED");
+                    StaticManager.Players[Player].PlayerObject.Player_Rigidbody.transform.position = new Vector2(X, Y);
+                }
+            }
         }
-
+    
         public override void ServerProcessPacket(NetIncomingMessage message)
         {
             Player = message.ReadString();

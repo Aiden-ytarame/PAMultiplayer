@@ -47,7 +47,7 @@ namespace YtaramMultiplayer.Server
                 NetIncomingMessage message;
                 while ((message = NetServer.ReadMessage()) != null)
                 {
-                    List<NetConnection> all = NetServer.Connections;
+               
                     switch(message.MessageType)
                     {
                         case NetIncomingMessageType.StatusChanged:
@@ -55,6 +55,7 @@ namespace YtaramMultiplayer.Server
                             string reason = message.ReadString();
                             if(status == NetConnectionStatus.Connected)
                             {
+                                List<NetConnection> all = NetServer.Connections;
                                 var player = NetUtility.ToHexString(message.SenderConnection.RemoteUniqueIdentifier);
                                 Players.Add(player);
                                 SendLocalPlayerPacket(message.SenderConnection, player);
@@ -89,7 +90,7 @@ namespace YtaramMultiplayer.Server
                         case NetIncomingMessageType.VerboseDebugMessage:
                             string text = message.ReadString();
 
-                             Plugin.Instance.Log.LogWarning(text);
+                             Plugin.Instance.Log.LogWarning($"DEBYUG: {text}");
                             break;
                         default:
                              Plugin.Instance.Log.LogWarning($"Unhandled type: {message.MessageType} {message.LengthBytes} bytes {message.DeliveryMethod}|{message.SequenceChannel}");
