@@ -13,15 +13,19 @@ Made using lidgren networking under the MIT license.
 
 ## **Known Issues**
 
-The server Ip and Port disapears after leaving and re opening the main menu.
-
 There's problems with closing the server and disconnecting a player.
+
+Not regeneration health on level restart.
+
+Desync issues when dying close to a checkpoint
 
 ## **Plans**
 
-* Get the basic mod working
-* Sync random seed
-* Make a lobby instead of current system
+* Get the basic mod working.
+* Change how it handles rotation.
+* Sync random seed.
+* Make a lobby instead of current system.
+  
 
 ## **Instalation**
 **(WIP)**
