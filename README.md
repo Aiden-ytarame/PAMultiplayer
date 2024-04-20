@@ -17,6 +17,12 @@ The server Ip and Port disapears after leaving and re opening the main menu.
 
 There's problems with closing the server and disconnecting a player.
 
+## **Plans**
+
+* Get the basic mod working
+* Sync random seed
+* Make a lobby instead of current system
+
 ## **Instalation**
 **(WIP)**
 
