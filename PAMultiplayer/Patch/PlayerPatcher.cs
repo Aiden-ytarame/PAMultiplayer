@@ -1,8 +1,11 @@
 ﻿
 using HarmonyLib;
 using UnityEngine;
+using UnityEditor;
 using YtaramMultiplayer.Client;
 using Lidgren.Network;
+
+
 
 namespace YtaramMultiplayer.Patch
 {
@@ -13,7 +16,6 @@ namespace YtaramMultiplayer.Patch
         [HarmonyPrefix]
         static bool Hit_Pre(ref VGPlayer __instance)
         {       
-            VGPlayerManager.Inst.pla
 
             if (__instance.PlayerID == 0)
             {
