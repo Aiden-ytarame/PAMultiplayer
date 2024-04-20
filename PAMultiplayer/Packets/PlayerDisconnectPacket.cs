@@ -8,7 +8,7 @@ namespace YtaramMultiplayer.Packets
 {
     public class PlayerDisconnectPacket : Packet
     {
-        public string Player { get; set; }
+        public string Player;
 
         public override void ClientProcessPacket(NetIncomingMessage message)
         {
@@ -25,9 +25,10 @@ namespace YtaramMultiplayer.Packets
 
         public override void ServerProcessPacket(NetIncomingMessage message)
         {
+            Player = message.ReadString();
             Server.Server server = Server.Server.Inst;        
             server.Players.Remove(Player);
-
+            
             NetServer netServer = Server.Server.Inst.NetServer;
             NetOutgoingMessage NewMessage = netServer.CreateMessage();
             PacketToNetOutgoing(NewMessage);

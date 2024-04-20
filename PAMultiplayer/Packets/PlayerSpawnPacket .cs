@@ -8,7 +8,7 @@ namespace YtaramMultiplayer.Packets
 {
     public class PlayerSpawnPacket : Packet
     {
-        public string Player { get; set; }
+        public string Player;
 
         public override void ClientProcessPacket(NetIncomingMessage message)
         {

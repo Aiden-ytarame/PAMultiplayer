@@ -8,8 +8,7 @@ namespace YtaramMultiplayer.Packets
 {
     public class LocalPlayerPacket : Packet
     {
-        public string Player { get; set; }
- 
+        public string Player;
         public override void ClientProcessPacket(NetIncomingMessage message)
         {
             Player = message.ReadString();

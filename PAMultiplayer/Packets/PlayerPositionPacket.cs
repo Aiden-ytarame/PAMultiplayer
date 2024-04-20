@@ -8,9 +8,9 @@ namespace YtaramMultiplayer.Packets
 {
     public class PlayerPositionPacket : Packet
     {
-        public string Player { get; set; }
-        public float X { get; set; }
-        public float Y { get; set; }
+        public string Player;
+        public float X;
+        public float Y;
         public override void ClientProcessPacket(NetIncomingMessage message)
         {
             Player = message.ReadString();
@@ -25,6 +25,10 @@ namespace YtaramMultiplayer.Packets
 
         public override void ServerProcessPacket(NetIncomingMessage message)
         {
+            Player = message.ReadString();
+            X = message.ReadFloat();
+            Y = message.ReadFloat();
+
             NetServer netServer = Server.Server.Inst.NetServer;
             NetOutgoingMessage NewMessage = netServer.CreateMessage();
             PacketToNetOutgoing(NewMessage);

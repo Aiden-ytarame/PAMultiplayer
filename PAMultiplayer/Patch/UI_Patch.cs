@@ -7,6 +7,7 @@ using YtaramMultiplayer.Client;
 using UnityEngine.UI;
 using Il2CppInterop.Runtime;
 using BepInEx;
+using YtaramMultiplayer.Server;
 namespace YtaramMultiplayer.Patch
 {
     [HarmonyPatch(typeof(VGPlayer))]
@@ -53,10 +54,11 @@ namespace YtaramMultiplayer.Patch
             var toggle = newSetting.GetComponent<UI_Toggle>();
             toggle.DataID = "online_host";
             toggle.subGraphics = null;
-            GameObject.Destroy(newSetting.GetComponentInChildren<GameObjectLocalizer>());
+            GameObject.Destroy(newSetting.GetComponentInChildren<GameObjectLocalizer>()); //is this still necessary?
             newSetting.GetComponentInChildren<TextMeshProUGUI>().text = "Host Server";
             UpdateIpAndPort Updt = newSetting.AddComponent<UpdateIpAndPort>();
-            
+
+         
             //setup IP Input Text
             var inputTextPrefabObj = AssetBundle.LoadFromFile($"{Paths.PluginPath}\\PAMultiplayer\\Assets\\inputtext");
             var Prefab = inputTextPrefabObj.LoadAsset(inputTextPrefabObj.AllAssetNames()[0]);
@@ -70,29 +72,40 @@ namespace YtaramMultiplayer.Patch
             GameObject InputField = GameObject.Find("PAM_IPText");
             InputField.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "Server IP";
             InputField.transform.GetChild(1).GetComponent<TMP_InputField>().text = "";
+
             Updt.IP = InputField.transform.GetChild(1).GetComponent<TMP_InputField>();
+            Updt.IP.text = StaticManager.ServerIp;
+           
+    
             //Server Port
             NewInputText = GameObject.Instantiate(Prefab, settingConent.transform);
             NewInputText.name = "PAM_PortText";
 
+            
             InputField = GameObject.Find("PAM_PortText");
             InputField.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "Port";
             InputField.transform.GetChild(1).GetComponent<TMP_InputField>().text = "";
-            Updt.PORT = InputField.transform.GetChild(1).GetComponent<TMP_InputField>();
 
+            Updt.PORT = InputField.transform.GetChild(1).GetComponent<TMP_InputField>();
+            Updt.PORT.text = StaticManager.ServerPort;
+
+            inputTextPrefabObj.Unload(false);
         }
     }
 
-    //needed so I can register this to the InputField ValueChanged callback(lambdas dont seem to work cuz they arent registered on ill2cpp)
+    //Events dont seem to work very well on Il2Cpp, so this is the workaround
     public class UpdateIpAndPort : MonoBehaviour
     {
         public TMP_InputField IP;
         public TMP_InputField PORT;
         void OnDisable()
         {
-            //OnValueChange even from text mesh pro didnt work for some reason, so this is what I did.
+            //OnValueChange event from text mesh pro didnt work for some reason, so this is what I did.
             StaticManager.ServerIp = IP.text;
             StaticManager.ServerPort = PORT.text;
+
+            if (DataManager.inst.GetSettingBool("online_host"))
+                StaticManager.ServerIp = "127.0.0.1"; //does LocalHost work here?
         }
     }
 

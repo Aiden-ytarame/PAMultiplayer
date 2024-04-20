@@ -71,16 +71,14 @@ namespace YtaramMultiplayer.Server
                         case NetIncomingMessageType.Data:
                             string TypeStr = message.ReadString();
                             Type PacketType = Type.GetType(TypeStr);
-                            Plugin.Instance.Log.LogWarning(TypeStr);
-                           
+                          
                             try
                             {
-                               ((Packet)Activator.CreateInstance(PacketType)).ServerProcessPacket(message);
-
+                                 ((Packet)Activator.CreateInstance(PacketType)).ServerProcessPacket(message);
                             }
                             catch(Exception ex)
                             {                               
-                                Plugin.Instance.Log.LogError("SERVER: Unhandled packet.");
+                                Plugin.Instance.Log.LogError($"SERVER: Unhandled packet. {TypeStr}");
                                 Plugin.Instance.Log.LogError(ex);
                             }                 
                             break;
@@ -102,42 +100,42 @@ namespace YtaramMultiplayer.Server
             }
         }
 
-        public void SpawnPlayers(List<NetConnection> netConnections, NetConnection Local, string Player)
+        public void SpawnPlayers(List<NetConnection> netConnections, NetConnection Local, string _player)
         {
-            Plugin.Instance.Log.LogWarning($"Player Spawned: {Player}");
+            Plugin.Instance.Log.LogWarning($"SERVER: Player Spawned: {_player}");
             //spawn all player on newly connected player
             foreach (NetConnection connection in netConnections)
             {
-                string _player = NetUtility.ToHexString(connection.RemoteUniqueIdentifier);
+                string player = NetUtility.ToHexString(connection.RemoteUniqueIdentifier);
 
-                if(_player != Player)
+                if(player != _player)
                 {
                     SendSpawnPacketToLocal(Local, _player);
                 }
             }
             //spawn new player on all other clie
-            SendSpawnPacketToAll(netConnections, Player);
+            SendSpawnPacketToAll(netConnections, _player);
         }
 
-        public void SendLocalPlayerPacket(NetConnection Local, string Player)
+        public void SendLocalPlayerPacket(NetConnection Local, string _player)
         {
-            Plugin.Instance.Log.LogWarning($"New Player: {Player}");
+            Plugin.Instance.Log.LogWarning($"New Player: {_player}");
             NetOutgoingMessage message = NetServer.CreateMessage();
-            new LocalPlayerPacket() {Player = Player}.PacketToNetOutgoing(message);
+            new LocalPlayerPacket() {Player = _player}.PacketToNetOutgoing(message);
             NetServer.SendMessage(message, Local, NetDeliveryMethod.ReliableOrdered, 0);
         }
-        public void SendSpawnPacketToLocal(NetConnection Local, string Player)
+        public void SendSpawnPacketToLocal(NetConnection Local, string _player)
         {
             NetOutgoingMessage message = NetServer.CreateMessage();
-            new PlayerSpawnPacket() { Player = Player }.PacketToNetOutgoing(message);
+            new PlayerSpawnPacket() { Player = _player }.PacketToNetOutgoing(message);
             NetServer.SendMessage(message, Local, NetDeliveryMethod.ReliableOrdered, 0);
 
         }
 
-        public void SendSpawnPacketToAll(List<NetConnection> all, string Player)
+        public void SendSpawnPacketToAll(List<NetConnection> all, string _player)
         {
             NetOutgoingMessage message = NetServer.CreateMessage();
-            new PlayerSpawnPacket() { Player = Player }.PacketToNetOutgoing(message);
+            new PlayerSpawnPacket() { Player = _player }.PacketToNetOutgoing(message);
             NetServer.SendMessage(message, all, NetDeliveryMethod.ReliableOrdered, 0);
         }
     

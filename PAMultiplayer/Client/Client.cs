@@ -100,7 +100,8 @@ namespace YtaramMultiplayer.Client
             Plugin.Instance.Log.LogWarning($"Damaged player {StaticManager.LocalPlayer}");
             NetOutgoingMessage message = NetClient.CreateMessage();
             new PlayerDamagePacket() { Player = StaticManager.LocalPlayer }.PacketToNetOutgoing(message);
-            NetClient.SendMessage(message, NetDeliveryMethod.ReliableOrdered);
+            
+            NetClient.SendMessage(message, NetDeliveryMethod.ReliableOrdered, 0);
             NetClient.FlushSendQueue();
         }
     }

@@ -8,8 +8,8 @@ namespace YtaramMultiplayer.Packets
 {
     public class PlayerRotationPacket : Packet
     {
-        public string Player { get; set; }
-        public float Z { get; set; }
+        public string Player;
+        public float Z;
         public override void ClientProcessPacket(NetIncomingMessage message)
         {
             Player = message.ReadString();
@@ -23,6 +23,9 @@ namespace YtaramMultiplayer.Packets
 
         public override void ServerProcessPacket(NetIncomingMessage message)
         {
+            Player = message.ReadString();
+            Z = message.ReadFloat();
+
             NetServer netServer = Server.Server.Inst.NetServer;
             NetOutgoingMessage NewMessage = netServer.CreateMessage();
             PacketToNetOutgoing(NewMessage);

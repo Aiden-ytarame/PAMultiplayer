@@ -1,5 +1,6 @@
 ﻿using System;
 using Lidgren.Network;
+using UnityEngine;
 
 namespace YtaramMultiplayer.Packets
 {
@@ -15,14 +16,8 @@ namespace YtaramMultiplayer.Packets
         protected abstract void PacketToNetOut(NetOutgoingMessage message);
 
         public abstract void ClientProcessPacket(NetIncomingMessage message);
-        public virtual void ServerProcessPacket(NetIncomingMessage message)
-        {
-            NetServer netServer = Server.Server.Inst.NetServer;
-            NetOutgoingMessage NewMessage = netServer.CreateMessage();
-            PacketToNetOutgoing(NewMessage);
+        public abstract void ServerProcessPacket(NetIncomingMessage message);
 
-            netServer.SendMessage(NewMessage, netServer.Connections, NetDeliveryMethod.ReliableOrdered, 0);
-        }
 
     }
 

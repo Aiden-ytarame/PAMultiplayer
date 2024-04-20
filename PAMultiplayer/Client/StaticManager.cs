@@ -10,8 +10,8 @@ namespace YtaramMultiplayer.Client
         public static Client Client;
         public static Server.Server Server;
         public static Dictionary<string, VGPlayerManager.VGPlayerData> Players;
-        public static string ServerIp;
-        public static string ServerPort;
+        public static string ServerIp = "";
+        public static string ServerPort = "";
         public static bool SpawnPending = false;
         public static int DamageQueue = -1;
         public static void InitClient(string ServerName)
@@ -25,10 +25,6 @@ namespace YtaramMultiplayer.Client
             LocalPlayer = " ";
             try
             {
-
-                if (DataManager.inst.GetSettingBool("online_host")) 
-                    ServerIp = "127.0.0.1"; //does LocalHost work here?
-
                 Client = new Client(int.Parse(ServerPort), ServerIp, ServerName);
                 Players = new Dictionary<string, VGPlayerManager.VGPlayerData>();
             }

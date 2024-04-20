@@ -8,7 +8,7 @@ namespace YtaramMultiplayer.Packets
 {
     public class PlayerDamagePacket : Packet
     {
-        public string Player { get; set; }
+        public string Player;
 
         public override void ClientProcessPacket(NetIncomingMessage message)
         {
@@ -24,10 +24,18 @@ namespace YtaramMultiplayer.Packets
             player.PlayerHit();
         }
 
+        public override void ServerProcessPacket(NetIncomingMessage message)
+        {
+            Player = message.ReadString();
 
+            NetServer netServer = Server.Server.Inst.NetServer;
+            NetOutgoingMessage NewMessage = netServer.CreateMessage();
+            PacketToNetOutgoing(NewMessage);
+
+            netServer.SendMessage(NewMessage, netServer.Connections, NetDeliveryMethod.ReliableOrdered, 0);
+        }
         protected override void PacketToNetOut(NetOutgoingMessage message)
         {
-            Plugin.Instance.Log.LogWarning($"SENDING DAMAGE PLAYER: {Player}");
             message.Write(Player);
         }
     }
