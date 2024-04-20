@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEditor;
 using YtaramMultiplayer.Client;
 using Lidgren.Network;
+using UnityEngine.Localization.PropertyVariants;
 
 
 
@@ -111,7 +112,10 @@ namespace YtaramMultiplayer.Patch
             if (!DataManager.inst.GetSettingBool("online_host"))
             {
                 if (StaticManager.ServerIp == "")
+                {
+                    Destroy(this);
                     return;
+                }
             }
             Plugin.Instance.Log.LogError("Init Client");
             StaticManager.IsMultiplayer = true;
@@ -121,8 +125,9 @@ namespace YtaramMultiplayer.Patch
         }
 
         //interpolate player positions
-        void Update()
+        void FixedUpdate()
         {
+         
             var PosEnu = StaticManager.PlayerPositions.GetEnumerator();
             Vector2 newPos;
             while (PosEnu.MoveNext())
@@ -134,22 +139,28 @@ namespace YtaramMultiplayer.Patch
 
                 newPos = PosEnu.Current.Value;
                 float Magnetude = (newPos - rb.position).sqrMagnitude;
-                if (Magnetude > 10) // no idea if these numbers are correct
+                if (Magnetude > 15) // no idea if these numbers are correct
                 {
                     Plugin.Instance.Log.LogWarning("Corrected Pos");
                     rb.position = newPos;
                     continue;
                 }
 
-                if (Magnetude < 2)
+                if (Magnetude < 0.3)
                 {
                     if (rb.position != newPos)
-                        rb.position = Vector2.Lerp(rb.position, newPos, 20 * Time.deltaTime);
+                        rb.position = Vector2.Lerp(rb.position, newPos, 20 * Time.fixedDeltaTime);
 
                     return;
                 }
 
-                rb.position = Vector2.LerpUnclamped(rb.position, newPos, 20 * Time.deltaTime);
+                if (Magnetude < 5)
+                {
+                    rb.position = Vector2.LerpUnclamped(rb.position, newPos, 85 * Time.fixedDeltaTime);
+                    return;
+                }
+
+                rb.position = Vector2.LerpUnclamped(rb.position, newPos, 20 * Time.fixedDeltaTime);
 
             }
         }
@@ -160,7 +171,7 @@ namespace YtaramMultiplayer.Patch
             if (StaticManager.IsMultiplayer && StaticManager.Client.NetClient.ConnectionStatus == NetConnectionStatus.Connected)
                 StaticManager.Client.SendDisconnect();
 
-            if (StaticManager.Server != null && StaticManager.Server.NetServer.Status == NetPeerStatus.Running)
+            if (StaticManager.Server != null)
                 StaticManager.Server.NetServer.Shutdown("Ended");
         }
 
