@@ -58,6 +58,7 @@ namespace YtaramMultiplayer.Patch
          
             //setup IP Input Text
             var inputTextPrefabObj = AssetBundle.LoadFromFile($"{Paths.PluginPath}\\PAMultiplayer\\Assets\\inputtext");
+
             var Prefab = inputTextPrefabObj.LoadAsset(inputTextPrefabObj.AllAssetNames()[0]);
             var NewInputText = GameObject.Instantiate(Prefab, settingConent.transform);
             NewInputText.name = "PAM_IPText";

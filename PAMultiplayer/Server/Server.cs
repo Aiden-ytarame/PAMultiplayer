@@ -15,21 +15,21 @@ namespace YtaramMultiplayer.Server
         public NetServer NetServer { get; private set; }
         Thread thread;
         public List<string> Players = new List<string>();
- 
+
         public Server()
         {
             Inst = this;
 
-           NetPeerConfiguration config = new NetPeerConfiguration("PAServer");
+            NetPeerConfiguration config = new NetPeerConfiguration("PAServer");
             config.MaximumConnections = 4;
             config.Port = int.Parse(StaticManager.ServerPort);
             config.EnableUPnP = true;
-          
+
             NetServer = new NetServer(config);
             NetServer.Start();
             NetServer.UPnP.ForwardPort(int.Parse(StaticManager.ServerPort), "GameStuff");
- 
-              
+
+
             thread = new Thread(Listen);
             thread.Start();
         }
@@ -48,7 +48,7 @@ namespace YtaramMultiplayer.Server
                         case NetIncomingMessageType.StatusChanged:
                             NetConnectionStatus status = (NetConnectionStatus)message.ReadByte();
                             string reason = message.ReadString();
-                            if(status == NetConnectionStatus.Connected)
+                            if (status == NetConnectionStatus.Connected)
                             {
                                 var player = NetUtility.ToHexString(message.SenderConnection.RemoteUniqueIdentifier);
                                 Players.Add(player);
@@ -69,28 +69,28 @@ namespace YtaramMultiplayer.Server
                         case NetIncomingMessageType.Data:
                             string TypeStr = message.ReadString();
                             Type PacketType = Type.GetType(TypeStr);
-                          
+
                             try
                             {
-                                 ((Packet)Activator.CreateInstance(PacketType)).ServerProcessPacket(message);
+                                ((Packet)Activator.CreateInstance(PacketType)).ServerProcessPacket(message);
                             }
-                            catch(Exception ex)
-                            {                               
+                            catch (Exception ex)
+                            {
                                 Plugin.Instance.Log.LogError($"SERVER: Unhandled packet. {TypeStr}");
                                 Plugin.Instance.Log.LogError(ex);
-                            }                 
+                            }
                             break;
-                          
+
                         case NetIncomingMessageType.DebugMessage:
                         case NetIncomingMessageType.ErrorMessage:
                         case NetIncomingMessageType.WarningMessage:
                         case NetIncomingMessageType.VerboseDebugMessage:
                             string text = message.ReadString();
 
-                             Plugin.Instance.Log.LogWarning($"DEBYUG: {text}");
+                            Plugin.Instance.Log.LogWarning($"DEBYUG: {text}");
                             break;
                         default:
-                             Plugin.Instance.Log.LogWarning($"Unhandled type: {message.MessageType} {message.LengthBytes} bytes {message.DeliveryMethod}|{message.SequenceChannel}");
+                            Plugin.Instance.Log.LogWarning($"Unhandled type: {message.MessageType} {message.LengthBytes} bytes {message.DeliveryMethod}|{message.SequenceChannel}");
                             break;
                     }
                     NetServer.Recycle(message);
@@ -106,9 +106,9 @@ namespace YtaramMultiplayer.Server
             {
                 string player = NetUtility.ToHexString(connection.RemoteUniqueIdentifier);
 
-           
-               SendSpawnPacketToLocal(Local, player);
-                
+
+                SendSpawnPacketToLocal(Local, player);
+
             }
             //spawn new player on all other clie
             SendSpawnPacketToAll(netConnections, _player);
@@ -118,7 +118,7 @@ namespace YtaramMultiplayer.Server
         {
             Plugin.Instance.Log.LogWarning($"New Player: {_player}");
             NetOutgoingMessage message = NetServer.CreateMessage();
-            new LocalPlayerPacket() {Player = _player}.PacketToNetOutgoing(message);
+            new LocalPlayerPacket() { Player = _player }.PacketToNetOutgoing(message);
             NetServer.SendMessage(message, Local, NetDeliveryMethod.ReliableOrdered, 0);
         }
         public void SendSpawnPacketToLocal(NetConnection Local, string _player)
@@ -135,6 +135,6 @@ namespace YtaramMultiplayer.Server
             new PlayerSpawnPacket() { Player = _player }.PacketToNetOutgoing(message);
             NetServer.SendMessage(message, all, NetDeliveryMethod.ReliableOrdered, 0);
         }
-    
+
     }
 }
