@@ -13,18 +13,19 @@ Made using lidgren networking under the MIT license.
 
 ## **Known Issues**
 
-It doesnt spawn Players in.
-
 There's problems with closing the server and disconnecting a player.
 
 Not regenerating health on level restart.
 
-Desync issues when dying close to a checkpoint
+Desync due to the time it takes to load a level(not 100% sure about this one, but the fix would be to trigger the level restart when the level starts not when it loads up)
+
+Desync issues when dying close to a checkpoint.
+
+Desync issues when taking damage before a player joins.
 
 ## **Plans**
 
-* Get the basic mod working.
-* Change how it handles rotation.
+* Interpolate player position between packets. 
 * Sync random seed.
 * Make a lobby instead of current system.
   
@@ -57,7 +58,5 @@ Desync issues when dying close to a checkpoint
 * Go to settings->Gameplay
 * Type the Host Ip address, and port.
 * start any arcade level. (preferably the same as the host)
-
-when a client joins, it should* automatically restart the level for everyone.
 
 **NOTE: Pausing does not sync to other players, please do not pause unless you're gonna quit the level.**
