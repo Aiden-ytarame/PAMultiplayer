@@ -17,13 +17,10 @@ namespace YtaramMultiplayer.Packets
 
             if (Player == StaticManager.LocalPlayer)
                 return;
-            Plugin.Instance.Log.LogInfo("TRY");
             if (StaticManager.Players.ContainsKey(Player))
             {
-                Plugin.Instance.Log.LogWarning("Contains");
                 if (StaticManager.Players[Player].PlayerObject)
                 {
-                    Plugin.Instance.Log.LogError("WORKED");
                     if (!StaticManager.PlayerPositions.ContainsKey(Player))
                     {
                         StaticManager.PlayerPositions.Add(Player, new Vector2(X, Y));

@@ -2,6 +2,7 @@
 using YtaramMultiplayer.Packets;
 using System;
 using UnityEngine;
+using System.Linq;
 
 namespace YtaramMultiplayer.Client
 {
@@ -36,6 +37,18 @@ namespace YtaramMultiplayer.Client
 
                     switch (message.MessageType)
                     {
+                        case NetIncomingMessageType.StatusChanged:
+                            NetConnectionStatus status = (NetConnectionStatus)message.ReadByte();
+                            string reason = message.ReadString();
+                            if (status == NetConnectionStatus.Disconnected)
+                            {
+                                var _player = NetUtility.ToHexString(message.SenderConnection.RemoteUniqueIdentifier);
+                                StaticManager.Players.Clear();
+      
+
+                                //kill all players but the host
+                            }
+                            break;
                         case NetIncomingMessageType.Data:
                             string TypeStr = message.ReadString();
                             Type PacketType = Type.GetType(TypeStr);
@@ -75,12 +88,12 @@ namespace YtaramMultiplayer.Client
             NetClient.SendMessage(message, NetDeliveryMethod.Unreliable);
             NetClient.FlushSendQueue();
         }
-        public void SendRotation(float Z)
+        public void SendRotation(float z)
         {
             
             NetOutgoingMessage message = NetClient.CreateMessage();
-            new PlayerRotationPacket { Player = StaticManager.LocalPlayer, Z = Z }.PacketToNetOutgoing(message);
-            NetClient.SendMessage(message, NetDeliveryMethod.Unreliable);
+            new PlayerRotationPacket { Player = StaticManager.LocalPlayer, Z = z }.PacketToNetOutgoing(message);
+            NetClient.SendMessage(message, NetDeliveryMethod.Unreliable, 0);
             NetClient.FlushSendQueue();
         }
 

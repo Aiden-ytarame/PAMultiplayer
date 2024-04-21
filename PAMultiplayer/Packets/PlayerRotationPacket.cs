@@ -21,7 +21,12 @@ namespace YtaramMultiplayer.Packets
             {
                 if (StaticManager.Players[Player].PlayerObject)
                 {
-                    StaticManager.Players[Player].PlayerObject.Player_Rigidbody.transform.eulerAngles = new Vector3(0, 0, Z);
+                  //  if (!StaticManager.PlayerRotations.ContainsKey(Player))
+                  //  {
+                    //    StaticManager.PlayerRotations.Add(Player, Z);
+                    //    return;
+                   // }
+                   // StaticManager.PlayerRotations[Player] = Z;
                 }
             }
         }

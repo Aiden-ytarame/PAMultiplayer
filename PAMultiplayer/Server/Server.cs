@@ -9,12 +9,6 @@ using YtaramMultiplayer.Packets;
 
 namespace YtaramMultiplayer.Server
 {
-    public class PlayerPosition
-    {
-        public float x;
-        public float y;
-    }
- 
     public class Server
     {
         public static Server Inst;
@@ -112,10 +106,9 @@ namespace YtaramMultiplayer.Server
             {
                 string player = NetUtility.ToHexString(connection.RemoteUniqueIdentifier);
 
-                if(player != _player)
-                {
-                    SendSpawnPacketToLocal(Local, _player);
-                }
+           
+               SendSpawnPacketToLocal(Local, player);
+                
             }
             //spawn new player on all other clie
             SendSpawnPacketToAll(netConnections, _player);

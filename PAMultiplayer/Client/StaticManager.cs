@@ -15,7 +15,7 @@ namespace YtaramMultiplayer.Client
         public static string ServerIp = "";
         public static string ServerPort = "";
         public static bool SpawnPending = false;
-        public static int DamageQueue = -1;
+        public static List<int> DamageQueue = new List<int>();
         static public bool IsMultiplayer = false; //checking if client is null always returns false for some reason.
         public static void InitClient(string ServerName)
         {

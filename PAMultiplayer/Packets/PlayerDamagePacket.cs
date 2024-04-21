@@ -1,4 +1,6 @@
-﻿using Lidgren.Network;
+﻿using Il2CppSystem;
+using Lidgren.Network;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using YtaramMultiplayer.Client;
@@ -16,12 +18,17 @@ namespace YtaramMultiplayer.Packets
 
             if (Player == StaticManager.LocalPlayer)
                 return;
-
+            Plugin.Instance.Log.LogWarning($"LocalPlayerId{StaticManager.Players[StaticManager.LocalPlayer].PlayerID}");
+            Plugin.Instance.Log.LogWarning($"LocalControllerId{StaticManager.Players[StaticManager.LocalPlayer].ControllerID}");
             Plugin.Instance.Log.LogWarning($"Damaging player {Player}");
-
+           
             var player = StaticManager.Players[Player].PlayerObject;
-            StaticManager.DamageQueue = player.PlayerID;
-            player.PlayerHit();
+            if (player == null || !player.gameObject)
+                return;
+
+            StaticManager.DamageQueue.Add(player.PlayerID);
+            
+
         }
 
         public override void ServerProcessPacket(NetIncomingMessage message)

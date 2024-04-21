@@ -13,7 +13,7 @@ namespace YtaramMultiplayer.Packets
         public override void ClientProcessPacket(NetIncomingMessage message)
         {
             Player = message.ReadString();
-
+            Plugin.Instance.Log.LogWarning($"attempting player spawn on player {Player}");
             if (Player == StaticManager.LocalPlayer)
                 return;
 
@@ -22,8 +22,9 @@ namespace YtaramMultiplayer.Packets
             VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
             NewData.PlayerID = StaticManager.Players.Count + 1;
             NewData.ControllerID = StaticManager.Players.Count + 1;
+            
 
-            if (VGPlayerManager.Inst.players.Contains(NewData))
+            if (!VGPlayerManager.Inst.players.Contains(NewData))
                 VGPlayerManager.Inst.players.Add(NewData);
             StaticManager.SpawnPending = true;
 
