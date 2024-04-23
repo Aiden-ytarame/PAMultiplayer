@@ -1,9 +1,9 @@
 ﻿using BepInEx;
 using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
-using YtaramMultiplayer.Patch;
+using PAMultiplayer.Patch;
 using Il2CppInterop.Runtime.Injection;
-namespace YtaramMultiplayer;
+namespace PAMultiplayer;
 
 [BepInPlugin(Guid, Name, Version)]
 [BepInProcess("Project Arrhythmia.exe")]
@@ -21,7 +21,7 @@ public class Plugin : BasePlugin
         
         ClassInjector.RegisterTypeInIl2Cpp<NetworkManager>();
         ClassInjector.RegisterTypeInIl2Cpp<UpdateIpAndPort>();
-        
+        ClassInjector.RegisterTypeInIl2Cpp<LobbyManager>();
         Instance = this;
         harmony = new Harmony(Guid);
         harmony.PatchAll();

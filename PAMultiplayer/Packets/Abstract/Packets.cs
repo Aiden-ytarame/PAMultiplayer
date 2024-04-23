@@ -1,8 +1,6 @@
-﻿using System;
-using Lidgren.Network;
-using UnityEngine;
+﻿using Lidgren.Network;
 
-namespace YtaramMultiplayer.Packets
+namespace PAMultiplayer.Packets
 {
     public abstract class Packet
     {

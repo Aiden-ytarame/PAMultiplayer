@@ -1,10 +1,11 @@
 ﻿using Lidgren.Network;
-using YtaramMultiplayer.Packets;
+using PAMultiplayer.Packets;
 using System;
 using UnityEngine;
 using System.Linq;
+using PAMultiplayer;
 
-namespace YtaramMultiplayer.Client
+namespace PAMultiplayer.Client
 {
     public class Client : MonoBehaviour
     {

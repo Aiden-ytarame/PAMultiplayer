@@ -1,10 +1,6 @@
 ﻿using Lidgren.Network;
-using System.Collections.Generic;
-using UnityEngine;
-using YtaramMultiplayer.Client;
-using YtaramMultiplayer.Server;
 
-namespace YtaramMultiplayer.Packets
+namespace PAMultiplayer.Packets
 {
     public class PlayerSpawnPacket : Packet
     {
@@ -26,10 +22,13 @@ namespace YtaramMultiplayer.Packets
 
             if (!VGPlayerManager.Inst.players.Contains(NewData))
                 VGPlayerManager.Inst.players.Add(NewData);
-            StaticManager.SpawnPending = true;
+            //StaticManager.SpawnPending = true;
 
             if (!StaticManager.Players.ContainsKey(Player))
                 StaticManager.Players.Add(Player, NewData);
+
+            if(!SceneManager.inst.isLoading)
+                VGPlayerManager.inst.RespawnPlayers();
         }
 
         public override void ServerProcessPacket(NetIncomingMessage message)

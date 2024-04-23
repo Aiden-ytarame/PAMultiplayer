@@ -4,10 +4,10 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Lidgren.Network;
-using YtaramMultiplayer.Client;
-using YtaramMultiplayer.Packets;
+using PAMultiplayer;
+using PAMultiplayer.Packets;
 
-namespace YtaramMultiplayer.Server
+namespace PAMultiplayer.Server
 {
     public class Server
     {

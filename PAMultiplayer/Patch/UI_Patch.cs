@@ -2,10 +2,10 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.Localization.PropertyVariants;
-using YtaramMultiplayer.Client;
 using BepInEx;
+using PAMultiplayer;
 
-namespace YtaramMultiplayer.Patch
+namespace PAMultiplayer.Patch
 {
     [HarmonyPatch(typeof(VGPlayer))]
     public class ClampPatch
@@ -34,9 +34,11 @@ namespace YtaramMultiplayer.Patch
     {
         [HarmonyPatch(nameof(SystemManager.Awake))]
         [HarmonyPostfix]
-        static void AddUIToSettings(ref SystemManager __instance)
+        static void AddUIToSettings()
         {
-           
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "Menu")
+                return;
+
             GameObject serverToggle = GameObject.Find("Toggle Camera Jiggle"); //get one of the settings Gameobject to duplicate.
             GameObject MPTitle = GameObject.Find("General Title (1)"); //get a category title Gameobject to duplicate.
             GameObject settingConent = serverToggle.transform.parent.gameObject; //get the settings parent to add new setting.
@@ -67,7 +69,7 @@ namespace YtaramMultiplayer.Patch
             //the asset bundle returns UnityEngine.Object
             //if you find a fix, please tell me.
 
-            GameObject InputField = GameObject.Find("PAM_IPText");
+            GameObject InputField = settingConent.transform.Find("PAM_IPText").gameObject;
             InputField.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "Server IP";
             InputField.transform.GetChild(1).GetComponent<TMP_InputField>().text = "";
 
@@ -80,7 +82,7 @@ namespace YtaramMultiplayer.Patch
             NewInputText.name = "PAM_PortText";
 
             
-            InputField = GameObject.Find("PAM_PortText");
+            InputField = settingConent.transform.Find("PAM_PortText").gameObject;
             InputField.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "Port";
             InputField.transform.GetChild(1).GetComponent<TMP_InputField>().text = "";
 

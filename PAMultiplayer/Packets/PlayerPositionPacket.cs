@@ -1,8 +1,7 @@
 ﻿using Lidgren.Network;
 using UnityEngine;
-using YtaramMultiplayer.Client;
 
-namespace YtaramMultiplayer.Packets
+namespace PAMultiplayer.Packets
 {
     public class PlayerPositionPacket : Packet
     {

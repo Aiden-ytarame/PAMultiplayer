@@ -1,10 +1,6 @@
 ﻿using Lidgren.Network;
-using System.Collections.Generic;
-using UnityEngine;
-using YtaramMultiplayer.Client;
-using YtaramMultiplayer.Server;
 
-namespace YtaramMultiplayer.Packets
+namespace PAMultiplayer.Packets
 {
     public class PlayerRotationPacket : Packet
     {

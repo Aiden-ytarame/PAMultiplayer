@@ -1,12 +1,6 @@
-﻿using Il2CppSystem;
-using Lidgren.Network;
-using System;
-using System.Collections.Generic;
-using UnityEngine;
-using YtaramMultiplayer.Client;
-using YtaramMultiplayer.Server;
+﻿using Lidgren.Network;
 
-namespace YtaramMultiplayer.Packets
+namespace PAMultiplayer.Packets
 {
     public class PlayerDamagePacket : Packet
     {
@@ -22,11 +16,13 @@ namespace YtaramMultiplayer.Packets
             Plugin.Instance.Log.LogWarning($"LocalControllerId{StaticManager.Players[StaticManager.LocalPlayer].ControllerID}");
             Plugin.Instance.Log.LogWarning($"Damaging player {Player}");
            
-            var player = StaticManager.Players[Player].PlayerObject;
+            VGPlayer player = StaticManager.Players[Player].PlayerObject;
             if (player == null || !player.gameObject)
                 return;
 
-            StaticManager.DamageQueue.Add(player.PlayerID);
+            player.PlayerHit();
+           // StaticManager.Players[Player].PlayerObject.PlayerHit();
+           // StaticManager.DamageQueue.Add(player.PlayerID);
             
 
         }
