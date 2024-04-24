@@ -43,20 +43,22 @@ Desync issues when taking damage before a player joins.
 
 ### Host
 
-* open the game 
-* Go to settings->Gameplay
+* Go to settings->Gameplay.
 * Toggle Host Server On.
-* Type a Port
+* Type a Port.
 * Start any arcade level to start a server.
-* Might require your to setup port forwarding on your router.
+* Wait for players to join your lobby and load the level (the indicator beside their names tell you when they've loaded)
+* Click start log and have fun!
+* *Might require your to setup port forwarding on your router.
 
 (note: the game might save the host server option on when quitting, may require to manually disable the host server on start up)
 
 
 ### Join 
 
-* Go to settings->Gameplay
+* Go to settings->Gameplay.
 * Type the Host Ip address, and port.
 * start any arcade level. (preferably the same as the host)
+* Wait for the host to start the level and have fun!
 
 **NOTE: Pausing does not sync to other players, please do not pause unless you're gonna quit the level.**
