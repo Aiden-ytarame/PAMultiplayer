@@ -99,13 +99,6 @@ namespace PAMultiplayer.Patch
             netMan.AddComponent<NetworkManager>();
         }
 
-        [HarmonyPatch(nameof(GameManager2.PlayGame))]
-        [HarmonyPostfix]
-        static void PostPlay(ref GameManager2 __instance)
-        {
-            __instance.Pause(false);
-        }
-
     }
 
 }

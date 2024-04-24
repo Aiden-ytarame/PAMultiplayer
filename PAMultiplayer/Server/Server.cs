@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Lidgren.Network;
 using PAMultiplayer;
 using PAMultiplayer.Packets;
+using PAMultiplayer.Patch;
 
 namespace PAMultiplayer.Server
 {
@@ -43,6 +44,9 @@ namespace PAMultiplayer.Server
                 {
 
                     List<NetConnection> all = NetServer.Connections;
+                    if (all.Count == 0)
+                        continue;
+
                     switch (message.MessageType)
                     {
                         case NetIncomingMessageType.StatusChanged:
@@ -52,9 +56,9 @@ namespace PAMultiplayer.Server
                             {
                                 var player = NetUtility.ToHexString(message.SenderConnection.RemoteUniqueIdentifier);
                                 Players.Add(player);
-                                SendLocalPlayerPacket(message.SenderConnection, player);
 
-                                SpawnPlayers(all, message.SenderConnection, player); //spawn all players on new client
+                                SendLocalPlayerPacket(message.SenderConnection, player);
+                                SpawnPlayers(all, message.SenderConnection, player);
                             }
                             if (status == NetConnectionStatus.Disconnected)
                             {
@@ -101,17 +105,19 @@ namespace PAMultiplayer.Server
         public void SpawnPlayers(List<NetConnection> netConnections, NetConnection Local, string _player)
         {
             Plugin.Instance.Log.LogWarning($"SERVER: Player Spawned: {_player}");
+            string steamName = null;
+
             //spawn all player on newly connected player
             foreach (NetConnection connection in netConnections)
             {
                 string player = NetUtility.ToHexString(connection.RemoteUniqueIdentifier);
-
-
-                SendSpawnPacketToLocal(Local, player);
-
+               
+                steamName = connection.RemoteHailMessage.PeekString();         
+                SendSpawnPacketToLocal(Local, player, steamName);
             }
-            //spawn new player on all other clie
-            SendSpawnPacketToAll(netConnections, _player);
+            steamName = Local.RemoteHailMessage.PeekString();
+
+            SendSpawnPacketToAll(netConnections, _player, steamName);
         }
 
         public void SendLocalPlayerPacket(NetConnection Local, string _player)
@@ -121,19 +127,26 @@ namespace PAMultiplayer.Server
             new LocalPlayerPacket() { Player = _player }.PacketToNetOutgoing(message);
             NetServer.SendMessage(message, Local, NetDeliveryMethod.ReliableOrdered, 0);
         }
-        public void SendSpawnPacketToLocal(NetConnection Local, string _player)
+        public void SendSpawnPacketToLocal(NetConnection Local, string _player, string _steamName = null)
         {
             NetOutgoingMessage message = NetServer.CreateMessage();
-            new PlayerSpawnPacket() { Player = _player }.PacketToNetOutgoing(message);
+            new PlayerSpawnPacket() { Player = _player,  SteamName = _steamName}.PacketToNetOutgoing(message);
             NetServer.SendMessage(message, Local, NetDeliveryMethod.ReliableOrdered, 0);
 
         }
 
-        public void SendSpawnPacketToAll(List<NetConnection> all, string _player)
+        public void SendSpawnPacketToAll(List<NetConnection> all, string _player, string _steamName = null)
         {
             NetOutgoingMessage message = NetServer.CreateMessage();
-            new PlayerSpawnPacket() { Player = _player }.PacketToNetOutgoing(message);
+            new PlayerSpawnPacket() { Player = _player, SteamName = _steamName }.PacketToNetOutgoing(message);
             NetServer.SendMessage(message, all, NetDeliveryMethod.ReliableOrdered, 0);
+        }
+
+        public void SendStartLevel()
+        {
+            NetOutgoingMessage message = NetServer.CreateMessage();
+            new StartLevelPacket().PacketToNetOutgoing(message);
+            NetServer.SendMessage(message, NetServer.Connections, NetDeliveryMethod.ReliableOrdered, 0);
         }
 
     }

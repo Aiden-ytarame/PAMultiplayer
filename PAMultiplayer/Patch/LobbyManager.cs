@@ -1,15 +1,14 @@
 ﻿using BepInEx;
 using HarmonyLib;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 
 namespace PAMultiplayer.Patch
 {
+
+    //this logic has to be ReWritten. if the client doesnt recive confirmation that we're on a lobby. it will start without checking.
+    //could fix by being Lobby by default, and on LocalPlayer packet call this code again in case of lobby being false on server.
     [HarmonyPatch(typeof(GameManager2))]
     public class GM_Lobby_Patch
     {
@@ -17,22 +16,52 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         public static void Postfix(ref GameManager2 __instance)
         {
-            if(StaticManager.IsMultiplayer)
+            if (StaticManager.IsMultiplayer && (StaticManager.IsLobby || StaticManager.IsHosting))
             {
                 __instance.Pause(false);
-                 __instance.gameObject.AddComponent<LobbyManager>();
+
+                __instance.gameObject.AddComponent<LobbyManager>();
             }
-            
+            StaticManager.Client.SendLoaded();
+        }
+    }
+    [HarmonyPatch(typeof(PauseMenu))]
+    public class Pause_Lobby_Patch
+    {
+
+        [HarmonyPatch(nameof(PauseMenu.UnPause))]
+        [HarmonyPrefix]
+        public static bool Prefix()
+        {
+            if (!StaticManager.IsLobby || (StaticManager.IsHosting && StaticManager.LobbyInfo.isEveryoneLoaded))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        [HarmonyPatch(nameof(PauseMenu.UnPause))]
+        [HarmonyPostfix]
+        public static void Postfix(ref PauseMenu __instance)
+        {
+            if (LobbyManager.instance && StaticManager.LobbyInfo.isEveryoneLoaded)
+            {  
+                StaticManager.IsLobby = false;
+                Object.Destroy(__instance.gameObject);
+                Object.Destroy(LobbyManager.instance);
+            }
         }
     }
     public class LobbyManager : MonoBehaviour
     {
-        static LobbyManager instance;
+        public static LobbyManager instance { get; private set; }
 
-        Dictionary<string, GameObject> PlayerList = new Dictionary<string, GameObject>();
-        GameObject PlayersListGO;
+        Dictionary<string, Transform> PlayerList = new Dictionary<string, Transform>();
+        Transform PlayersListGO;
+        PauseMenu pauseMenu;
         UnityEngine.Object PlayerPrefab;
-        void Start()
+
+        void Awake()
         {
             instance = this;
             StaticManager.IsLobby = true;
@@ -44,51 +73,61 @@ namespace PAMultiplayer.Patch
             PlayerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]);
             var lobbyObj = GameObject.Instantiate(lobbyPrefab, PlayerGUI.transform);
             lobbyObj.name = "PAM_Lobby";
+
             //again, if I can cast UnityEngine.Object to GameObject please tell me :)
-            PlayersListGO = PlayerGUI.transform.Find("PAM_Lobby").GetChild(1).GetChild(4).gameObject; //eh I could do the Find() directly to the correct object.
 
-
-            if (!DataManager.inst.GetSettingBool("online_host"))
+            var LobbyGO = PlayerGUI.transform.Find("PAM_Lobby").gameObject;
+            pauseMenu = LobbyGO.GetComponent<PauseMenu>();
+            PlayersListGO = LobbyGO.transform.GetChild(1).GetChild(5); //eh I could do the Find() directly to the correct object.
+         
+            if (!StaticManager.IsHosting)
             {
-                if (StaticManager.ServerIp == "")
-                {
+                
+                
                     
                     //Delete the Buttons for clients.
-                }
+                
             }
 
+            var Enu = StaticManager.LobbyInfo.PlayerDisplayName.GetEnumerator();
+            while(Enu.MoveNext())
+            {
+                AddPlayerToLobby(Enu.Current.Key, Enu.Current.Value);
+            }
             lobbyBundle.Unload(false);
         }
 
-        void OnDisable()
+        public void AddPlayerToLobby(string player, string playerName)
         {
-            StaticManager.IsLobby = false;
-            instance = null;
-        }
-
-        public static void AddPlayerToLobby(string player)
-        {
-            if (instance == null)
-                return;
-
-            var playerEntry = GameObject.Instantiate(instance.PlayerPrefab, instance.PlayersListGO.transform);
+            var playerEntry = GameObject.Instantiate(PlayerPrefab, PlayersListGO.transform);
             playerEntry.name = $"PAM_Player {player}";
 
-            GameObject entry = instance.PlayersListGO.transform.Find($"PAM_Player {player}").gameObject;
-            entry.GetComponentInChildren<TextMeshProUGUI>().text = player;
-            instance.PlayerList.Add(player, entry);
+            Transform entry = PlayersListGO.Find($"PAM_Player {player}");
+            entry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
+            PlayerList.Add(player, entry);
         }
 
-        public static void RemovePlayerFromLobby(string player)
+        public void RemovePlayerFromLobby(string player)
         {
-            if (instance == null)
-                return;
-
-            GameObject entry = instance.PlayersListGO.transform.Find($"PAM_Player {player}").gameObject;
+            Transform entry = PlayersListGO.transform.Find($"PAM_Player {player}");
             Destroy(entry);
 
-            instance.PlayerList.Remove(player);
+            PlayerList.Remove(player);
         }
 
+        public void SetPlayerLoaded(string player)
+        {
+            //do that
+            Transform entry = PlayersListGO.Find($"PAM_Player {player}");
+            if(entry)
+                entry.GetChild(1).GetComponent<TextMeshProUGUI>().text = "▓";
+            
+        }
+
+        public void StartLevel()
+        {
+            StaticManager.IsLobby = false;
+            pauseMenu.UnPause();
+        }
     }
 }

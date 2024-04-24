@@ -14,18 +14,18 @@ namespace PAMultiplayer.Client
         {
             var config = new NetPeerConfiguration(ServerName);
             config.AutoFlushSendQueue = false;
-    
-
+           
             System.Threading.Thread thread;
 
             thread = new System.Threading.Thread(Listen);
             NetClient = new NetClient(config);
-           
+            NetOutgoingMessage hail = NetClient.CreateMessage();
+            hail.Write(SteamWorkshopFacepunch.inst.steamUser.Name);
             // client.RegisterReceivedCallback(new System.Threading.SendOrPostCallback(ReciveMessage), System.Threading.SynchronizationContext.Current);
             thread.Start();
             NetClient.Start();
-            NetClient.Connect(Server, Port);
-
+            NetClient.Connect(Server, Port, hail);
+            Plugin.Instance.Log.LogError(SteamWorkshopFacepunch.inst.steamUser.Name);
         }
 
         public void Listen()
@@ -113,6 +113,15 @@ namespace PAMultiplayer.Client
             NetOutgoingMessage message = NetClient.CreateMessage();
             new PlayerDamagePacket() { Player = StaticManager.LocalPlayer }.PacketToNetOutgoing(message);
             
+            NetClient.SendMessage(message, NetDeliveryMethod.ReliableOrdered, 0);
+            NetClient.FlushSendQueue();
+        }
+
+        public void SendLoaded()
+        {
+            NetOutgoingMessage message = NetClient.CreateMessage();
+            new PlayerLoadedPacket() { Player = StaticManager.LocalPlayer }.PacketToNetOutgoing(message);
+
             NetClient.SendMessage(message, NetDeliveryMethod.ReliableOrdered, 0);
             NetClient.FlushSendQueue();
         }
