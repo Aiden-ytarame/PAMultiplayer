@@ -105,7 +105,7 @@ namespace PAMultiplayer.Patch
             StaticManager.ServerPort = PORT.text;
 
             if (DataManager.inst.GetSettingBool("online_host"))
-                StaticManager.ServerIp = "localhost"; //does LocalHost work here?
+                StaticManager.ServerIp = "127.0.0.1"; //does LocalHost work here?
         }
     }
 

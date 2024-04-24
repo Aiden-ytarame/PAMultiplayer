@@ -39,8 +39,10 @@ namespace PAMultiplayer.Packets
             if (!StaticManager.Players.ContainsKey(Player))
                 StaticManager.Players.Add(Player, NewData);
 
-            if(!SceneManager.inst.isLoading)
-                VGPlayerManager.inst.RespawnPlayers();
+            if (!SceneManager.inst.isLoading && !LobbyManager.instance)
+                    VGPlayerManager.inst.RespawnPlayers();
+
+            
 
         }
 

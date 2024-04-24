@@ -22,7 +22,7 @@ namespace PAMultiplayer
         public static bool SpawnPending = false;
         public static List<int> DamageQueue = new List<int>();
 
-        public static bool IsLobby = false;
+        public static bool IsLobby = true;
         public static bool IsHosting = false;
         public static bool IsMultiplayer = false; //checking if client is null always returns false for some reason.
 

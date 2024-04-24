@@ -1,4 +1,5 @@
 ﻿using Lidgren.Network;
+using PAMultiplayer.Patch;
 
 
 namespace PAMultiplayer.Packets
@@ -14,6 +15,15 @@ namespace PAMultiplayer.Packets
 
             Plugin.Instance.Log.LogWarning($"Local ID is {Player}");
             StaticManager.LocalPlayer = Player;
+            StaticManager.IsLobby = isLobby;
+
+            if(!isLobby)
+            {
+                if (LobbyManager.instance)
+                {
+                    LobbyManager.instance.StartLevel();
+                }
+            }
         }
 
         public override void ServerProcessPacket(NetIncomingMessage message)

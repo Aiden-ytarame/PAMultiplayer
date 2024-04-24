@@ -7,6 +7,7 @@ using Lidgren.Network;
 using PAMultiplayer;
 using PAMultiplayer.Packets;
 using PAMultiplayer.Patch;
+using Rewired;
 
 namespace PAMultiplayer.Server
 {
@@ -24,12 +25,13 @@ namespace PAMultiplayer.Server
             NetPeerConfiguration config = new NetPeerConfiguration("PAServer");
             config.MaximumConnections = 4;
             config.Port = int.Parse(StaticManager.ServerPort);
+
             config.EnableUPnP = true;
 
             NetServer = new NetServer(config);
             NetServer.Start();
-            NetServer.UPnP.ForwardPort(int.Parse(StaticManager.ServerPort), "GameStuff");
-
+            if(NetServer.UPnP.ForwardPort(int.Parse(StaticManager.ServerPort), "GameStuff"))          
+                Plugin.Instance.Log.LogWarning("UPnP SUCCESS");       
 
             thread = new Thread(Listen);
             thread.Start();
@@ -44,17 +46,20 @@ namespace PAMultiplayer.Server
                 {
 
                     List<NetConnection> all = NetServer.Connections;
-                    if (all.Count == 0)
-                        continue;
+           //         if (all.Count == 0)
+               //         continue;
 
                     switch (message.MessageType)
                     {
                         case NetIncomingMessageType.StatusChanged:
                             NetConnectionStatus status = (NetConnectionStatus)message.ReadByte();
                             string reason = message.ReadString();
-                            if (status == NetConnectionStatus.Connected)
+
+              
+                                if (status == NetConnectionStatus.Connected)
                             {
                                 var player = NetUtility.ToHexString(message.SenderConnection.RemoteUniqueIdentifier);
+                                Plugin.Instance.Log.LogWarning($"Player Connected: {player}");
                                 Players.Add(player);
 
                                 SendLocalPlayerPacket(message.SenderConnection, player);
@@ -111,7 +116,7 @@ namespace PAMultiplayer.Server
             foreach (NetConnection connection in netConnections)
             {
                 string player = NetUtility.ToHexString(connection.RemoteUniqueIdentifier);
-               
+
                 steamName = connection.RemoteHailMessage.PeekString();         
                 SendSpawnPacketToLocal(Local, player, steamName);
             }
@@ -124,7 +129,7 @@ namespace PAMultiplayer.Server
         {
             Plugin.Instance.Log.LogWarning($"New Player: {_player}");
             NetOutgoingMessage message = NetServer.CreateMessage();
-            new LocalPlayerPacket() { Player = _player }.PacketToNetOutgoing(message);
+            new LocalPlayerPacket() { Player = _player, isLobby = StaticManager.IsLobby }.PacketToNetOutgoing(message);
             NetServer.SendMessage(message, Local, NetDeliveryMethod.ReliableOrdered, 0);
         }
         public void SendSpawnPacketToLocal(NetConnection Local, string _player, string _steamName = null)

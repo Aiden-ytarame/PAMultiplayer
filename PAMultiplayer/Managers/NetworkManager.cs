@@ -13,6 +13,7 @@ namespace PAMultiplayer
 
                 if (StaticManager.Server == null || StaticManager.Server.NetServer.Status == NetPeerStatus.NotRunning)
                 {
+                    Plugin.Instance.Log.LogError("Init Server");
                     StaticManager.Server = new Server.Server();
                 }
             }
@@ -94,6 +95,7 @@ namespace PAMultiplayer
             if (StaticManager.Server != null)
                 StaticManager.Server.NetServer.Shutdown("Ended");
 
+            StaticManager.IsLobby = true;
             StaticManager.LobbyInfo = new LobbyInfo();
         }
 

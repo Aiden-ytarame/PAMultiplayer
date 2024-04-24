@@ -19,10 +19,20 @@ namespace PAMultiplayer.Patch
             if (StaticManager.IsMultiplayer && (StaticManager.IsLobby || StaticManager.IsHosting))
             {
                 __instance.Pause(false);
-
                 __instance.gameObject.AddComponent<LobbyManager>();
+                StaticManager.Client.SendLoaded();
+            }         
+        }
+
+        [HarmonyPatch(nameof(GameManager2.UnPause))]
+        [HarmonyPrefix]
+        public static bool Prefix()
+        {
+            if (!StaticManager.IsLobby || (StaticManager.IsHosting && StaticManager.LobbyInfo.isEveryoneLoaded))
+            {
+                return true;
             }
-            StaticManager.Client.SendLoaded();
+            return false;
         }
     }
     [HarmonyPatch(typeof(PauseMenu))]
@@ -40,6 +50,7 @@ namespace PAMultiplayer.Patch
             return false;
         }
 
+
         [HarmonyPatch(nameof(PauseMenu.UnPause))]
         [HarmonyPostfix]
         public static void Postfix(ref PauseMenu __instance)
@@ -49,6 +60,10 @@ namespace PAMultiplayer.Patch
                 StaticManager.IsLobby = false;
                 Object.Destroy(__instance.gameObject);
                 Object.Destroy(LobbyManager.instance);
+                VGPlayerManager.inst.RespawnPlayers();
+
+                if (StaticManager.IsHosting)
+                    StaticManager.Server.SendStartLevel();
             }
         }
     }
@@ -82,18 +97,21 @@ namespace PAMultiplayer.Patch
          
             if (!StaticManager.IsHosting)
             {
-                
-                
-                    
-                    //Delete the Buttons for clients.
-                
+                LobbyGO.transform.GetChild(1).GetChild(3).gameObject.SetActive(false);
+                LobbyGO.transform.GetChild(1).GetChild(2).gameObject.SetActive(true);
             }
 
             var Enu = StaticManager.LobbyInfo.PlayerDisplayName.GetEnumerator();
             while(Enu.MoveNext())
             {
                 AddPlayerToLobby(Enu.Current.Key, Enu.Current.Value);
+                //this is weird, this means that when you join a lobby
+                //every player that joined before you will get shown as Loaded, even if theyre not. 
+                //its easier than send if the player loaded or not to every new client.
+                SetPlayerLoaded(Enu.Current.Key); 
             }
+            Enu.Dispose();
+
             lobbyBundle.Unload(false);
         }
 
@@ -117,11 +135,9 @@ namespace PAMultiplayer.Patch
 
         public void SetPlayerLoaded(string player)
         {
-            //do that
             Transform entry = PlayersListGO.Find($"PAM_Player {player}");
             if(entry)
-                entry.GetChild(1).GetComponent<TextMeshProUGUI>().text = "▓";
-            
+                entry.GetChild(1).GetComponent<TextMeshProUGUI>().text = "▓";           
         }
 
         public void StartLevel()

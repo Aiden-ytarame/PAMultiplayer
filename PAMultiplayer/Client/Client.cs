@@ -19,6 +19,7 @@ namespace PAMultiplayer.Client
 
             thread = new System.Threading.Thread(Listen);
             NetClient = new NetClient(config);
+           
             NetOutgoingMessage hail = NetClient.CreateMessage();
             hail.Write(SteamWorkshopFacepunch.inst.steamUser.Name);
             // client.RegisterReceivedCallback(new System.Threading.SendOrPostCallback(ReciveMessage), System.Threading.SynchronizationContext.Current);
