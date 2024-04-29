@@ -8,7 +8,8 @@ namespace PAMultiplayer.Packets
     {
         public override void ClientProcessPacket(NetIncomingMessage message)
         {
-            LobbyManager.instance.StartLevel();
+            if(StaticManager.IsLobby)
+                LobbyManager.instance.StartLevel();
         }
 
         public override void ServerProcessPacket(NetIncomingMessage message)

@@ -21,6 +21,8 @@ namespace PAMultiplayer
             {
                 if (StaticManager.ServerIp == "")
                 {
+                    StaticManager.IsMultiplayer = false;
+                    StaticManager.IsLobby = false;
                     Destroy(this);
                     return;
                 }
@@ -88,7 +90,6 @@ namespace PAMultiplayer
 
         void OnDisable()
         {
-            StaticManager.IsMultiplayer = false;
             if (StaticManager.IsMultiplayer && StaticManager.Client.NetClient.ConnectionStatus == NetConnectionStatus.Connected)
                 StaticManager.Client.SendDisconnect();
 

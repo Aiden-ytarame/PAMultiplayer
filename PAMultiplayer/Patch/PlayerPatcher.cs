@@ -1,7 +1,7 @@
 ﻿
+using System;
 using HarmonyLib;
 using UnityEngine;
-
 
 
 namespace PAMultiplayer.Patch
@@ -94,11 +94,12 @@ namespace PAMultiplayer.Patch
         [HarmonyPatch(nameof(GameManager2.Start))]
         [HarmonyPostfix]
         static void PostStart(ref GameManager2 __instance)
-        {       
+        {
+            if (__instance.IsEditor)
+                return;
+
             var netMan = new GameObject("Network");
             netMan.AddComponent<NetworkManager>();
         }
-
     }
-
 }
