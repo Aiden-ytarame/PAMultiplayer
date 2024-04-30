@@ -10,7 +10,7 @@ namespace PAMultiplayer.Patch
     //this logic has to be ReWritten. if the client doesnt recive confirmation that we're on a lobby. it will start without checking.
     //could fix by being Lobby by default, and on LocalPlayer packet call this code again in case of lobby being false on server.
     [HarmonyPatch(typeof(GameManager2))]
-    public class GM_Lobby_Patch
+    public class GmLobbyPatch
     {
         [HarmonyPatch(nameof(GameManager2.PlayGame))]
         [HarmonyPostfix]
@@ -36,7 +36,7 @@ namespace PAMultiplayer.Patch
         }
     }
     [HarmonyPatch(typeof(PauseMenu))]
-    public class Pause_Lobby_Patch
+    public class PauseLobbyPatch
     {
 
         [HarmonyPatch(nameof(PauseMenu.UnPause))]
@@ -55,11 +55,11 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         public static void Postfix(ref PauseMenu __instance)
         {
-            if (LobbyManager.instance && StaticManager.LobbyInfo.isEveryoneLoaded)
+            if (LobbyManager.Instance && StaticManager.LobbyInfo.isEveryoneLoaded)
             {  
                 StaticManager.IsLobby = false;
                 Object.Destroy(__instance.gameObject);
-                Object.Destroy(LobbyManager.instance);
+                Object.Destroy(LobbyManager.Instance);
                 VGPlayerManager.inst.RespawnPlayers();
 
                 if (StaticManager.IsHosting)
@@ -69,36 +69,36 @@ namespace PAMultiplayer.Patch
     }
     public class LobbyManager : MonoBehaviour
     {
-        public static LobbyManager instance { get; private set; }
+        public static LobbyManager Instance { get; private set; }
 
-        Dictionary<string, Transform> PlayerList = new Dictionary<string, Transform>();
-        Transform PlayersListGO;
-        PauseMenu pauseMenu;
-        UnityEngine.Object PlayerPrefab;
+        readonly Dictionary<string, Transform> _playerList = new Dictionary<string, Transform>();
+        Transform _playersListGo;
+        PauseMenu _pauseMenu;
+        UnityEngine.Object _playerPrefab;
 
         void Awake()
         {
-            instance = this;
+            Instance = this;
             StaticManager.IsLobby = true;
 
-            GameObject PlayerGUI = GameObject.Find("Player GUI");
+            GameObject playerGUI = GameObject.Find("Player GUI");
             var lobbyBundle = AssetBundle.LoadFromFile($"{Paths.PluginPath}\\PAMultiplayer\\Assets\\lobby");
 
             var lobbyPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]);
-            PlayerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]);
-            var lobbyObj = GameObject.Instantiate(lobbyPrefab, PlayerGUI.transform);
+            _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]);
+            var lobbyObj = GameObject.Instantiate(lobbyPrefab, playerGUI.transform);
             lobbyObj.name = "PAM_Lobby";
 
             //again, if I can cast UnityEngine.Object to GameObject please tell me :)
 
-            var LobbyGO = PlayerGUI.transform.Find("PAM_Lobby").gameObject;
-            pauseMenu = LobbyGO.GetComponent<PauseMenu>();
-            PlayersListGO = LobbyGO.transform.GetChild(1).GetChild(5); //eh I could do the Find() directly to the correct object.
+            var lobbyGo = playerGUI.transform.Find("PAM_Lobby").gameObject;
+            _pauseMenu = lobbyGo.GetComponent<PauseMenu>();
+            _playersListGo = lobbyGo.transform.GetChild(1).GetChild(5); //eh I could do the Find() directly to the correct object.
          
             if (!StaticManager.IsHosting)
             {
-                LobbyGO.transform.GetChild(1).GetChild(3).gameObject.SetActive(false);
-                LobbyGO.transform.GetChild(1).GetChild(2).gameObject.SetActive(true);
+                lobbyGo.transform.GetChild(1).GetChild(3).gameObject.SetActive(false);
+                lobbyGo.transform.GetChild(1).GetChild(2).gameObject.SetActive(true);
             }
 
             var Enu = StaticManager.LobbyInfo.PlayerDisplayName.GetEnumerator();
@@ -117,25 +117,25 @@ namespace PAMultiplayer.Patch
 
         public void AddPlayerToLobby(string player, string playerName)
         {
-            var playerEntry = GameObject.Instantiate(PlayerPrefab, PlayersListGO.transform);
+            var playerEntry = GameObject.Instantiate(_playerPrefab, _playersListGo.transform);
             playerEntry.name = $"PAM_Player {player}";
 
-            Transform entry = PlayersListGO.Find($"PAM_Player {player}");
+            Transform entry = _playersListGo.Find($"PAM_Player {player}");
             entry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
-            PlayerList.Add(player, entry);
+            _playerList.Add(player, entry);
         }
 
         public void RemovePlayerFromLobby(string player)
         {
-            Transform entry = PlayersListGO.transform.Find($"PAM_Player {player}");
+            Transform entry = _playersListGo.transform.Find($"PAM_Player {player}");
             Destroy(entry);
 
-            PlayerList.Remove(player);
+            _playerList.Remove(player);
         }
 
         public void SetPlayerLoaded(string player)
         {
-            Transform entry = PlayersListGO.Find($"PAM_Player {player}");
+            Transform entry = _playersListGo.Find($"PAM_Player {player}");
             if(entry)
                 entry.GetChild(1).GetComponent<TextMeshProUGUI>().text = "▓";           
         }
@@ -143,7 +143,7 @@ namespace PAMultiplayer.Patch
         public void StartLevel()
         {
             StaticManager.IsLobby = false;
-            pauseMenu.UnPause();
+            _pauseMenu.UnPause();
         }
     }
 }

@@ -19,9 +19,9 @@ namespace PAMultiplayer.Packets
 
             if(!isLobby)
             {
-                if (LobbyManager.instance)
+                if (LobbyManager.Instance)
                 {
-                    LobbyManager.instance.StartLevel();
+                    LobbyManager.Instance.StartLevel();
                 }
             }
         }

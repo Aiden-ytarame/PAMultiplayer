@@ -17,8 +17,8 @@ namespace PAMultiplayer.Packets
 
             StaticManager.LobbyInfo.AddPlayerInfo(Player, SteamName);
 
-            if (LobbyManager.instance)
-                LobbyManager.instance.AddPlayerToLobby(Player, SteamName);
+            if (LobbyManager.Instance)
+                LobbyManager.Instance.AddPlayerToLobby(Player, SteamName);
 
         
 
@@ -39,7 +39,7 @@ namespace PAMultiplayer.Packets
             if (!StaticManager.Players.ContainsKey(Player))
                 StaticManager.Players.Add(Player, NewData);
 
-            if (!SceneManager.inst.isLoading && !LobbyManager.instance)
+            if (!SceneManager.inst.isLoading && !LobbyManager.Instance)
                     VGPlayerManager.inst.RespawnPlayers();
 
             

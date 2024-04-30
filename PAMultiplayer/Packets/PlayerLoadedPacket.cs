@@ -11,9 +11,9 @@ namespace PAMultiplayer.Packets
         {
             Player = message.ReadString();
             StaticManager.LobbyInfo.SetLoaded(Player);
-            if(LobbyManager.instance)
+            if(LobbyManager.Instance)
             {
-                LobbyManager.instance.SetPlayerLoaded(Player);
+                LobbyManager.Instance.SetPlayerLoaded(Player);
             }
         }
 

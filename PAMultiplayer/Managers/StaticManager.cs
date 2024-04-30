@@ -67,9 +67,9 @@ namespace PAMultiplayer
             PlayerDisplayName.Remove(player);
             PlayerLoaded.Remove(player);
 
-            if (LobbyManager.instance)
+            if (LobbyManager.Instance)
             {
-                LobbyManager.instance.RemovePlayerFromLobby(player);
+                LobbyManager.Instance.RemovePlayerFromLobby(player);
             }
         }
 

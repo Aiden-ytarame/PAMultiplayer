@@ -41,14 +41,16 @@ namespace PAMultiplayer.Server
             Plugin.Instance.Log.LogWarning("StartedServer");
             while (true)
             {
+                if (NetServer.Connections.Count < 1)
+                {
+                    NetServer.Shutdown("No Connections");
+                    return;
+                }
                 NetIncomingMessage message;
                 while ((message = NetServer.ReadMessage()) != null)
                 {
-
+                        
                     List<NetConnection> all = NetServer.Connections;
-           //         if (all.Count == 0)
-               //         continue;
-
                     switch (message.MessageType)
                     {
                         case NetIncomingMessageType.StatusChanged:

@@ -19,7 +19,7 @@ namespace PAMultiplayer
             }
             else
             {
-                if (StaticManager.ServerIp == "")
+                if (StaticManager.ServerIp == "" || StaticManager.ServerIp == "localhost")
                 {
                     StaticManager.IsMultiplayer = false;
                     StaticManager.IsLobby = false;
@@ -28,10 +28,9 @@ namespace PAMultiplayer
                 }
             }
             Plugin.Instance.Log.LogError("Init Client");
+            StaticManager.IsLobby = true;
             StaticManager.IsMultiplayer = true;
             StaticManager.InitClient("PAServer");
-
-
         }
 
         void Update() //Not sure if FixedUpdate is better.
@@ -44,7 +43,7 @@ namespace PAMultiplayer
                 if (PosEnu.Current.Key == StaticManager.LocalPlayer)
                     continue;
 
-                if (StaticManager.Players[PosEnu.Current.Key].PlayerObject == null)
+                if (!StaticManager.Players[PosEnu.Current.Key].PlayerObject)
                     continue;
 
                 Rigidbody2D rb = StaticManager.Players[PosEnu.Current.Key].PlayerObject.Player_Rigidbody;
@@ -90,13 +89,12 @@ namespace PAMultiplayer
 
         void OnDisable()
         {
-            if (StaticManager.IsMultiplayer && StaticManager.Client.NetClient.ConnectionStatus == NetConnectionStatus.Connected)
-                StaticManager.Client.SendDisconnect();
-
             if (StaticManager.Server != null)
                 StaticManager.Server.NetServer.Shutdown("Ended");
-
-            StaticManager.IsLobby = true;
+            
+            if (StaticManager.Client != null && StaticManager.Client.NetClient != null && StaticManager.Client.NetClient.ConnectionStatus == NetConnectionStatus.Connected)
+                StaticManager.Client.SendDisconnect();
+            
             StaticManager.LobbyInfo = new LobbyInfo();
         }
 

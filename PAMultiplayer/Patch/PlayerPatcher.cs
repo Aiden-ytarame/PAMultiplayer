@@ -64,26 +64,26 @@ namespace PAMultiplayer.Patch
             if (StaticManager.Players == null)
                 return;
 
-              if (StaticManager.Players.ContainsKey(StaticManager.LocalPlayer))
-              {
-                  if (__instance.PlayerID == 0)
-                  {
-                      if (__instance.Player_Rigidbody != null)
-                      {
-                          if (!StaticManager.Players[StaticManager.LocalPlayer].PlayerObject)
-                              StaticManager.Players[StaticManager.LocalPlayer].PlayerObject = __instance;
-
-                          var V2 = __instance.Player_Rigidbody.transform.position;
-                          StaticManager.Client.SendPosition(V2.x, V2.y);
-                      }
-
-                  }
-              }
-              else
-              {
+            if (StaticManager.Players.ContainsKey(StaticManager.LocalPlayer))
+            {
                 if (__instance.PlayerID == 0)
-                      StaticManager.Players.Add(StaticManager.LocalPlayer, VGPlayerManager.Inst.players[0]);
-              }
+                {
+                    if (__instance.Player_Rigidbody)
+                    {
+                        if (!StaticManager.Players[StaticManager.LocalPlayer].PlayerObject)
+                            StaticManager.Players[StaticManager.LocalPlayer].PlayerObject = __instance;
+
+                        var V2 = __instance.Player_Rigidbody.transform.position;
+                        StaticManager.Client.SendPosition(V2.x, V2.y);
+                    }
+
+                }
+            }
+            else
+            {
+                if (__instance.PlayerID == 0)
+                    StaticManager.Players.Add(StaticManager.LocalPlayer, VGPlayerManager.Inst.players[0]);
+            }
 
         }
 
