@@ -17,17 +17,13 @@ There's problems with closing the server and disconnecting a player.
 
 Not regenerating health on level restart.
 
-Desync due to the time it takes to load a level(not 100% sure about this one, but the fix would be to trigger the level restart when the level starts not when it loads up)
-
 Desync issues when dying close to a checkpoint.
 
-Desync issues when taking damage before a player joins.
 
 ## **Plans**
 
 * Interpolate player position between packets. 
 * Sync random seed.
-* Make a lobby instead of current system.
   
 
 ## **Instalation**
@@ -60,5 +56,7 @@ Desync issues when taking damage before a player joins.
 * Type the Host Ip address, and port.
 * start any arcade level. (preferably the same as the host)
 * Wait for the host to start the level and have fun!
+
+I recommend that all players join before starting the lobby, joining mid level restarts the level for everyone but it desyncs the joining player slightly
 
 **NOTE: Pausing does not sync to other players, please do not pause unless you're gonna quit the level.**
