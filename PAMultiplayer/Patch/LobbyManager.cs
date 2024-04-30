@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using HarmonyLib;
 using System.Collections.Generic;
+using System.IO;
 using TMPro;
 using UnityEngine;
 
@@ -82,7 +83,7 @@ namespace PAMultiplayer.Patch
             StaticManager.IsLobby = true;
 
             GameObject playerGUI = GameObject.Find("Player GUI");
-            var lobbyBundle = AssetBundle.LoadFromFile($"{Paths.PluginPath}\\PAMultiplayer\\Assets\\lobby");
+            var lobbyBundle = AssetBundle.LoadFromFile(Directory.GetFiles(Paths.PluginPath, "lobby", SearchOption.AllDirectories)[0]);
 
             var lobbyPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]);
             _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]);

@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using System.IO;
+using HarmonyLib;
 using UnityEngine;
 using TMPro;
 using UnityEngine.Localization.PropertyVariants;
@@ -75,12 +76,12 @@ namespace PAMultiplayer.Patch
 
 
             //setup IP Input Text
-            var inputTextPrefabObj = AssetBundle.LoadFromFile($"{Paths.PluginPath}\\PAMultiplayer\\Assets\\inputtext");
+            var inputTextPrefabObj = AssetBundle.LoadFromFile(Directory.GetFiles(Paths.PluginPath, "inputtext", SearchOption.AllDirectories)[0]);
 
             var Prefab = inputTextPrefabObj.LoadAsset(inputTextPrefabObj.AllAssetNames()[0]);
             var NewInputText = GameObject.Instantiate(Prefab, transform);
             NewInputText.name = "PAM_IPText";
-
+            
             //yes, this sucks. I couldnt find a way to cast this to GameObject without doing this.
             //the asset bundle returns UnityEngine.Object
             //if you find a fix, please tell me.

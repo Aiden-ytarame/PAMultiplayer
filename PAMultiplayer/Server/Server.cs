@@ -41,11 +41,6 @@ namespace PAMultiplayer.Server
             Plugin.Instance.Log.LogWarning("StartedServer");
             while (true)
             {
-                if (NetServer.Connections.Count < 1)
-                {
-                    NetServer.Shutdown("No Connections");
-                    return;
-                }
                 NetIncomingMessage message;
                 while ((message = NetServer.ReadMessage()) != null)
                 {
@@ -74,10 +69,20 @@ namespace PAMultiplayer.Server
 
                                 NetOutgoingMessage outMessage = NetServer.CreateMessage();
                                 new PlayerDisconnectPacket() { Player = _player }.PacketToNetOutgoing(outMessage);
+                                if (NetServer.Connections.Count < 1)
+                                {
+                                    continue;
+                                }
+                                
                                 NetServer.SendMessage(outMessage, all, NetDeliveryMethod.ReliableOrdered, 0);
                             }
                             break;
                         case NetIncomingMessageType.Data:
+                            if (NetServer.Connections.Count < 1)
+                            {
+                                continue;
+                            }
+                            
                             string TypeStr = message.ReadString();
                             Type PacketType = Type.GetType(TypeStr);
 
