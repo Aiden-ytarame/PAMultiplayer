@@ -19,6 +19,7 @@ Not regenerating health on level restart.
 
 Desync issues when dying close to a checkpoint.
 
+This uses reflection to make a new instance of a packet for every packet recieved, thats not very good. a better approach would to hold an Processor for each packet, but the laziness got the best of me.
 
 ## **Plans**
 
