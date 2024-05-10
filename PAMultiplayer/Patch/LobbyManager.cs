@@ -10,12 +10,12 @@ namespace PAMultiplayer.Patch
 
     //this logic has to be ReWritten. if the client doesnt recive confirmation that we're on a lobby. it will start without checking.
     //could fix by being Lobby by default, and on LocalPlayer packet call this code again in case of lobby being false on server.
-    [HarmonyPatch(typeof(GameManager2))]
+    [HarmonyPatch(typeof(GameManager))]
     public class GmLobbyPatch
     {
-        [HarmonyPatch(nameof(GameManager2.PlayGame))]
+        [HarmonyPatch(nameof(GameManager.PlayGame))]
         [HarmonyPostfix]
-        public static void Postfix(ref GameManager2 __instance)
+        public static void Postfix(ref GameManager __instance)
         {
             if (StaticManager.IsMultiplayer && (StaticManager.IsLobby || StaticManager.IsHosting))
             {
@@ -25,7 +25,7 @@ namespace PAMultiplayer.Patch
             }         
         }
 
-        [HarmonyPatch(nameof(GameManager2.UnPause))]
+        [HarmonyPatch(nameof(GameManager.UnPause))]
         [HarmonyPrefix]
         public static bool Prefix()
         {
@@ -81,7 +81,7 @@ namespace PAMultiplayer.Patch
         {
             Instance = this;
             StaticManager.IsLobby = true;
-
+            VGCursor.ShowCursor();
             GameObject playerGUI = GameObject.Find("Player GUI");
             var lobbyBundle = AssetBundle.LoadFromFile(Directory.GetFiles(Paths.PluginPath, "lobby", SearchOption.AllDirectories)[0]);
 

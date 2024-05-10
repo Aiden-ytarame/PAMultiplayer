@@ -37,7 +37,6 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         static void AddUIToSettings()
         {
-
             if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "Menu")
                 return;
 

@@ -50,7 +50,7 @@ namespace PAMultiplayer.Patch
                 StaticManager.SpawnPending = false;
                 Plugin.Instance.Log.LogError(VGPlayerManager.Inst.players.Count);
                 VGPlayerManager.Inst.RespawnPlayers();
-                GameManager2.Inst.RewindToCheckpoint(0, true);
+                GameManager.Inst.RewindToCheckpoint(0, true);
             }
 
             if (StaticManager.DamageQueue.Contains(__instance.PlayerID))
@@ -88,12 +88,12 @@ namespace PAMultiplayer.Patch
         }
 
     }
-    [HarmonyPatch(typeof(GameManager2))]
+    [HarmonyPatch(typeof(GameManager))]
     public class AddNetManager
     {
-        [HarmonyPatch(nameof(GameManager2.Start))]
+        [HarmonyPatch(nameof(GameManager.Start))]
         [HarmonyPostfix]
-        static void PostStart(ref GameManager2 __instance)
+        static void PostStart(ref GameManager __instance)
         {
             if (__instance.IsEditor)
                 return;
