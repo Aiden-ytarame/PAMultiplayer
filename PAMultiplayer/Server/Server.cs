@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lidgren.Network;
 using PAMultiplayer;
+using PAMultiplayer.Managers;
 using PAMultiplayer.Packets;
 using PAMultiplayer.Patch;
 using Rewired;
@@ -31,14 +32,14 @@ namespace PAMultiplayer.Server
             NetServer = new NetServer(config);
             NetServer.Start();
             if(NetServer.UPnP.ForwardPort(int.Parse(StaticManager.ServerPort), "GameStuff"))          
-                Plugin.Instance.Log.LogWarning("UPnP SUCCESS");       
+                Plugin.Inst.Log.LogWarning("UPnP SUCCESS");       
 
             thread = new Thread(Listen);
             thread.Start();
         }
         void Listen()
         {
-            Plugin.Instance.Log.LogWarning("StartedServer");
+            Plugin.Inst.Log.LogWarning("StartedServer");
             while (true)
             {
                 NetIncomingMessage message;
@@ -56,7 +57,7 @@ namespace PAMultiplayer.Server
                                 if (status == NetConnectionStatus.Connected)
                             {
                                 var player = NetUtility.ToHexString(message.SenderConnection.RemoteUniqueIdentifier);
-                                Plugin.Instance.Log.LogWarning($"Player Connected: {player}");
+                                Plugin.Inst.Log.LogWarning($"Player Connected: {player}");
                                 Players.Add(player);
 
                                 SendLocalPlayerPacket(message.SenderConnection, player);
@@ -92,8 +93,8 @@ namespace PAMultiplayer.Server
                             }
                             catch (Exception ex)
                             {
-                                Plugin.Instance.Log.LogError($"SERVER: Unhandled packet. {TypeStr}");
-                                Plugin.Instance.Log.LogError(ex);
+                                Plugin.Inst.Log.LogError($"SERVER: Unhandled packet. {TypeStr}");
+                                Plugin.Inst.Log.LogError(ex);
                             }
                             break;
 
@@ -103,10 +104,10 @@ namespace PAMultiplayer.Server
                         case NetIncomingMessageType.VerboseDebugMessage:
                             string text = message.ReadString();
 
-                            Plugin.Instance.Log.LogWarning($"DEBYUG: {text}");
+                            Plugin.Inst.Log.LogWarning($"DEBYUG: {text}");
                             break;
                         default:
-                            Plugin.Instance.Log.LogWarning($"Unhandled type: {message.MessageType} {message.LengthBytes} bytes {message.DeliveryMethod}|{message.SequenceChannel}");
+                            Plugin.Inst.Log.LogWarning($"Unhandled type: {message.MessageType} {message.LengthBytes} bytes {message.DeliveryMethod}|{message.SequenceChannel}");
                             break;
                     }
                     NetServer.Recycle(message);
@@ -116,7 +117,7 @@ namespace PAMultiplayer.Server
 
         public void SpawnPlayers(List<NetConnection> netConnections, NetConnection Local, string _player)
         {
-            Plugin.Instance.Log.LogWarning($"SERVER: Player Spawned: {_player}");
+            Plugin.Inst.Log.LogWarning($"SERVER: Player Spawned: {_player}");
             string steamName = null;
 
             //spawn all player on newly connected player
@@ -134,7 +135,7 @@ namespace PAMultiplayer.Server
 
         public void SendLocalPlayerPacket(NetConnection Local, string _player)
         {
-            Plugin.Instance.Log.LogWarning($"New Player: {_player}");
+            Plugin.Inst.Log.LogWarning($"New Player: {_player}");
             NetOutgoingMessage message = NetServer.CreateMessage();
             new LocalPlayerPacket() { Player = _player, isLobby = StaticManager.IsLobby }.PacketToNetOutgoing(message);
             NetServer.SendMessage(message, Local, NetDeliveryMethod.ReliableOrdered, 0);

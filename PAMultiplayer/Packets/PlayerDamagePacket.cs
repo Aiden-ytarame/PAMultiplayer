@@ -1,4 +1,5 @@
 ﻿using Lidgren.Network;
+using PAMultiplayer.Managers;
 
 namespace PAMultiplayer.Packets
 {
@@ -12,9 +13,8 @@ namespace PAMultiplayer.Packets
 
             if (Player == StaticManager.LocalPlayer)
                 return;
-            Plugin.Instance.Log.LogWarning($"LocalPlayerId{StaticManager.Players[StaticManager.LocalPlayer].PlayerID}");
-            Plugin.Instance.Log.LogWarning($"LocalControllerId{StaticManager.Players[StaticManager.LocalPlayer].ControllerID}");
-            Plugin.Instance.Log.LogWarning($"Damaging player {Player}");
+            
+            Plugin.Inst.Log.LogWarning($"Damaging player {Player}");
            
             VGPlayer player = StaticManager.Players[Player].PlayerObject;
             if (player == null || !player.gameObject)

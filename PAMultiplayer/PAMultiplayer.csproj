@@ -25,6 +25,10 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>lib\Assembly-CSharp.dll</HintPath>
     </Reference>
+			  
+    <Reference Include="Facepunch.Steamworks.Win64">
+      <HintPath>lib\Facepunch.Steamworks.Win64.dll</HintPath>
+    </Reference>
     <Reference Include="Il2Cppmscorlib">
       <HintPath>lib\Il2Cppmscorlib.dll</HintPath>
     </Reference>
@@ -53,4 +57,33 @@
       <HintPath>lib\UnityEngine.UI.dll</HintPath>
     </Reference>
   </ItemGroup>
+	
+    <ItemGroup>
+      <Compile Remove="Packets\PingPacket.cs" />
+      <Compile Remove="Packets\LocalPlayerPacket.cs" />
+      <Compile Remove="Packets\PlayerDamagePacket.cs" />
+      <Compile Remove="Packets\PlayerDisconnectPacket.cs" />
+      <Compile Remove="Packets\PlayerLoadedPacket.cs" />
+      <Compile Remove="Packets\PlayerPositionPacket.cs" />
+      <Compile Remove="Packets\PlayerRotationPacket.cs" />
+      <Compile Remove="Packets\PlayerSpawnPacket .cs" />
+      <Compile Remove="Packets\StartLevelPacket.cs" />
+      <Compile Remove="Packets\**" />
+      <Compile Remove="Client\Client.cs" />
+      <Compile Remove="Client\**" />
+      <Compile Remove="Server\**" />
+      <Compile Remove="Packet\PlayerPositionPacket.cs" />
+    </ItemGroup>
+	
+    <ItemGroup>
+      <EmbeddedResource Remove="Packets\**" />
+      <EmbeddedResource Remove="Client\**" />
+      <EmbeddedResource Remove="Server\**" />
+    </ItemGroup>
+	
+    <ItemGroup>
+      <None Remove="Packets\**" />
+      <None Remove="Client\**" />
+      <None Remove="Server\**" />
+    </ItemGroup>
 </Project>

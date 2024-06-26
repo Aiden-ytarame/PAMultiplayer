@@ -1,4 +1,5 @@
 ﻿using Lidgren.Network;
+using PAMultiplayer.Managers;
 using PAMultiplayer.Patch;
 
 
@@ -13,7 +14,7 @@ namespace PAMultiplayer.Packets
             Player = message.ReadString();
             isLobby = message.ReadBoolean();
 
-            Plugin.Instance.Log.LogWarning($"Local ID is {Player}");
+            Plugin.Inst.Log.LogWarning($"Local ID is {Player}");
             StaticManager.LocalPlayer = Player;
             StaticManager.IsLobby = isLobby;
 
@@ -33,7 +34,7 @@ namespace PAMultiplayer.Packets
 
         protected override void PacketToNetOut(NetOutgoingMessage message)
         {
-            Plugin.Instance.Log.LogWarning($"Local is {Player}");
+            Plugin.Inst.Log.LogWarning($"Local is {Player}");
             message.Write(Player);
             message.Write(StaticManager.IsLobby);
         }

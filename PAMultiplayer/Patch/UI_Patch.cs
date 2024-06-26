@@ -4,6 +4,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.Localization.PropertyVariants;
 using BepInEx;
+using PAMultiplayer.Managers;
 
 
 namespace PAMultiplayer.Patch
@@ -48,9 +49,6 @@ namespace PAMultiplayer.Patch
     //Events dont seem to work very well on Il2Cpp, so this is the workaround
     public class UpdateIpAndPort : MonoBehaviour
     {
-        TMP_InputField IP;
-        TMP_InputField PORT;
-
         void OnEnable()
         {
             GameObject serverToggle = transform.Find("Toggle Camera Jiggle").gameObject; //get one of the settings Gameobject to duplicate.
@@ -58,63 +56,32 @@ namespace PAMultiplayer.Patch
 
 
             //Add new  category title.
-            GameObject newSetting = GameObject.Instantiate(MPTitle, transform);
+            GameObject newSetting = Instantiate(MPTitle, transform);
             newSetting.GetComponentInChildren<TextMeshProUGUI>().text = "<b>MULTIPLAYER</b> - Change multiplayer mod settings";
             newSetting.GetComponent<UI_Text>().graphics = null;
 
-            //make the Host Server Toggle.
-            newSetting = GameObject.Instantiate(serverToggle, transform);
+            //make the Multiplayer Toggle.
+            newSetting = Instantiate(serverToggle, transform);
             var toggle = newSetting.GetComponent<UI_Toggle>();
+            toggle.DataID = "online_isMultiplayer";
+            toggle.subGraphics = null;
+            toggle.Value = DataManager.inst.GetSettingBool("online_isMultiplayer");
+            
+            //make the Host Server Toggle.
+            newSetting = Instantiate(serverToggle, transform);
+            toggle = newSetting.GetComponent<UI_Toggle>();
             toggle.DataID = "online_host";
             toggle.subGraphics = null;
             toggle.Value = DataManager.inst.GetSettingBool("online_host");
-
-
-            GameObject.Destroy(newSetting.GetComponentInChildren<GameObjectLocalizer>()); //is this still necessary?
-            newSetting.GetComponentInChildren<TextMeshProUGUI>().text = "Host Server";
-
-
-            //setup IP Input Text
-            var inputTextPrefabObj = AssetBundle.LoadFromFile(Directory.GetFiles(Paths.PluginPath, "inputtext", SearchOption.AllDirectories)[0]);
-
-            var Prefab = inputTextPrefabObj.LoadAsset(inputTextPrefabObj.AllAssetNames()[0]);
-            var NewInputText = GameObject.Instantiate(Prefab, transform);
-            NewInputText.name = "PAM_IPText";
             
-            //yes, this sucks. I couldnt find a way to cast this to GameObject without doing this.
-            //the asset bundle returns UnityEngine.Object
-            //if you find a fix, please tell me.
-
-            GameObject inputField = transform.Find("PAM_IPText").gameObject;
-            inputField.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "Server IP";
-            inputField.transform.GetChild(1).GetComponent<TMP_InputField>().text = "";
-
-            IP = inputField.transform.GetChild(1).GetComponent<TMP_InputField>();
-            IP.text = StaticManager.ServerIp;
-
-
-            //Server Port
-            NewInputText = GameObject.Instantiate(Prefab, transform);
-            NewInputText.name = "PAM_PortText";
-
-
-            inputField = transform.Find("PAM_PortText").gameObject;
-            inputField.transform.GetChild(0).GetComponent<TextMeshProUGUI>().text = "Port";
-            inputField.transform.GetChild(1).GetComponent<TMP_InputField>().text = "";
-
-            PORT = inputField.transform.GetChild(1).GetComponent<TMP_InputField>();
-            PORT.text = StaticManager.ServerPort;
-
-            inputTextPrefabObj.Unload(false);
+            Destroy(newSetting.GetComponentInChildren<GameObjectLocalizer>()); //is this still necessary?
+            newSetting.GetComponentInChildren<TextMeshProUGUI>().text = "Host Server";
+            
         }
         void OnDisable()
         {
-            //OnValueChange event from text mesh pro didnt work for some reason, so this is what I did.
-            StaticManager.ServerIp = IP.text;
-            StaticManager.ServerPort = PORT.text;
-
-            if (DataManager.inst.GetSettingBool("online_host"))
-                StaticManager.ServerIp = "localhost"; //does LocalHost work here?
+             StaticManager.IsHosting = DataManager.inst.GetSettingBool("online_host");
+             StaticManager.IsMultiplayer = DataManager.inst.GetSettingBool("online_isMultiplayer");
         }
     }
 

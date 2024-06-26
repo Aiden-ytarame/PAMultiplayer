@@ -1,45 +1,40 @@
-﻿using Lidgren.Network;
+﻿using System;
+using Steamworks;
 using UnityEngine;
 
-namespace PAMultiplayer
+namespace PAMultiplayer.Managers
 {
     public class NetworkManager : MonoBehaviour
     {
         void OnEnable()
         {
-            StaticManager.IsHosting = DataManager.inst.GetSettingBool("online_host");
+            try
+            {
+                if (!SteamClient.IsValid || !SteamClient.IsLoggedOn)
+                    SteamClient.Init(440310);
+            }
+            catch (Exception e)
+            {
+                Plugin.Inst.Log.LogError(e);
+            }
+            
             if (StaticManager.IsHosting)
             {
+                Plugin.Inst.Log.LogError("Init Server");
+                SteamLobbyManager.Inst.CreateLobby();
 
-                if (StaticManager.Server == null || StaticManager.Server.NetServer.Status == NetPeerStatus.NotRunning)
-                {
-                    Plugin.Instance.Log.LogError("Init Server");
-                    StaticManager.Server = new Server.Server();
-                }
             }
-            else
-            {
-                if (StaticManager.ServerIp == "" || StaticManager.ServerIp == "localhost")
-                {
-                    StaticManager.IsMultiplayer = false;
-                    StaticManager.IsLobby = false;
-                    Destroy(this);
-                    return;
-                }
-            }
-            Plugin.Instance.Log.LogError("Init Client");
-            StaticManager.IsLobby = true;
-            StaticManager.IsMultiplayer = true;
-            StaticManager.InitClient("PAServer");
         }
 
+        //everything here will go into its own steam manager later on
+        //this is all testing
+      
         void Update() //Not sure if FixedUpdate is better.
         {
             var PosEnu = StaticManager.PlayerPositions.GetEnumerator();
 
             while (PosEnu.MoveNext())
             {
-
                 if (PosEnu.Current.Key == StaticManager.LocalPlayer)
                     continue;
 
@@ -53,35 +48,6 @@ namespace PAMultiplayer
 
                 rb.position = PosEnu.Current.Value;
 
-                continue;
-
-                //Ignore everything under this, its broken as shit
-                /////////////////////////////////////////////////////////////
-                Vector2 newPos = PosEnu.Current.Value;
-                float Magnetude = (newPos - rb.position).sqrMagnitude;
-                if (Magnetude > 15) // no idea if these numbers are correct
-                {
-                    Plugin.Instance.Log.LogWarning("Corrected Pos");
-                    rb.position = newPos;
-                    continue;
-                }
-
-                if (Magnetude < 0.3)
-                {
-                    if (rb.position != newPos)
-                        rb.position = Vector2.Lerp(rb.position, newPos, 20 * Time.fixedDeltaTime);
-
-                    return;
-                }
-
-                if (Magnetude < 5)
-                {
-                    rb.position = Vector2.LerpUnclamped(rb.position, newPos, 85 * Time.fixedDeltaTime);
-                    return;
-                }
-
-                rb.position = Vector2.LerpUnclamped(rb.position, newPos, 20 * Time.fixedDeltaTime);
-
             }
 
             PosEnu.Dispose();
@@ -89,11 +55,15 @@ namespace PAMultiplayer
 
         void OnDisable()
         {
-            if (StaticManager.Server != null)
-                StaticManager.Server.NetServer.Shutdown("Ended");
-            
-            if (StaticManager.Client != null && StaticManager.Client.NetClient != null && StaticManager.Client.NetClient.ConnectionStatus == NetConnectionStatus.Connected)
-                StaticManager.Client.SendDisconnect();
+            try
+            {
+                SteamManager.Inst.EndServer();
+                SteamManager.Inst.EndClient();
+            }
+            catch(Exception e)
+            {
+                Plugin.Inst.Log.LogError(e);
+            }
             
             StaticManager.LobbyInfo = new LobbyInfo();
         }

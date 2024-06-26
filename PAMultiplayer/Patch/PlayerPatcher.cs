@@ -1,6 +1,8 @@
 ﻿
 using System;
 using HarmonyLib;
+using PAMultiplayer.Managers;
+using Steamworks;
 using UnityEngine;
 
 
@@ -14,18 +16,15 @@ namespace PAMultiplayer.Patch
         [HarmonyPrefix]
         static bool Hit_Pre(ref VGPlayer __instance)
         {
-            if (!__instance.CanTakeDamage) //weird, I thought this was checked in the function!
-                return false;
-
-            if (__instance.PlayerID == 0) 
+            if (__instance.PlayerID == 0 && __instance.CanTakeDamage) 
             {
                 if (StaticManager.IsMultiplayer)
                 {
-                    StaticManager.Client.SendDamage();
+                    SteamManager.Inst.Client.SendDamage();
                 }
                 return true;
             }
-            if (StaticManager.DamageQueue.Contains(__instance.PlayerID))
+            if (StaticManager.DamageQueue.Count != 0 && StaticManager.DamageQueue.Contains(__instance.PlayerID))
             {
                 StaticManager.DamageQueue.Remove(__instance.PlayerID);
                 return true;
@@ -39,42 +38,24 @@ namespace PAMultiplayer.Patch
         [HarmonyPrefix]
         static void Update_Pre(ref VGPlayer __instance)
         {   
-            if (!StaticManager.IsMultiplayer)
-            {
-                return;
-            }
-           
-            /*
-            if (StaticManager.SpawnPending)
-            {
-                StaticManager.SpawnPending = false;
-                Plugin.Instance.Log.LogError(VGPlayerManager.Inst.players.Count);
-                VGPlayerManager.Inst.RespawnPlayers();
-                GameManager.Inst.RewindToCheckpoint(0, true);
-            }
-
-            if (StaticManager.DamageQueue.Contains(__instance.PlayerID))
-            {
-                Plugin.Instance.Log.LogWarning("CONTAINS");
-                __instance.PlayerHit();
-            }
-            */
+            if (!StaticManager.IsMultiplayer) return;
+            
         
 
             if (StaticManager.Players == null)
                 return;
 
-            if (StaticManager.Players.ContainsKey(StaticManager.LocalPlayer))
+            if (StaticManager.Players.TryGetValue(StaticManager.LocalPlayer, out var player))
             {
                 if (__instance.PlayerID == 0)
                 {
                     if (__instance.Player_Rigidbody)
                     {
-                        if (!StaticManager.Players[StaticManager.LocalPlayer].PlayerObject)
-                            StaticManager.Players[StaticManager.LocalPlayer].PlayerObject = __instance;
+                        if (!player.PlayerObject)
+                            player.PlayerObject = __instance;
 
                         var V2 = __instance.Player_Rigidbody.transform.position;
-                        StaticManager.Client.SendPosition(V2.x, V2.y);
+                        SteamManager.Inst.Client.SendPosition(V2);
                     }
 
                 }
@@ -98,6 +79,8 @@ namespace PAMultiplayer.Patch
             if (__instance.IsEditor)
                 return;
 
+            if (!StaticManager.IsMultiplayer) return;
+            
             var netMan = new GameObject("Network");
             netMan.AddComponent<NetworkManager>();
         }

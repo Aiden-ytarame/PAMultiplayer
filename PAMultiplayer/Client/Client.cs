@@ -4,6 +4,7 @@ using System;
 using UnityEngine;
 using System.Linq;
 using PAMultiplayer;
+using PAMultiplayer.Managers;
 
 namespace PAMultiplayer.Client
 {
@@ -26,7 +27,7 @@ namespace PAMultiplayer.Client
             thread.Start();
             NetClient.Start();
             NetClient.Connect(Server, Port, hail);
-            Plugin.Instance.Log.LogError(SteamWorkshopFacepunch.inst.steamUser.Name);
+            Plugin.Inst.Log.LogError(SteamWorkshopFacepunch.inst.steamUser.Name);
         }
 
         public void Listen()
@@ -60,8 +61,8 @@ namespace PAMultiplayer.Client
                             }
                             catch(Exception ex)
                             {
-                                Plugin.Instance.Log.LogError("CLIENT: Unhandled packet Recieved");
-                                Plugin.Instance.Log.LogError(ex);
+                                Plugin.Inst.Log.LogError("CLIENT: Unhandled packet Recieved");
+                                Plugin.Inst.Log.LogError(ex);
                             }
                             break;
 
@@ -70,10 +71,10 @@ namespace PAMultiplayer.Client
                         case NetIncomingMessageType.WarningMessage:
                         case NetIncomingMessageType.VerboseDebugMessage:
                             string text = message.ReadString();
-                            Plugin.Instance.Log.LogWarning(text);
+                            Plugin.Inst.Log.LogWarning(text);
                             break;
                         default:
-                            Plugin.Instance.Log.LogError($"Unhandled type: { message.MessageType} { message.LengthBytes} bytes { message.DeliveryMethod}|{ message.SequenceChannel}");
+                            Plugin.Inst.Log.LogError($"Unhandled type: { message.MessageType} { message.LengthBytes} bytes { message.DeliveryMethod}|{ message.SequenceChannel}");
                             break;
                     }
                     NetClient.Recycle(message);
@@ -110,7 +111,7 @@ namespace PAMultiplayer.Client
         }
         public void SendDamage()
         {
-            Plugin.Instance.Log.LogWarning($"Damaged player {StaticManager.LocalPlayer}");
+            Plugin.Inst.Log.LogWarning($"Damaged player {StaticManager.LocalPlayer}");
             NetOutgoingMessage message = NetClient.CreateMessage();
             new PlayerDamagePacket() { Player = StaticManager.LocalPlayer }.PacketToNetOutgoing(message);
             

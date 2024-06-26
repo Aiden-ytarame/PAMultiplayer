@@ -1,4 +1,5 @@
 ﻿using Lidgren.Network;
+using PAMultiplayer.Managers;
 using PAMultiplayer.Patch;
 using Rewired;
 
@@ -12,20 +13,16 @@ namespace PAMultiplayer.Packets
         {
             Player = message.ReadString();
             SteamName = message.ReadString();
-            Plugin.Instance.Log.LogWarning($"attempting player spawn on player {Player}");
+            Plugin.Inst.Log.LogWarning($"attempting player spawn on player {Player}");
 
-
-            StaticManager.LobbyInfo.AddPlayerInfo(Player, SteamName);
-
-            if (LobbyManager.Instance)
-                LobbyManager.Instance.AddPlayerToLobby(Player, SteamName);
+            
 
         
 
             if (Player == StaticManager.LocalPlayer)
                 return;
 
-            Plugin.Instance.Log.LogWarning($"Spawning player {Player}");
+            Plugin.Inst.Log.LogWarning($"Spawning player {Player}");
 
             VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
             NewData.PlayerID = StaticManager.Players.Count + 1; //by the way, this can cause problems

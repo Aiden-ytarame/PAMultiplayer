@@ -1,14 +1,15 @@
-﻿using BepInEx;
-using HarmonyLib;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
+using BepInEx;
+using HarmonyLib;
+using Steamworks;
 using TMPro;
 using UnityEngine;
 
-namespace PAMultiplayer.Patch
+namespace PAMultiplayer.Managers
 {
 
-    //this logic has to be ReWritten. if the client doesnt recive confirmation that we're on a lobby. it will start without checking.
+    //this logic has to be ReWritten. if the client doesn't recieve confirmation that we're on a lobby. it will start without checking.
     //could fix by being Lobby by default, and on LocalPlayer packet call this code again in case of lobby being false on server.
     [HarmonyPatch(typeof(GameManager))]
     public class GmLobbyPatch
@@ -21,7 +22,7 @@ namespace PAMultiplayer.Patch
             {
                 __instance.Pause(false);
                 __instance.gameObject.AddComponent<LobbyManager>();
-                StaticManager.Client.SendLoaded();
+                SteamManager.Inst.Client.SendLoaded();
             }         
         }
 
@@ -29,7 +30,7 @@ namespace PAMultiplayer.Patch
         [HarmonyPrefix]
         public static bool Prefix()
         {
-            if (!StaticManager.IsLobby || (StaticManager.IsHosting && StaticManager.LobbyInfo.isEveryoneLoaded))
+            if (!StaticManager.IsLobby || (StaticManager.IsHosting && StaticManager.LobbyInfo.IsEveryoneLoaded))
             {
                 return true;
             }
@@ -44,7 +45,7 @@ namespace PAMultiplayer.Patch
         [HarmonyPrefix]
         public static bool Prefix()
         {
-            if (!StaticManager.IsLobby || (StaticManager.IsHosting && StaticManager.LobbyInfo.isEveryoneLoaded))
+            if (!StaticManager.IsLobby || (StaticManager.IsHosting && StaticManager.LobbyInfo.IsEveryoneLoaded))
             {
                 return true;
             }
@@ -56,7 +57,7 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         public static void Postfix(ref PauseMenu __instance)
         {
-            if (LobbyManager.Instance && StaticManager.LobbyInfo.isEveryoneLoaded)
+            if (LobbyManager.Instance && StaticManager.LobbyInfo.IsEveryoneLoaded)
             {  
                 StaticManager.IsLobby = false;
                 Object.Destroy(__instance.gameObject);
@@ -64,7 +65,7 @@ namespace PAMultiplayer.Patch
                 VGPlayerManager.inst.RespawnPlayers();
 
                 if (StaticManager.IsHosting)
-                    StaticManager.Server.SendStartLevel();
+                    SteamManager.Inst.Server.StartLevel();
             }
         }
     }
@@ -72,10 +73,10 @@ namespace PAMultiplayer.Patch
     {
         public static LobbyManager Instance { get; private set; }
 
-        readonly Dictionary<string, Transform> _playerList = new Dictionary<string, Transform>();
+        readonly Dictionary<SteamId, Transform> _playerList = new Dictionary<SteamId, Transform>();
         Transform _playersListGo;
         PauseMenu _pauseMenu;
-        UnityEngine.Object _playerPrefab;
+        Object _playerPrefab;
 
         void Awake()
         {
@@ -102,21 +103,21 @@ namespace PAMultiplayer.Patch
                 lobbyGo.transform.GetChild(1).GetChild(2).gameObject.SetActive(true);
             }
 
-            var Enu = StaticManager.LobbyInfo.PlayerDisplayName.GetEnumerator();
+            var Enu = SteamLobbyManager.Inst.CurrentLobby.Members.GetEnumerator();
             while(Enu.MoveNext())
             {
-                AddPlayerToLobby(Enu.Current.Key, Enu.Current.Value);
+                AddPlayerToLobby(Enu.Current.Id, Enu.Current.Name);
                 //this is weird, this means that when you join a lobby
                 //every player that joined before you will get shown as Loaded, even if theyre not. 
                 //its easier than send if the player loaded or not to every new client.
-                SetPlayerLoaded(Enu.Current.Key); 
+                SetPlayerLoaded(Enu.Current.Id); 
             }
             Enu.Dispose();
 
             lobbyBundle.Unload(false);
         }
 
-        public void AddPlayerToLobby(string player, string playerName)
+        public void AddPlayerToLobby(SteamId player, string playerName)
         {
             var playerEntry = GameObject.Instantiate(_playerPrefab, _playersListGo.transform);
             playerEntry.name = $"PAM_Player {player}";
@@ -126,7 +127,7 @@ namespace PAMultiplayer.Patch
             _playerList.Add(player, entry);
         }
 
-        public void RemovePlayerFromLobby(string player)
+        public void RemovePlayerFromLobby(SteamId player)
         {
             Transform entry = _playersListGo.transform.Find($"PAM_Player {player}");
             Destroy(entry);
@@ -134,7 +135,7 @@ namespace PAMultiplayer.Patch
             _playerList.Remove(player);
         }
 
-        public void SetPlayerLoaded(string player)
+        public void SetPlayerLoaded(SteamId player)
         {
             Transform entry = _playersListGo.Find($"PAM_Player {player}");
             if(entry)

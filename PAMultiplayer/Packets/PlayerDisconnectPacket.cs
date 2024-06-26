@@ -1,4 +1,5 @@
 ﻿using Lidgren.Network;
+using PAMultiplayer.Managers;
 
 namespace PAMultiplayer.Packets
 {
@@ -10,7 +11,7 @@ namespace PAMultiplayer.Packets
         {
             Player = message.ReadString();
 
-            Plugin.Instance.Log.LogWarning($"Removing player {Player}");
+            Plugin.Inst.Log.LogWarning($"Removing player {Player}");
 
             var player = StaticManager.Players[Player].PlayerObject;
             player.PlayerDeath();
