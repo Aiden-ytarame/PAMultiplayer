@@ -67,6 +67,8 @@ namespace PAMultiplayer.Patch
             toggle.subGraphics = null;
             toggle.Value = DataManager.inst.GetSettingBool("online_isMultiplayer");
             
+            Destroy(newSetting.GetComponentInChildren<GameObjectLocalizer>()); //is this still necessary?
+            newSetting.GetComponentInChildren<TextMeshProUGUI>().text = "Multiplayer";
             //make the Host Server Toggle.
             newSetting = Instantiate(serverToggle, transform);
             toggle = newSetting.GetComponent<UI_Toggle>();

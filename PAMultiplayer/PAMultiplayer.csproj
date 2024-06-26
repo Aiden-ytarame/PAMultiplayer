@@ -32,9 +32,6 @@
     <Reference Include="Il2Cppmscorlib">
       <HintPath>lib\Il2Cppmscorlib.dll</HintPath>
     </Reference>
-    <Reference Include="Lidgren.Network">
-      <HintPath>lib\Lidgren.Network.dll</HintPath>
-    </Reference>
     <Reference Include="Rewired_Core">
       <HintPath>lib\Rewired_Core.dll</HintPath>
     </Reference>
