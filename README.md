@@ -30,9 +30,9 @@ There's problems with closing the server and disconnecting a player.
 ### Host
 
 * Select any arcade level
-* enable the "Multiplayer" Modifier
-* start the level
-* invite friends through steam
+* Enable the "Multiplayer" Modifier
+* Start the level
+* Invite friends through steam
 * Wait for players to join your lobby and load the level (the indicator beside their names tell you when they've loaded)
 * Click start log and have fun!
 
