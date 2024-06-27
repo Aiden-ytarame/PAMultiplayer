@@ -1,8 +1,5 @@
-﻿
-using System;
-using HarmonyLib;
+﻿using HarmonyLib;
 using PAMultiplayer.Managers;
-using Steamworks;
 using UnityEngine;
 
 
@@ -11,61 +8,49 @@ namespace PAMultiplayer.Patch
     [HarmonyPatch(typeof(VGPlayer))]
     public class Player_UpdatePatch
     {
+        [HarmonyPatch(nameof(VGPlayer.OnChildTriggerEnter))]
+        [HarmonyPatch(nameof(VGPlayer.OnChildTriggerStay))]
+        [HarmonyPrefix]
+        static bool PreCollision(ref VGPlayer __instance)
+        {
+            if (StaticManager.IsMultiplayer && __instance.PlayerID != 0)
+                return false;
+            
+            return true; //only collide if is local player
+        }
 
         [HarmonyPatch(nameof(VGPlayer.PlayerHit))]
         [HarmonyPrefix]
-        static bool Hit_Pre(ref VGPlayer __instance)
+        static void Hit_Pre(ref VGPlayer __instance)
         {
-            if (__instance.PlayerID == 0 && __instance.CanTakeDamage) 
+            if (StaticManager.IsMultiplayer && __instance.PlayerID == 0) 
             {
-                if (StaticManager.IsMultiplayer)
-                {
-                    SteamManager.Inst.Client.SendDamage();
-                }
-                return true;
+                SteamManager.Inst.Client.SendDamage();
             }
-            if (StaticManager.DamageQueue.Count != 0 && StaticManager.DamageQueue.Contains(__instance.PlayerID))
-            {
-                StaticManager.DamageQueue.Remove(__instance.PlayerID);
-                return true;
-            }
-            return false;
-
         }
 
 
         [HarmonyPatch(nameof(VGPlayer.Update))]
         [HarmonyPrefix]
         static void Update_Pre(ref VGPlayer __instance)
-        {   
-            if (!StaticManager.IsMultiplayer) return;
+        {
+            if (!StaticManager.IsMultiplayer || __instance.PlayerID != 0) return;
             
-        
-
-            if (StaticManager.Players == null)
-                return;
-
             if (StaticManager.Players.TryGetValue(StaticManager.LocalPlayer, out var player))
             {
-                if (__instance.PlayerID == 0)
+                if (__instance.Player_Rigidbody)
                 {
-                    if (__instance.Player_Rigidbody)
-                    {
-                        if (!player.PlayerObject)
-                            player.PlayerObject = __instance;
+                   // if (!player.PlayerObject)
+                    //    player.PlayerObject = __instance;
 
-                        var V2 = __instance.Player_Rigidbody.transform.position;
-                        SteamManager.Inst.Client.SendPosition(V2);
-                    }
-
+                    var V2 = __instance.Player_Rigidbody.transform.position;
+                    SteamManager.Inst.Client?.SendPosition(V2);
                 }
             }
             else
             {
-                if (__instance.PlayerID == 0)
-                    StaticManager.Players.Add(StaticManager.LocalPlayer, VGPlayerManager.Inst.players[0]);
+                StaticManager.Players.Add(StaticManager.LocalPlayer, VGPlayerManager.Inst.players[0]);
             }
-
         }
 
     }

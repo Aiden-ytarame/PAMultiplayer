@@ -9,7 +9,9 @@ public enum PacketType : short
     Position,
     Rotation,
     Start,
-    Spawn
+    Spawn,
+    Checkpoint,
+    Rewind
 }
 
 public struct NetPacket

@@ -1,6 +1,4 @@
-using System;
-using System.Threading.Tasks;
-using PAMultiplayer.Patch;
+using System.Collections.Generic;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -11,7 +9,7 @@ public class SteamLobbyManager : MonoBehaviour
 {
     public Lobby CurrentLobby;
     public static SteamLobbyManager Inst;
-    
+    private Dictionary<SteamId, bool> _loadedPlayers = new();
     public void CreateLobby()
     {
         SteamManager.Inst.StartServer();
@@ -57,13 +55,13 @@ public class SteamLobbyManager : MonoBehaviour
     private void OnLobbyMemberDisconnected(Lobby lobby, Friend friend)
     {
         Plugin.Logger.LogInfo($"Member Joined : [{friend.Name}]");
-        StaticManager.LobbyInfo.RemovePlayerFromLoadList(friend.Id);
+        RemovePlayerFromLoadList(friend.Id);
 
         if (LobbyManager.Instance)
             LobbyManager.Instance.RemovePlayerFromLobby(friend.Id);
         
         var player = StaticManager.Players[friend.Id].PlayerObject;
-        player.PlayerDeath();
+        player?.PlayerDeath();
         VGPlayerManager.Inst.players.Remove(StaticManager.Players[friend.Id]);
         StaticManager.PlayerPositions.Remove(friend.Id);
         StaticManager.Players.Remove(friend.Id);
@@ -73,7 +71,7 @@ public class SteamLobbyManager : MonoBehaviour
     {
         Plugin.Logger.LogInfo($"Member Joined : [{friend.Name}]");
         
-        StaticManager.LobbyInfo.AddPlayerToLoadList(friend.Id);
+        AddPlayerToLoadList(friend.Id);
 
         if (LobbyManager.Instance)
             LobbyManager.Instance.AddPlayerToLobby(friend.Id, friend.Name);
@@ -104,6 +102,8 @@ public class SteamLobbyManager : MonoBehaviour
 
         if (StaticManager.LocalPlayer == lobby.Owner.Id) return; //if not host
 
+        //this could be moved to somewhere before even joining
+        //but if it works, we keep
         bool match = false;
         ulong id = ulong.Parse(lobby.GetData("LevelId"));
         foreach (var level in ArcadeLevelDataManager.Inst.ArcadeLevels)
@@ -134,6 +134,7 @@ public class SteamLobbyManager : MonoBehaviour
         if (result != Result.OK)
         {
             Plugin.Logger.LogError($"Failed to create lobby : Result [{result}]");
+            SceneManager.Inst.LoadScene("menu");
             return;
         }
         Plugin.Logger.LogInfo($"Lobby Created!");
@@ -146,6 +147,23 @@ public class SteamLobbyManager : MonoBehaviour
 
     public void StartGame()
     {
+        SteamManager.Inst.Server.LatestCheckpoint = 0;
         CurrentLobby.SetJoinable(false);
     }
+    
+    public void AddPlayerToLoadList(SteamId playerSteamId)
+    {
+        _loadedPlayers.TryAdd(playerSteamId, false);
+    }
+
+    public void RemovePlayerFromLoadList(SteamId player)
+    {
+        _loadedPlayers.Remove(player);
+    }
+
+    public void SetLoaded(SteamId playerSteamId)
+    {
+        _loadedPlayers[playerSteamId] = true;
+    }
+    public bool IsEveryoneLoaded => !_loadedPlayers.ContainsValue(false);
 }

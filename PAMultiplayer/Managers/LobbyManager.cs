@@ -5,12 +5,10 @@ using HarmonyLib;
 using Steamworks;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace PAMultiplayer.Managers
 {
-
-    //this logic has to be ReWritten. if the client doesn't recieve confirmation that we're on a lobby. it will start without checking.
-    //could fix by being Lobby by default, and on LocalPlayer packet call this code again in case of lobby being false on server.
     [HarmonyPatch(typeof(GameManager))]
     public class GmLobbyPatch
     {
@@ -18,11 +16,11 @@ namespace PAMultiplayer.Managers
         [HarmonyPostfix]
         public static void Postfix(ref GameManager __instance)
         {
-            if (StaticManager.IsMultiplayer && (StaticManager.IsLobby || StaticManager.IsHosting))
+            if (StaticManager.IsMultiplayer && StaticManager.IsHosting)
             {
                 __instance.Pause(false);
                 __instance.gameObject.AddComponent<LobbyManager>();
-                SteamManager.Inst.Client.SendLoaded();
+                SteamManager.Inst.Client?.SendLoaded();
             }         
         }
 
@@ -30,7 +28,8 @@ namespace PAMultiplayer.Managers
         [HarmonyPrefix]
         public static bool Prefix()
         {
-            if (!StaticManager.IsLobby || (StaticManager.IsHosting && StaticManager.LobbyInfo.IsEveryoneLoaded))
+            return true;
+            if (StaticManager.IsHosting && SteamLobbyManager.Inst.IsEveryoneLoaded)
             {
                 return true;
             }
@@ -40,12 +39,11 @@ namespace PAMultiplayer.Managers
     [HarmonyPatch(typeof(PauseMenu))]
     public class PauseLobbyPatch
     {
-
         [HarmonyPatch(nameof(PauseMenu.UnPause))]
         [HarmonyPrefix]
         public static bool Prefix()
         {
-            if (!StaticManager.IsLobby || (StaticManager.IsHosting && StaticManager.LobbyInfo.IsEveryoneLoaded))
+            if (LobbyManager.Instance.shouldStart || (StaticManager.IsHosting && SteamLobbyManager.Inst.IsEveryoneLoaded))
             {
                 return true;
             }
@@ -57,10 +55,9 @@ namespace PAMultiplayer.Managers
         [HarmonyPostfix]
         public static void Postfix(ref PauseMenu __instance)
         {
-            if (LobbyManager.Instance && StaticManager.LobbyInfo.IsEveryoneLoaded)
+            if (LobbyManager.Instance && SteamLobbyManager.Inst.IsEveryoneLoaded)
             {  
-                StaticManager.IsLobby = false;
-                Object.Destroy(__instance.gameObject);
+                Object.Destroy(__instance.gameObject); //why did I do this?
                 Object.Destroy(LobbyManager.Instance);
                 VGPlayerManager.inst.RespawnPlayers();
 
@@ -72,8 +69,9 @@ namespace PAMultiplayer.Managers
     public class LobbyManager : MonoBehaviour
     {
         public static LobbyManager Instance { get; private set; }
-
-        readonly Dictionary<SteamId, Transform> _playerList = new Dictionary<SteamId, Transform>();
+        public bool shouldStart = false;
+        readonly Dictionary<SteamId, Transform> _playerList = new();
+        Dictionary<SteamId, bool> _loadedPlayers = new();
         Transform _playersListGo;
         PauseMenu _pauseMenu;
         Object _playerPrefab;
@@ -81,7 +79,6 @@ namespace PAMultiplayer.Managers
         void Awake()
         {
             Instance = this;
-            StaticManager.IsLobby = true;
             VGCursor.ShowCursor();
             GameObject playerGUI = GameObject.Find("Player GUI");
             var lobbyBundle = AssetBundle.LoadFromFile(Directory.GetFiles(Paths.PluginPath, "lobby", SearchOption.AllDirectories)[0]);
@@ -129,22 +126,20 @@ namespace PAMultiplayer.Managers
 
         public void RemovePlayerFromLobby(SteamId player)
         {
-            Transform entry = _playersListGo.transform.Find($"PAM_Player {player}");
-            Destroy(entry);
-
+            Destroy(_playerList[player]);
             _playerList.Remove(player);
         }
 
         public void SetPlayerLoaded(SteamId player)
         {
-            Transform entry = _playersListGo.Find($"PAM_Player {player}");
+            Transform entry = _playerList[player];
             if(entry)
                 entry.GetChild(1).GetComponent<TextMeshProUGUI>().text = "▓";           
         }
 
         public void StartLevel()
         {
-            StaticManager.IsLobby = false;
+            shouldStart = true;
             _pauseMenu.UnPause();
         }
     }

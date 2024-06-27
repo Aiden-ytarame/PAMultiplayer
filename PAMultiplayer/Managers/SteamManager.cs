@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using BepInEx.Unity.IL2CPP.Utils;
+using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using PAMultiplayer.Packet;
-using PAMultiplayer.Patch;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -62,6 +63,10 @@ public class SteamManager : MonoBehaviour
     private void OnGameLobbyJoinRequested(Lobby lobby, SteamId steamId)
     {
         InitSteamClient();
+        DataManager.inst.UpdateSettingBool("online_host", false);
+        DataManager.inst.UpdateSettingBool("online_isMultiplayer", true);
+        StaticManager.IsHosting = false;
+        StaticManager.IsMultiplayer = true;
         Plugin.Logger.LogInfo($"Joining friend's lobby owned by [{lobby.Owner.Id}]");
         SteamMatchmaking.JoinLobbyAsync(steamId);
     }
@@ -82,7 +87,10 @@ public class SteamManager : MonoBehaviour
 
     public void EndClient()
     {
-        Client?.Close();
+        Client.Close();
+        SteamLobbyManager.Inst.CurrentLobby.Leave();
+        StaticManager.IsMultiplayer = false;
+        StaticManager.IsHosting = false;
     }
     public void StartServer()
     {
@@ -91,7 +99,8 @@ public class SteamManager : MonoBehaviour
 
     public void EndServer()
     {
-        Server?.Close();
+        Server.Close();
+        Server.Socket.Close();
     }
     
 }
@@ -99,8 +108,8 @@ public class SteamManager : MonoBehaviour
 //I assume it means Vitamin Games
 public class VGSocketManager : SocketManager
 {
-    private byte[] _payloadCache = new byte[4096];
-
+    public int LatestCheckpoint = 0;
+    
     public override void OnConnecting(Connection connection, ConnectionInfo data)
     {
         base.OnConnecting(connection, data);
@@ -141,7 +150,7 @@ public class VGSocketManager : SocketManager
                 SendMessages(Connected, data, size);
                 break;
             case PacketType.Position:
-                SendMessages(Connected, data, size);
+                SendMessages(Connected, data, size, SendType.Unreliable);
                 break;
             case PacketType.Rotation:
                 break;
@@ -177,21 +186,21 @@ public class VGSocketManager : SocketManager
     {
         SendMessages(Connected, new NetPacket(){SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Start});
     }
+
+    public void SendCheckpointHit(int index)
+    {
+        LatestCheckpoint = index;
+        SendMessages(Connected, new NetPacket(){SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Checkpoint, Data = index});
+    }
+
+    public void SendRewindToCheckpoint(int index)
+    {
+        SendMessages(Connected, new NetPacket(){SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Rewind, Data = index});
+    }
 }
 
 public class VGConnectionManager : ConnectionManager
 {
-    private byte[] _payloadCache = new byte[4096];
-
-    private void EnsurePayloadCapacity(int size)
-    {
-        if (_payloadCache.Length >= size)
-            return;
-
-        _payloadCache = new byte[Math.Max(_payloadCache.Length * 2, size)];
-    }
-
-
     public override void OnConnecting(ConnectionInfo info)
     {
         Plugin.Logger.LogInfo($"Client: Connecting with Steam user {info.Identity.SteamId}.");
@@ -199,7 +208,7 @@ public class VGConnectionManager : ConnectionManager
 
     public override void OnConnected(ConnectionInfo info)
     {
-     
+        Plugin.Logger.LogInfo($"Client: Connected with Steam user {info.Identity.SteamId}.");
     }
 
     public override void OnDisconnected(ConnectionInfo info)
@@ -209,16 +218,17 @@ public class VGConnectionManager : ConnectionManager
         Plugin.Logger.LogInfo($"Client: Disconnected Steam user {info.Identity.SteamId}.");
     }
 
-    void SendPacket(NetPacket packet)
+    void SendPacket(NetPacket packet, SendType sendType = SendType.Reliable)
     {
         int length = Marshal.SizeOf(packet);
-       
-        IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
-        Marshal.StructureToPtr(packet, unmanagedPointer, false);
+        IntPtr unmanagedData = Marshal.AllocHGlobal(length);
         
-        Connection.SendMessage(unmanagedPointer, length);
+        Marshal.StructureToPtr(packet, unmanagedData, false);
         
-        Marshal.FreeHGlobal(unmanagedPointer);
+        Connection.SendMessage(unmanagedData, length, sendType);
+        
+        Marshal.FreeHGlobal(unmanagedData);
+        
     }
     public override void OnMessage(IntPtr data, int size, long messageNum, long recvTime, int channel)
     {
@@ -227,26 +237,24 @@ public class VGConnectionManager : ConnectionManager
         switch (packet.PacketType)
         {
             case PacketType.Damage:
-                if (packet.SenderId == StaticManager.LocalPlayer)
-                    return;
-            
                 Plugin.Inst.Log.LogWarning($"Damaging player {packet.SenderId}");
+                
+                if (packet.SenderId == StaticManager.LocalPlayer) return;
            
                 VGPlayer player = StaticManager.Players[packet.SenderId].PlayerObject;
-                if (player == null || !player.gameObject)
-                    return;
-
-                StaticManager.DamageQueue.Add(StaticManager.Players[packet.SenderId].PlayerID);
+                if (!player) return;
+                player.Health = (int)packet.Data;
                 player.PlayerHit();
                 break;
             
             case PacketType.Start:
-                if(StaticManager.IsLobby)
-                    LobbyManager.Instance.StartLevel();
+                LobbyManager.Instance.StartLevel();
                 break;
             
             case PacketType.Loaded:
-                StaticManager.LobbyInfo.SetLoaded(packet.SenderId);
+                if (packet.SenderId == StaticManager.LocalPlayer) return; 
+                
+                SteamLobbyManager.Inst.SetLoaded(packet.SenderId);
                 if(LobbyManager.Instance)
                 {
                     LobbyManager.Instance.SetPlayerLoaded(packet.SenderId);
@@ -279,7 +287,26 @@ public class VGConnectionManager : ConnectionManager
             
             case PacketType.Spawn:
                 break;
-            
+            case PacketType.Checkpoint:
+                Plugin.Logger.LogInfo($"Checkpoint [{(int)packet.Data}] Received");
+                GameManager.Inst.playingCheckpointAnimation = true;
+                VGPlayerManager.Inst.RespawnPlayers();
+                
+                GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation((int)packet.Data));
+                break;
+            case PacketType.Rewind:
+                Plugin.Logger.LogInfo($"Rewind to Checkpoint [{(int)packet.Data}] Received");
+                VGPlayerManager.Inst.players.ForEach(new Action<VGPlayerManager.VGPlayerData>(x =>
+                {
+                    if (!x.PlayerObject.isDead)
+                    {
+                        x.PlayerObject.Health = 1;
+                        x.PlayerObject.PlayerHit();
+                        //forcekill() fucked up the game.
+                    }
+                }));
+                GameManager.Inst.RewindToCheckpoint((int)packet.Data);
+                break;
         }
     }
 
@@ -297,8 +324,9 @@ public class VGConnectionManager : ConnectionManager
     {
         var packet = new NetPacket()
         {
-            PacketType = PacketType.Position,
+            PacketType = PacketType.Damage,
             SenderId = StaticManager.LocalPlayer,
+            Data = VGPlayerManager.Inst.players[0].PlayerObject.Health
         };
         SendPacket(packet);
     }
@@ -310,7 +338,7 @@ public class VGConnectionManager : ConnectionManager
             SenderId = StaticManager.LocalPlayer,
             Data = pos
         };
-        SendPacket(packet);
+        SendPacket(packet, SendType.Unreliable);
     }
 }
 

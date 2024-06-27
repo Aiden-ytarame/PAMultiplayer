@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace PAMultiplayer.Managers
 {
+    //this class has to be remade or removed
     public class NetworkManager : MonoBehaviour
     {
         void OnEnable()
@@ -18,11 +19,10 @@ namespace PAMultiplayer.Managers
                 Plugin.Inst.Log.LogError(e);
             }
             
-            if (StaticManager.IsHosting)
+            if (StaticManager.IsHosting && !GameManager.Inst.IsEditor)
             {
                 Plugin.Inst.Log.LogError("Init Server");
                 SteamLobbyManager.Inst.CreateLobby();
-
             }
         }
 
@@ -64,8 +64,6 @@ namespace PAMultiplayer.Managers
             {
                 Plugin.Inst.Log.LogError(e);
             }
-            
-            StaticManager.LobbyInfo = new LobbyInfo();
         }
 
     }
