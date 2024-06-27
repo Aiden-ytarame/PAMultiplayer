@@ -63,8 +63,6 @@ public class SteamManager : MonoBehaviour
     private void OnGameLobbyJoinRequested(Lobby lobby, SteamId steamId)
     {
         InitSteamClient();
-        DataManager.inst.UpdateSettingBool("online_host", false);
-        DataManager.inst.UpdateSettingBool("online_isMultiplayer", true);
         StaticManager.IsHosting = false;
         StaticManager.IsMultiplayer = true;
         Plugin.Logger.LogInfo($"Joining friend's lobby owned by [{lobby.Owner.Id}]");

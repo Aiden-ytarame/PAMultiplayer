@@ -96,7 +96,7 @@ public class SteamLobbyManager : MonoBehaviour
     }
 
     private void OnLobbyEntered(Lobby lobby)
-    { 
+    {
         Plugin.Logger.LogInfo($"Joined Lobby hosted by [{lobby.Owner.Id}]");
         SteamManager.Inst.StartClient(lobby.Owner.Id);
 
@@ -104,30 +104,21 @@ public class SteamLobbyManager : MonoBehaviour
 
         //this could be moved to somewhere before even joining
         //but if it works, we keep
-        bool match = false;
         ulong id = ulong.Parse(lobby.GetData("LevelId"));
         foreach (var level in ArcadeLevelDataManager.Inst.ArcadeLevels)
         {
             if (level.SteamInfo.ItemID.Value == id)
             {
-                match = true;
                 SaveManager.Inst.CurrentArcadeLevel = level;
-                break;
+                SceneManager.Inst.LoadScene("ArcadeLevel");
+                return;
             }
         }
+        Plugin.Logger.LogError($"You did not have the lobby's level downloaded!");
+        lobby.Leave();
 
-        if (!match)
-        {
-            Plugin.Logger.LogError($"You did not have the lobby's level downloaded!");
-            lobby.Leave();
-            return;
-        }
-        
-        SceneManager.Inst.LoadScene("ArcadeLevel");
-        
-        //handle lobby screen
     }
-    
+
 
     private void OnLobbyCreated(Result result, Lobby lobby)
     {
