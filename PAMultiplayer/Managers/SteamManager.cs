@@ -27,10 +27,14 @@ public class SteamManager : MonoBehaviour
         SteamMatchmaking.OnLobbyInvite += OnLobbyInvite;
         SteamFriends.OnGameLobbyJoinRequested += OnGameLobbyJoinRequested;
     }
-    
-    private void Update()
+
+    private void Start()
     {
         InitSteamClient();
+    }
+
+    private void Update()
+    {
         if(Server != null)
             Server.Receive();
         if(Client != null)
