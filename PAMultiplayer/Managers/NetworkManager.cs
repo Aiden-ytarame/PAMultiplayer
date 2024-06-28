@@ -9,16 +9,6 @@ namespace PAMultiplayer.Managers
     {
         void OnEnable()
         {
-            try
-            {
-                if (!SteamClient.IsValid || !SteamClient.IsLoggedOn)
-                    SteamClient.Init(440310);
-            }
-            catch (Exception e)
-            {
-                Plugin.Inst.Log.LogError(e);
-            }
-            
             if (StaticManager.IsHosting && !GameManager.Inst.IsEditor)
             {
                 Plugin.Inst.Log.LogError("Init Server");

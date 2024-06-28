@@ -5,7 +5,7 @@ using HarmonyLib;
 using Steamworks;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Serialization;
+using Object = UnityEngine.Object;
 
 namespace PAMultiplayer.Managers
 {
@@ -16,26 +16,19 @@ namespace PAMultiplayer.Managers
         [HarmonyPostfix]
         public static void Postfix(ref GameManager __instance)
         {
-            if (StaticManager.IsMultiplayer && StaticManager.IsHosting)
+            if (StaticManager.IsMultiplayer)
             {
                 __instance.Pause(false);
                 __instance.gameObject.AddComponent<LobbyManager>();
-                SteamManager.Inst.Client?.SendLoaded();
-            }         
-        }
-
-        [HarmonyPatch(nameof(GameManager.UnPause))]
-        [HarmonyPrefix]
-        public static bool Prefix()
-        {
-            return true;
-            if (StaticManager.IsHosting && SteamLobbyManager.Inst.IsEveryoneLoaded)
-            {
-                return true;
+                
+                if(StaticManager.IsHosting)
+                    SteamManager.Inst.Server?.SendHostLoaded();
+                else 
+                    SteamManager.Inst.Client?.SendLoaded();
             }
-            return false;
         }
     }
+
     [HarmonyPatch(typeof(PauseMenu))]
     public class PauseLobbyPatch
     {
@@ -57,7 +50,6 @@ namespace PAMultiplayer.Managers
         {
             if (LobbyManager.Instance && SteamLobbyManager.Inst.IsEveryoneLoaded)
             {  
-                Object.Destroy(__instance.gameObject); //why did I do this?
                 Object.Destroy(LobbyManager.Instance);
                 VGPlayerManager.inst.RespawnPlayers();
 
@@ -71,9 +63,8 @@ namespace PAMultiplayer.Managers
         public static LobbyManager Instance { get; private set; }
         public bool shouldStart = false;
         readonly Dictionary<SteamId, Transform> _playerList = new();
-        Dictionary<SteamId, bool> _loadedPlayers = new();
         Transform _playersListGo;
-        PauseMenu _pauseMenu;
+        public PauseMenu pauseMenu;
         Object _playerPrefab;
 
         void Awake()
@@ -85,28 +76,45 @@ namespace PAMultiplayer.Managers
 
             var lobbyPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]);
             _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]);
-            var lobbyObj = GameObject.Instantiate(lobbyPrefab, playerGUI.transform);
+            var lobbyObj = Instantiate(lobbyPrefab, playerGUI.transform);
             lobbyObj.name = "PAM_Lobby";
 
             //again, if I can cast UnityEngine.Object to GameObject please tell me :)
 
             var lobbyGo = playerGUI.transform.Find("PAM_Lobby").gameObject;
-            _pauseMenu = lobbyGo.GetComponent<PauseMenu>();
-            _playersListGo = lobbyGo.transform.GetChild(1).GetChild(5); //eh I could do the Find() directly to the correct object.
-         
-            if (!StaticManager.IsHosting)
-            {
-                lobbyGo.transform.GetChild(1).GetChild(3).gameObject.SetActive(false);
-                lobbyGo.transform.GetChild(1).GetChild(2).gameObject.SetActive(true);
-            }
+            pauseMenu = lobbyGo.GetComponent<PauseMenu>();
 
+            _playersListGo = lobbyGo.transform.Find("Content/PlayerList");
+         
+            if (StaticManager.IsHosting)
+            {
+                if (!SteamLobbyManager.Inst.InLobby)
+                {
+                    lobbyGo.transform.Find("Content/buttons").gameObject.SetActive(false);
+                    lobbyGo.transform.Find("Content/LobbyFailed").gameObject.SetActive(true);
+                    lobbyGo.transform.Find("Content/LobbyFailed").GetComponentInChildren<MultiElementButton>().onClick.AddListener(new System.Action(
+                        () =>
+                        {
+                            Plugin.Logger.LogDebug("RETRY");
+                            StaticManager.IsReloadingLobby = true;
+                            SceneManager.Inst.LoadScene("Arcade Level");
+                        }));
+                }
+            }
+            else //this is for the Waiting for host Message
+            {
+                lobbyGo.transform.Find("Content/buttons").gameObject.SetActive(false);
+                lobbyGo.transform.Find("Content/WaitingForHost").gameObject.SetActive(true);
+            }
+            
             var Enu = SteamLobbyManager.Inst.CurrentLobby.Members.GetEnumerator();
             while(Enu.MoveNext())
             {
                 AddPlayerToLobby(Enu.Current.Id, Enu.Current.Name);
-                //this is weird, this means that when you join a lobby
-                //every player that joined before you will get shown as Loaded, even if theyre not. 
-                //its easier than send if the player loaded or not to every new client.
+                
+                //this means that when you join a lobby
+                //every player that joined before you will get shown as Loaded, even if they're not. 
+                //it's easier than send if the player loaded or not to every new client.
                 SetPlayerLoaded(Enu.Current.Id); 
             }
             Enu.Dispose();
@@ -114,9 +122,17 @@ namespace PAMultiplayer.Managers
             lobbyBundle.Unload(false);
         }
 
+        private void OnDestroy()
+        {
+            if (_playersListGo)
+            {
+                Destroy(_playersListGo.parent.parent.gameObject);
+            }
+        }
+
         public void AddPlayerToLobby(SteamId player, string playerName)
         {
-            var playerEntry = GameObject.Instantiate(_playerPrefab, _playersListGo.transform);
+            var playerEntry = Instantiate(_playerPrefab, _playersListGo.transform);
             playerEntry.name = $"PAM_Player {player}";
 
             Transform entry = _playersListGo.Find($"PAM_Player {player}");
@@ -140,7 +156,7 @@ namespace PAMultiplayer.Managers
         public void StartLevel()
         {
             shouldStart = true;
-            _pauseMenu.UnPause();
+            pauseMenu.UnPause();
         }
     }
 }

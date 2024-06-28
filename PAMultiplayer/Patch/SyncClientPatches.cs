@@ -50,11 +50,12 @@ public static class RewindHandler
     static void ReplaceDeathAction(ref Il2CppSystem.Action<Vector3> _deathAction)
     {
         if (!StaticManager.IsMultiplayer) return;
+   
         if (StaticManager.IsHosting)
         {
             _deathAction = new Action<Vector3>(x =>
             {
-                SteamManager.Inst.Server.SendRewindToCheckpoint(SteamManager.Inst.Server.LatestCheckpoint);
+                SteamManager.Inst.Server?.SendRewindToCheckpoint();
             });
         }
         else

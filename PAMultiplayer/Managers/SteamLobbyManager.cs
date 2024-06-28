@@ -8,6 +8,7 @@ namespace PAMultiplayer.Managers;
 public class SteamLobbyManager : MonoBehaviour
 {
     public Lobby CurrentLobby;
+    public bool InLobby { get; private set; }
     public static SteamLobbyManager Inst;
     private Dictionary<SteamId, bool> _loadedPlayers = new();
     public void CreateLobby()
@@ -97,11 +98,15 @@ public class SteamLobbyManager : MonoBehaviour
 
     private void OnLobbyEntered(Lobby lobby)
     {
-        Plugin.Logger.LogInfo($"Joined Lobby hosted by [{lobby.Owner.Id}]");
-        SteamManager.Inst.StartClient(lobby.Owner.Id);
-
-        if (StaticManager.LocalPlayer == lobby.Owner.Id) return; //if not host
-
+        Plugin.Logger.LogInfo($"Joined Lobby hosted by [{lobby.GetData("HostId")}]");
+        Plugin.Logger.LogInfo($"Lobby Id In Lobby [{lobby.Id}]");
+        Plugin.Logger.LogInfo($"Owner Id [{lobby.Owner.Id}]");
+        Plugin.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
+        Plugin.Logger.LogInfo($"Host Id from Data [{lobby.GetData("HostId")}]");
+        InLobby = true;
+        if (StaticManager.LocalPlayer == lobby.Owner.Id) return; 
+        
+        SteamManager.Inst.StartClient(StaticManager.HostId);
         //this could be moved to somewhere before even joining
         //but if it works, we keep
         ulong id = ulong.Parse(lobby.GetData("LevelId"));
@@ -110,12 +115,14 @@ public class SteamLobbyManager : MonoBehaviour
             if (level.SteamInfo.ItemID.Value == id)
             {
                 SaveManager.Inst.CurrentArcadeLevel = level;
-                SceneManager.Inst.LoadScene("ArcadeLevel");
+                Plugin.Logger.LogInfo($"Level id [{lobby.GetData("LevelId")}]");
+                SceneManager.Inst.LoadScene("Arcade Level");
                 return;
             }
         }
         Plugin.Logger.LogError($"You did not have the lobby's level downloaded!");
         lobby.Leave();
+        InLobby = false;
 
     }
 
@@ -125,21 +132,36 @@ public class SteamLobbyManager : MonoBehaviour
         if (result != Result.OK)
         {
             Plugin.Logger.LogError($"Failed to create lobby : Result [{result}]");
-            SceneManager.Inst.LoadScene("menu");
+            lobby.Leave();
+            SceneManager.Inst.LoadScene("Menu");
             return;
         }
         Plugin.Logger.LogInfo($"Lobby Created!");
+        Plugin.Logger.LogInfo(lobby.Owner.Id);
+        Plugin.Logger.LogInfo(lobby.Id);
+        
         CurrentLobby = lobby;
         lobby.SetPublic();
         lobby.SetJoinable(true);
         
         lobby.SetData("LevelId", SaveManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
+        lobby.SetData("HostId", SteamClient.SteamId.ToString()); //owner.id is broken as shit
+        if (!LobbyManager.Instance.pauseMenu) return; //this is for the "Lobby failed to be created" message
+        
+        LobbyManager.Instance.pauseMenu.transform.Find("Content/buttons").gameObject.SetActive(true);
+        LobbyManager.Instance.pauseMenu.transform.Find("Content/LobbyFailed").gameObject.SetActive(false);
     }
 
     public void StartGame()
     {
-        SteamManager.Inst.Server.LatestCheckpoint = 0;
         CurrentLobby.SetJoinable(false);
+    }
+
+    public void LeaveLobby()
+    {
+        if(InLobby)
+            CurrentLobby.Leave();
+        InLobby = false;
     }
     
     public void AddPlayerToLoadList(SteamId playerSteamId)

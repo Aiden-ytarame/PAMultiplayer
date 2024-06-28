@@ -25,11 +25,14 @@ namespace PAMultiplayer.Patch
         {
             if (StaticManager.IsMultiplayer && __instance.PlayerID == 0) 
             {
-                SteamManager.Inst.Client.SendDamage();
+                if(StaticManager.IsHosting)
+                    SteamManager.Inst.Server.SendHostDamage();
+                else 
+                    SteamManager.Inst.Client.SendDamage();
+                
             }
         }
-
-
+        
         [HarmonyPatch(nameof(VGPlayer.Update))]
         [HarmonyPrefix]
         static void Update_Pre(ref VGPlayer __instance)
@@ -40,11 +43,11 @@ namespace PAMultiplayer.Patch
             {
                 if (__instance.Player_Rigidbody)
                 {
-                   // if (!player.PlayerObject)
-                    //    player.PlayerObject = __instance;
-
                     var V2 = __instance.Player_Rigidbody.transform.position;
-                    SteamManager.Inst.Client?.SendPosition(V2);
+                    if(StaticManager.IsHosting)
+                        SteamManager.Inst.Server.SendHostPosition(V2);
+                    else
+                        SteamManager.Inst.Client.SendPosition(V2);
                 }
             }
             else
