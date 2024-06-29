@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using HarmonyLib;
 using PAMultiplayer.Packet;
 using Steamworks;
 using Steamworks.Data;
@@ -17,8 +16,8 @@ public class VGSocketManager : SocketManager
 
     public override void OnConnecting(Connection connection, ConnectionInfo data)
     {
-        base.OnConnecting(connection, data);
-        Plugin.Inst.Log.LogInfo($"Server: {data.Identity.SteamId} is connecting");
+        var result = connection.Accept();
+        Plugin.Inst.Log.LogInfo($"Server: {data.Identity.SteamId} is connecting || Result [{result}]");
     }
 
     public override void OnConnected(Connection connection, ConnectionInfo data)
@@ -43,7 +42,8 @@ public class VGSocketManager : SocketManager
     void GetDataFromPacket(IntPtr data, int size)
     {
         // Read PacketType
-        NetPacket packet = Marshal.PtrToStructure<NetPacket>(data);
+        var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
+        NetPacket packet = Marshal.PtrToStructure<NetPacket>(dataHandle.AddrOfPinnedObject());
 
         switch (packet.PacketType)
         {
@@ -66,6 +66,7 @@ public class VGSocketManager : SocketManager
             case PacketType.Spawn:
                 break;
         }
+        dataHandle.Free();
     }
 
     void SendMessages(List<Connection> connections, IntPtr ptr, int size, SendType sendType = SendType.Reliable)
@@ -160,17 +161,19 @@ public class VGConnectionManager : ConnectionManager
 {
     public override void OnConnecting(ConnectionInfo info)
     {
-        Plugin.Logger.LogInfo($"Client: IsSteamId {info.Identity.IsSteamId}.");
+        base.OnConnecting(info);
         Plugin.Logger.LogInfo($"Client: Connecting with Steam user {info.Identity.SteamId}.");
     }
 
     public override void OnConnected(ConnectionInfo info)
     {
+        base.OnConnected(info);
         Plugin.Logger.LogInfo($"Client: Connected with Steam user {info.Identity.SteamId}.");
     }
 
     public override void OnDisconnected(ConnectionInfo info)
     {
+        base.OnDisconnected(info);
         Plugin.Logger.LogInfo($"Client: Disconnected Steam user {info.Identity.SteamId}.");
     }
 

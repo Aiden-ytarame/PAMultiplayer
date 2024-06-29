@@ -45,9 +45,9 @@ namespace PAMultiplayer.Patch
                 {
                     var V2 = __instance.Player_Rigidbody.transform.position;
                     if(StaticManager.IsHosting)
-                        SteamManager.Inst.Server.SendHostPosition(V2);
+                        SteamManager.Inst.Server?.SendHostPosition(V2);
                     else
-                        SteamManager.Inst.Client.SendPosition(V2);
+                        SteamManager.Inst.Client?.SendPosition(V2);
                 }
             }
             else

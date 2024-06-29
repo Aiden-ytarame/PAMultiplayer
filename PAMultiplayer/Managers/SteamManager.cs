@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using HarmonyLib;
-using PAMultiplayer.Packet;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -14,6 +11,8 @@ public class SteamManager : MonoBehaviour
     public static SteamManager Inst { get; private set; }
     public VGSocketManager Server;
     public VGConnectionManager Client;
+
+    private int _joinAttempts;
     private void Awake()
     {
         if (Inst)
@@ -27,18 +26,9 @@ public class SteamManager : MonoBehaviour
         SteamMatchmaking.OnLobbyInvite += OnLobbyInvite;
         SteamFriends.OnGameLobbyJoinRequested += OnGameLobbyJoinRequested;
     }
-
-    private void Start()
-    {
-        InitSteamClient();
-    }
-
     private void Update()
     {
-        if(Server != null)
-            Server.Receive();
-        if(Client != null)
-            Client.Receive();
+        InitSteamClient();
     }
 
     private void OnApplicationQuit()
@@ -46,33 +36,65 @@ public class SteamManager : MonoBehaviour
         EndServer();
         EndClient();
     }
-    void InitSteamClient()
+    public void InitSteamClient()
     {
         if (SteamClient.IsValid)
             return;
+            
         try
         {
             Plugin.Inst.Log.LogInfo("Steam Initialized");
             SteamClient.Init(440310);
             SteamNetworkingUtils.InitRelayNetworkAccess();
             StaticManager.LocalPlayer = SteamClient.SteamId;
+            
+            RequestLobbies();
         }
         catch(Exception e)
         {
-            Plugin.Inst.Log.LogError(e);
+            Plugin.Inst.Log.LogError("failed to initialize steam");
         }
     }
 
+    
     private void OnGameLobbyJoinRequested(Lobby lobby, SteamId steamId)
     {
         StaticManager.IsHosting = false;
         StaticManager.IsMultiplayer = true;
         Plugin.Logger.LogInfo($"Joining friend's lobby owned by [{steamId}]");
         Plugin.Logger.LogError($"Lobby Id [{lobby.Id.ToString()}]");
-        StaticManager.HostId = steamId;
-        SteamMatchmaking.JoinLobbyAsync(lobby.Id);
+        AttemptToJoin(lobby);
     }
 
+    async void AttemptToJoin(Lobby lobby)
+    {
+        var result = await lobby.Join();
+        Plugin.Logger.LogError(result);
+        if (result != RoomEnter.Success)
+        {
+            if (_joinAttempts > 3)
+            {
+                Plugin.Logger.LogError("failed to Join lobby");
+                _joinAttempts = 0;
+                return;
+            }
+            _joinAttempts++;
+            AttemptToJoin(lobby);
+            return;
+        }
+
+        _joinAttempts = 0;
+    }
+
+    async void RequestLobbies()
+    {
+        //testing only
+        var result = await new LobbyQuery().WithMaxResults(10).WithSlotsAvailable(1).RequestAsync();
+        foreach (var lobby in result)
+        {
+           Plugin.Logger.LogInfo($"[TEST] Lobby List query entry [{lobby.Owner.Name}]"); 
+        }
+    }
     private void OnLobbyInvite(Friend friend, Lobby lobby)
     {
         Plugin.Logger.LogInfo($"Invite received from [{friend.Name}]");

@@ -21,6 +21,8 @@ namespace PAMultiplayer.Managers
       
         void Update() //Not sure if FixedUpdate is better.
         {
+            SteamManager.Inst.Server?.Receive();
+            SteamManager.Inst.Client?.Receive();
             var PosEnu = StaticManager.PlayerPositions.GetEnumerator();
 
             while (PosEnu.MoveNext())

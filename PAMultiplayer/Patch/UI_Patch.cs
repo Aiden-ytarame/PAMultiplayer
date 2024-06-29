@@ -20,6 +20,7 @@ namespace PAMultiplayer.Patch
             Transform multiplayer = Object.Instantiate(modifier, __instance.transform);
        
             var toggle = multiplayer.GetComponent<MultiElementToggle>();
+            toggle.isOn = false;
             toggle.onValueChanged = new Toggle.ToggleEvent();
                 toggle.onValueChanged.AddListener(new System.Action<bool>(_ => {UIConnector.Inst.PlaySound("UI_Select");}));
                 toggle.onValueChanged.AddListener(new System.Action<bool>(x =>

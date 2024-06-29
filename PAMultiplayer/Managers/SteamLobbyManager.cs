@@ -30,6 +30,7 @@ public class SteamLobbyManager : MonoBehaviour
         SteamMatchmaking.OnLobbyEntered += OnLobbyEntered;
         SteamMatchmaking.OnLobbyGameCreated += OnLobbyGameCreated;
         SteamMatchmaking.OnLobbyMemberJoined += OnLobbyMemberJoined;
+        
         SteamMatchmaking.OnLobbyMemberDisconnected += OnLobbyMemberDisconnected;
         SteamMatchmaking.OnLobbyMemberLeave += OnLobbyMemberDisconnected;
     }
@@ -55,7 +56,7 @@ public class SteamLobbyManager : MonoBehaviour
     
     private void OnLobbyMemberDisconnected(Lobby lobby, Friend friend)
     {
-        Plugin.Logger.LogInfo($"Member Joined : [{friend.Name}]");
+        Plugin.Logger.LogInfo($"Member Left : [{friend.Name}]");
         RemovePlayerFromLoadList(friend.Id);
 
         if (LobbyManager.Instance)
@@ -99,14 +100,12 @@ public class SteamLobbyManager : MonoBehaviour
     private void OnLobbyEntered(Lobby lobby)
     {
         Plugin.Logger.LogInfo($"Joined Lobby hosted by [{lobby.GetData("HostId")}]");
-        Plugin.Logger.LogInfo($"Lobby Id In Lobby [{lobby.Id}]");
-        Plugin.Logger.LogInfo($"Owner Id [{lobby.Owner.Id}]");
         Plugin.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
-        Plugin.Logger.LogInfo($"Host Id from Data [{lobby.GetData("HostId")}]");
+        CurrentLobby = lobby;
         InLobby = true;
         if (StaticManager.LocalPlayer == lobby.Owner.Id) return; 
         
-        SteamManager.Inst.StartClient(StaticManager.HostId);
+        SteamManager.Inst.StartClient(lobby.Owner.Id);
         //this could be moved to somewhere before even joining
         //but if it works, we keep
         ulong id = ulong.Parse(lobby.GetData("LevelId"));
@@ -115,7 +114,6 @@ public class SteamLobbyManager : MonoBehaviour
             if (level.SteamInfo.ItemID.Value == id)
             {
                 SaveManager.Inst.CurrentArcadeLevel = level;
-                Plugin.Logger.LogInfo($"Level id [{lobby.GetData("LevelId")}]");
                 SceneManager.Inst.LoadScene("Arcade Level");
                 return;
             }
@@ -137,15 +135,11 @@ public class SteamLobbyManager : MonoBehaviour
             return;
         }
         Plugin.Logger.LogInfo($"Lobby Created!");
-        Plugin.Logger.LogInfo(lobby.Owner.Id);
-        Plugin.Logger.LogInfo(lobby.Id);
         
-        CurrentLobby = lobby;
         lobby.SetPublic();
         lobby.SetJoinable(true);
         
         lobby.SetData("LevelId", SaveManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
-        lobby.SetData("HostId", SteamClient.SteamId.ToString()); //owner.id is broken as shit
         if (!LobbyManager.Instance.pauseMenu) return; //this is for the "Lobby failed to be created" message
         
         LobbyManager.Instance.pauseMenu.transform.Find("Content/buttons").gameObject.SetActive(true);
