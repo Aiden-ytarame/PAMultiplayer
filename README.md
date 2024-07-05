@@ -10,6 +10,8 @@ Uses BepInEx.
 
 There's problems with closing the server and disconnecting a player.
 
+DOESNT WORK YET
+
 ## **Plans**
 
 * Interpolate player position between packets. 
