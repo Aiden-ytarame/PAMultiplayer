@@ -8,7 +8,7 @@ namespace PAMultiplayer.Managers
     public static class StaticManager
     {
         public static SteamId LocalPlayer;
-        public static SteamId HostId;
+        public static int LocalPlayerId;
         public static readonly Dictionary<SteamId, VGPlayerManager.VGPlayerData> Players = new();
         public static readonly Dictionary<SteamId, Vector2> PlayerPositions = new();
         

@@ -1,33 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using BepInEx;
+using Cpp2IL.Core.Extensions;
 using HarmonyLib;
+using Il2CppSystems.SceneManagement;
 using Steamworks;
 using TMPro;
 using UnityEngine;
+using Action = Il2CppSystem.Action;
 using Object = UnityEngine.Object;
 
 namespace PAMultiplayer.Managers
 {
-    [HarmonyPatch(typeof(GameManager))]
-    public class GmLobbyPatch
-    {
-        [HarmonyPatch(nameof(GameManager.PlayGame))]
-        [HarmonyPostfix]
-        public static void Postfix(ref GameManager __instance)
-        {
-            if (StaticManager.IsMultiplayer)
-            {
-                __instance.Pause(false);
-                __instance.gameObject.AddComponent<LobbyManager>();
-                
-                if(StaticManager.IsHosting)
-                    SteamManager.Inst.Server?.SendHostLoaded();
-                else 
-                    SteamManager.Inst.Client?.SendLoaded();
-            }
-        }
-    }
 
     [HarmonyPatch(typeof(PauseMenu))]
     public class PauseLobbyPatch
@@ -36,7 +22,7 @@ namespace PAMultiplayer.Managers
         [HarmonyPrefix]
         public static bool Prefix()
         {
-            if (LobbyManager.Instance.shouldStart || (StaticManager.IsHosting && SteamLobbyManager.Inst.IsEveryoneLoaded))
+            if (!StaticManager.IsMultiplayer || LobbyManager.Instance.shouldStart || (StaticManager.IsHosting && SteamLobbyManager.Inst.IsEveryoneLoaded))
             {
                 return true;
             }
@@ -70,16 +56,25 @@ namespace PAMultiplayer.Managers
         void Awake()
         {
             Instance = this;
-            VGCursor.ShowCursor();
+            VGCursor.Inst.ShowCursor();
             GameObject playerGUI = GameObject.Find("Player GUI");
-            var lobbyBundle = AssetBundle.LoadFromFile(Directory.GetFiles(Paths.PluginPath, "lobby", SearchOption.AllDirectories)[0]);
-
-            var lobbyPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]);
-            _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]);
-            var lobbyObj = Instantiate(lobbyPrefab, playerGUI.transform);
-            lobbyObj.name = "PAM_Lobby";
+            
+            //this is for when I bundle the assets into the dll.
+            
+            using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("PAMultiplayer.Assets.lobby menu"))
+            {
+                var lobbyBundle = AssetBundle.LoadFromMemory(stream.ReadBytes());
+                
+                var lobbyPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]);
+                _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]);
+                var lobbyObj = Instantiate(lobbyPrefab, playerGUI.transform);
+                lobbyObj.name = "PAM_Lobby";
+                
+                lobbyBundle.Unload(false);
+            }
 
             //again, if I can cast UnityEngine.Object to GameObject please tell me :)
+            //or load the GO from the asset bundle directly
 
             var lobbyGo = playerGUI.transform.Find("PAM_Lobby").gameObject;
             pauseMenu = lobbyGo.GetComponent<PauseMenu>();
@@ -88,6 +83,16 @@ namespace PAMultiplayer.Managers
          
             if (StaticManager.IsHosting)
             {
+                var buttons = lobbyGo.transform.Find("Content/buttons");
+                buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(new System.Action(() =>
+                {
+                    SceneLoader.Inst.LoadSceneGroup("Arcade");
+                }));
+                buttons.GetChild(2).GetComponent<MultiElementButton>().onClick.AddListener(new System.Action(() =>
+                {
+                    SceneLoader.Inst.LoadSceneGroup("Menu");
+                }));
+                
                 if (!SteamLobbyManager.Inst.InLobby)
                 {
                     lobbyGo.transform.Find("Content/buttons").gameObject.SetActive(false);
@@ -97,7 +102,7 @@ namespace PAMultiplayer.Managers
                         {
                             Plugin.Logger.LogDebug("RETRY");
                             StaticManager.IsReloadingLobby = true;
-                            SceneManager.Inst.LoadScene("Arcade Level");
+                            SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
                         }));
                 }
             }
@@ -118,8 +123,7 @@ namespace PAMultiplayer.Managers
                 SetPlayerLoaded(Enu.Current.Id); 
             }
             Enu.Dispose();
-
-            lobbyBundle.Unload(false);
+            
         }
 
         private void OnDestroy()
@@ -132,12 +136,20 @@ namespace PAMultiplayer.Managers
 
         public void AddPlayerToLobby(SteamId player, string playerName)
         {
-            var playerEntry = Instantiate(_playerPrefab, _playersListGo.transform);
-            playerEntry.name = $"PAM_Player {player}";
+            try
+            {
+                var playerEntry = Instantiate(_playerPrefab, _playersListGo.transform);
+                playerEntry.name = $"PAM_Player {player}";
 
-            Transform entry = _playersListGo.Find($"PAM_Player {player}");
-            entry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
-            _playerList.Add(player, entry);
+                Transform entry = _playersListGo.Find($"PAM_Player {player}");
+                entry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
+                _playerList.Add(player, entry);
+            }
+            catch (Exception e)
+            {
+                Plugin.Logger.LogError(e);
+                throw;
+            }
         }
 
         public void RemovePlayerFromLobby(SteamId player)

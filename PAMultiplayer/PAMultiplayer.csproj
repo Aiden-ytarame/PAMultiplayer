@@ -13,10 +13,14 @@
       https://nuget.samboy.dev/v3/index.json;
     </RestoreAdditionalProjectSources>
     <RootNamespace>PAMultiplayer</RootNamespace>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
 	   <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />
 	  <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+	  <PackageReference Include="Costura.Fody" Version="5.8.0-alpha0098">
+	    <PrivateAssets>all</PrivateAssets>
+	  </PackageReference>
   </ItemGroup>
 	
     <ItemGroup>
@@ -52,31 +56,24 @@
   </ItemGroup>
 	
     <ItemGroup>
-      <Compile Remove="Packets\PingPacket.cs" />
-      <Compile Remove="Packets\LocalPlayerPacket.cs" />
-      <Compile Remove="Packets\PlayerDamagePacket.cs" />
-      <Compile Remove="Packets\PlayerDisconnectPacket.cs" />
-      <Compile Remove="Packets\PlayerLoadedPacket.cs" />
-      <Compile Remove="Packets\PlayerPositionPacket.cs" />
-      <Compile Remove="Packets\PlayerRotationPacket.cs" />
-      <Compile Remove="Packets\PlayerSpawnPacket .cs" />
-      <Compile Remove="Packets\StartLevelPacket.cs" />
-      <Compile Remove="Packets\**" />
-      <Compile Remove="Client\Client.cs" />
-      <Compile Remove="Client\**" />
-      <Compile Remove="Server\**" />
-      <Compile Remove="Packet\PlayerPositionPacket.cs" />
+      <None Remove="lib\Facepunch.Steamworks.Win64.dll" />
+      <Content Include="lib\Facepunch.Steamworks.Win64.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+      <None Remove="lib\steam_api64.dll" />
+      <Content Include="lib\steam_api64.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
     </ItemGroup>
 	
     <ItemGroup>
-      <EmbeddedResource Remove="Packets\**" />
-      <EmbeddedResource Remove="Client\**" />
-      <EmbeddedResource Remove="Server\**" />
+      <None Remove="Assets\lobby menu" />
+      <EmbeddedResource Include="Assets\lobby menu">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
     </ItemGroup>
 	
-    <ItemGroup>
-      <None Remove="Packets\**" />
-      <None Remove="Client\**" />
-      <None Remove="Server\**" />
-    </ItemGroup>
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+      <Exec Command="xcopy /q /Y &quot;D:\Downloads\UnityPorted\MODS\PAGit\PAMultiplayer\PAMultiplayer\bin\Debug\net6.0\PAMultiplayer.dll&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Project Arrhythmia\BepInEx\plugins\PAMultiplayer\&quot; &gt; nul" />
+    </Target>
 </Project>

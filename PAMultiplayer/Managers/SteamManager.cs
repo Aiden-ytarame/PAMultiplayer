@@ -12,6 +12,7 @@ public class SteamManager : MonoBehaviour
     public VGSocketManager Server;
     public VGConnectionManager Client;
 
+    private int _serverPort = 0;
     private int _joinAttempts;
     private void Awake()
     {
@@ -25,10 +26,28 @@ public class SteamManager : MonoBehaviour
         
         SteamMatchmaking.OnLobbyInvite += OnLobbyInvite;
         SteamFriends.OnGameLobbyJoinRequested += OnGameLobbyJoinRequested;
+
+        return;
+        SteamNetworkingUtils.OnDebugOutput += (output, s) =>
+        {
+            Plugin.Logger.LogWarning($"Networking Debug Message : level [{output}], Message [{s}]");
+        };
+
+        Dispatch.OnDebugCallback += (type, s, arg3) =>
+        {
+            Plugin.Logger.LogWarning($"Steam Debug Message : type [{type}], Message [{s}]");
+        };
+        
+        Dispatch.OnException += (e) =>
+        {
+            Plugin.Logger.LogError($"Steam Exception : Message [{e}]");
+        };
     }
     private void Update()
     {
         InitSteamClient();
+        if(SteamClient.IsValid)
+            SteamClient.RunCallbacks();
     }
 
     private void OnApplicationQuit()
@@ -44,11 +63,13 @@ public class SteamManager : MonoBehaviour
         try
         {
             Plugin.Inst.Log.LogInfo("Steam Initialized");
-            SteamClient.Init(440310);
+            SteamClient.Init(440310, false);
             SteamNetworkingUtils.InitRelayNetworkAccess();
+            SteamNetworkingUtils.DebugLevel = NetDebugOutput.Warning;
+            SteamNetworkingUtils.ConnectionTimeout = 5000;
+   
             StaticManager.LocalPlayer = SteamClient.SteamId;
             
-            RequestLobbies();
         }
         catch(Exception e)
         {
@@ -68,33 +89,9 @@ public class SteamManager : MonoBehaviour
 
     async void AttemptToJoin(Lobby lobby)
     {
-        var result = await lobby.Join();
-        Plugin.Logger.LogError(result);
-        if (result != RoomEnter.Success)
-        {
-            if (_joinAttempts > 3)
-            {
-                Plugin.Logger.LogError("failed to Join lobby");
-                _joinAttempts = 0;
-                return;
-            }
-            _joinAttempts++;
-            AttemptToJoin(lobby);
-            return;
-        }
-
-        _joinAttempts = 0;
+        lobby.Join();
     }
-
-    async void RequestLobbies()
-    {
-        //testing only
-        var result = await new LobbyQuery().WithMaxResults(10).WithSlotsAvailable(1).RequestAsync();
-        foreach (var lobby in result)
-        {
-           Plugin.Logger.LogInfo($"[TEST] Lobby List query entry [{lobby.Owner.Name}]"); 
-        }
-    }
+    
     private void OnLobbyInvite(Friend friend, Lobby lobby)
     {
         Plugin.Logger.LogInfo($"Invite received from [{friend.Name}]");
@@ -106,7 +103,6 @@ public class SteamManager : MonoBehaviour
         Plugin.Logger.LogInfo($"Starting client. Connection to [{targetSteamId}]");
 
         Client = SteamNetworkingSockets.ConnectRelay<VGConnectionManager>(targetSteamId);
-        Plugin.Logger.LogInfo(Client.Connected);
     }
 
     public void EndClient()
@@ -125,13 +121,16 @@ public class SteamManager : MonoBehaviour
     public void StartServer()
     {
         Plugin.Logger.LogInfo("Starting Server.");
-        Server = SteamNetworkingSockets.CreateRelaySocket<VGSocketManager>();
+        Server = SteamNetworkingSockets.CreateRelaySocket<VGSocketManager>(_serverPort);
+        //if the server port doesn't change it fails to create a socket
+        //why? don't ask me man
+        _serverPort++;
     }
 
     public void EndServer()
     {
+        SteamLobbyManager.Inst.LeaveLobby();
         Server.Close();
-        Server.Socket.Close();
     }
     
 }

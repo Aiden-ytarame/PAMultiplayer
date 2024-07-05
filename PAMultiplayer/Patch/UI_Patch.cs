@@ -1,8 +1,10 @@
-﻿using HarmonyLib;
+﻿using System;
+using HarmonyLib;
 using UnityEngine;
 using TMPro;
 using PAMultiplayer.Managers;
 using UnityEngine.UI;
+using Object = UnityEngine.Object;
 
 
 namespace PAMultiplayer.Patch
@@ -18,12 +20,13 @@ namespace PAMultiplayer.Patch
             Transform modifier = __instance.transform.GetChild(0).GetChild(0);
 
             Transform multiplayer = Object.Instantiate(modifier, __instance.transform);
-       
+            
+            Object.Destroy(multiplayer.GetComponent<ToggleGroup>()); //dont remember why this here, might remove it
             var toggle = multiplayer.GetComponent<MultiElementToggle>();
             toggle.isOn = false;
             toggle.onValueChanged = new Toggle.ToggleEvent();
-                toggle.onValueChanged.AddListener(new System.Action<bool>(_ => {UIConnector.Inst.PlaySound("UI_Select");}));
-                toggle.onValueChanged.AddListener(new System.Action<bool>(x =>
+           //     toggle.onValueChanged.AddListener(new System.Action<bool>(_ => {AudioManager.Inst.PlaySound("UI_Select", 1);}));
+                toggle.onValueChanged.AddListener(new Action<bool>(x =>
                 {
                     StaticManager.IsHosting = x;
                     StaticManager.IsMultiplayer = x;

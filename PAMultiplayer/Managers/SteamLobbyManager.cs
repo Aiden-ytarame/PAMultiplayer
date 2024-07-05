@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Il2CppSystems.SceneManagement;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -11,6 +13,7 @@ public class SteamLobbyManager : MonoBehaviour
     public bool InLobby { get; private set; }
     public static SteamLobbyManager Inst;
     private Dictionary<SteamId, bool> _loadedPlayers = new();
+    
     public void CreateLobby()
     {
         SteamManager.Inst.StartServer();
@@ -37,13 +40,6 @@ public class SteamLobbyManager : MonoBehaviour
 
     private void OnApplicationQuit()
     {
-        SteamMatchmaking.OnLobbyCreated -= OnLobbyCreated;
-        SteamMatchmaking.OnLobbyEntered -= OnLobbyEntered;
-        SteamMatchmaking.OnLobbyGameCreated -= OnLobbyGameCreated;
-        SteamMatchmaking.OnLobbyMemberJoined -= OnLobbyMemberJoined;
-        SteamMatchmaking.OnLobbyMemberDisconnected -= OnLobbyMemberDisconnected;
-        SteamMatchmaking.OnLobbyMemberLeave -= OnLobbyMemberDisconnected;
-   
         CurrentLobby.Leave();
     }
     
@@ -77,35 +73,37 @@ public class SteamLobbyManager : MonoBehaviour
 
         if (LobbyManager.Instance)
             LobbyManager.Instance.AddPlayerToLobby(friend.Id, friend.Name);
-        
+          
+      
         if (friend.Id == StaticManager.LocalPlayer)
             return;
-
+        
         VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
         NewData.PlayerID = StaticManager.Players.Count + 1; //by the way, this can cause problems
         NewData.ControllerID = StaticManager.Players.Count + 1;
-            
-
+        Plugin.Logger.LogInfo($"Member Joined : [{friend.Name}]");
+        
         if (!VGPlayerManager.Inst.players.Contains(NewData))
             VGPlayerManager.Inst.players.Add(NewData);
-        //StaticManager.SpawnPending = true;
+      
 
         StaticManager.Players.TryAdd(friend.Id, NewData);
-
-        if (!SceneManager.inst.isLoading && !LobbyManager.Instance)
+        
+        
+        if (!SceneLoader.Inst.isLoading && !LobbyManager.Instance)
             VGPlayerManager.inst.RespawnPlayers();
         //handle lobby screen;
     }
 
     private void OnLobbyEntered(Lobby lobby)
     {
-        Plugin.Logger.LogInfo($"Joined Lobby hosted by [{lobby.GetData("HostId")}]");
+        Plugin.Logger.LogInfo($"Joined Lobby hosted by [{lobby.Owner.Name}]");
         Plugin.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
         CurrentLobby = lobby;
         InLobby = true;
+      
         if (StaticManager.LocalPlayer == lobby.Owner.Id) return; 
         
-        SteamManager.Inst.StartClient(lobby.Owner.Id);
         //this could be moved to somewhere before even joining
         //but if it works, we keep
         ulong id = ulong.Parse(lobby.GetData("LevelId"));
@@ -113,8 +111,9 @@ public class SteamLobbyManager : MonoBehaviour
         {
             if (level.SteamInfo.ItemID.Value == id)
             {
+                SteamManager.Inst.StartClient(lobby.Owner.Id);
                 SaveManager.Inst.CurrentArcadeLevel = level;
-                SceneManager.Inst.LoadScene("Arcade Level");
+                SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
                 return;
             }
         }
@@ -131,7 +130,7 @@ public class SteamLobbyManager : MonoBehaviour
         {
             Plugin.Logger.LogError($"Failed to create lobby : Result [{result}]");
             lobby.Leave();
-            SceneManager.Inst.LoadScene("Menu");
+            SceneLoader.Inst.LoadSceneGroup("Menu");
             return;
         }
         Plugin.Logger.LogInfo($"Lobby Created!");
@@ -140,10 +139,13 @@ public class SteamLobbyManager : MonoBehaviour
         lobby.SetJoinable(true);
         
         lobby.SetData("LevelId", SaveManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
-        if (!LobbyManager.Instance.pauseMenu) return; //this is for the "Lobby failed to be created" message
+      
+        if (!LobbyManager.Instance?.pauseMenu) return; //this is for the "Lobby failed to be created" message
         
         LobbyManager.Instance.pauseMenu.transform.Find("Content/buttons").gameObject.SetActive(true);
         LobbyManager.Instance.pauseMenu.transform.Find("Content/LobbyFailed").gameObject.SetActive(false);
+        
+        
     }
 
     public void StartGame()

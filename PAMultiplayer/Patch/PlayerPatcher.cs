@@ -1,7 +1,5 @@
 ﻿using HarmonyLib;
 using PAMultiplayer.Managers;
-using UnityEngine;
-
 
 namespace PAMultiplayer.Patch
 {
@@ -13,7 +11,7 @@ namespace PAMultiplayer.Patch
         [HarmonyPrefix]
         static bool PreCollision(ref VGPlayer __instance)
         {
-            if (StaticManager.IsMultiplayer && __instance.PlayerID != 0)
+            if (StaticManager.IsMultiplayer && __instance.PlayerID != StaticManager.LocalPlayerId)
                 return false;
             
             return true; //only collide if is local player
@@ -23,7 +21,7 @@ namespace PAMultiplayer.Patch
         [HarmonyPrefix]
         static void Hit_Pre(ref VGPlayer __instance)
         {
-            if (StaticManager.IsMultiplayer && __instance.PlayerID == 0) 
+            if (StaticManager.IsMultiplayer && __instance.PlayerID == StaticManager.LocalPlayerId) 
             {
                 if(StaticManager.IsHosting)
                     SteamManager.Inst.Server.SendHostDamage();
@@ -37,7 +35,7 @@ namespace PAMultiplayer.Patch
         [HarmonyPrefix]
         static void Update_Pre(ref VGPlayer __instance)
         {
-            if (!StaticManager.IsMultiplayer || __instance.PlayerID != 0) return;
+            if (!StaticManager.IsMultiplayer || __instance.PlayerID != StaticManager.LocalPlayerId) return;
             
             if (StaticManager.Players.TryGetValue(StaticManager.LocalPlayer, out var player))
             {
@@ -56,21 +54,5 @@ namespace PAMultiplayer.Patch
             }
         }
 
-    }
-    [HarmonyPatch(typeof(GameManager))]
-    public class AddNetManager
-    {
-        [HarmonyPatch(nameof(GameManager.Start))]
-        [HarmonyPostfix]
-        static void PostStart(ref GameManager __instance)
-        {
-            if (__instance.IsEditor)
-                return;
-
-            if (!StaticManager.IsMultiplayer) return;
-            
-            var netMan = new GameObject("Network");
-            netMan.AddComponent<NetworkManager>();
-        }
     }
 }
