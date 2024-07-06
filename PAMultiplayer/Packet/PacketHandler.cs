@@ -59,12 +59,11 @@ public class DamagePacket : PacketHandler
 {
     public override void ProcessPacket(SteamId senderId, object data)
     {
-        
         Plugin.Inst.Log.LogWarning($"Damaging player { senderId}");
 
         if ( senderId == StaticManager.LocalPlayer) return;
 
-        int health = (int)(Single)data;
+        int health = (int)data;
         VGPlayer player = StaticManager.Players[senderId].PlayerObject;
         if (!player) return;
         player.Health = health;
@@ -137,11 +136,11 @@ public class CheckpointPacket : PacketHandler
 {
     public override void ProcessPacket(SteamId senderId, object data)
     {
-        Plugin.Logger.LogInfo($"Checkpoint [{(int)(Single)data}] Received");
+        Plugin.Logger.LogInfo($"Checkpoint [{(int)data}] Received");
         GameManager.Inst.playingCheckpointAnimation = true;
         VGPlayerManager.Inst.RespawnPlayers();
 
-        GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation((int)(Single)data));
+        GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation((int)data));
     }
 }
 
@@ -149,7 +148,7 @@ public class RewindPacket : PacketHandler
 {
     public override void ProcessPacket(SteamId senderId, object data)
     {
-        Plugin.Logger.LogInfo($"Rewind to Checkpoint [{(int)(Single)data}] Received");
+        Plugin.Logger.LogInfo($"Rewind to Checkpoint [{(int)data}] Received");
         VGPlayerManager.Inst.players.ForEach(new System.Action<VGPlayerManager.VGPlayerData>(x =>
         {
             if (!x.PlayerObject.isDead)
@@ -159,6 +158,6 @@ public class RewindPacket : PacketHandler
                 //forcekill() fucked up the game.
             }
         }));
-        GameManager.Inst.RewindToCheckpoint((int)(Single)data);
+        GameManager.Inst.RewindToCheckpoint((int)data);
     }
 }

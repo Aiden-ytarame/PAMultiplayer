@@ -14,7 +14,6 @@ public class SteamManager : MonoBehaviour
     public VGConnectionManager Client;
 
     private int _serverPort = 0;
-    private int _joinAttempts;
     private void Awake()
     {
         if (Inst)
@@ -27,22 +26,6 @@ public class SteamManager : MonoBehaviour
         
         SteamMatchmaking.OnLobbyInvite += OnLobbyInvite;
         SteamFriends.OnGameLobbyJoinRequested += OnGameLobbyJoinRequested;
-
-        return;
-        SteamNetworkingUtils.OnDebugOutput += (output, s) =>
-        {
-            Plugin.Logger.LogWarning($"Networking Debug Message : level [{output}], Message [{s}]");
-        };
-
-        Dispatch.OnDebugCallback += (type, s, arg3) =>
-        {
-            Plugin.Logger.LogWarning($"Steam Debug Message : type [{type}], Message [{s}]");
-        };
-        
-        Dispatch.OnException += (e) =>
-        {
-            Plugin.Logger.LogError($"Steam Exception : Message [{e}]");
-        };
     }
     private void Update()
     {
@@ -66,7 +49,6 @@ public class SteamManager : MonoBehaviour
             Plugin.Inst.Log.LogInfo("Steam Initialized");
             SteamClient.Init(440310, false);
             SteamNetworkingUtils.InitRelayNetworkAccess();
-            SteamNetworkingUtils.DebugLevel = NetDebugOutput.Warning;
             SteamNetworkingUtils.ConnectionTimeout = 5000;
             SteamNetworkingUtils.Timeout = 6000;
    
@@ -86,11 +68,6 @@ public class SteamManager : MonoBehaviour
         StaticManager.IsMultiplayer = true;
         Plugin.Logger.LogInfo($"Joining friend's lobby owned by [{steamId}]");
         Plugin.Logger.LogError($"Lobby Id [{lobby.Id.ToString()}]");
-        AttemptToJoin(lobby);
-    }
-
-    async void AttemptToJoin(Lobby lobby)
-    {
         lobby.Join();
     }
     

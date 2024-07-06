@@ -17,18 +17,18 @@ public enum PacketType : short
 
 public enum PacketDataType : short
 {
-    Float,
+    Int,
     Vector
 }
 
-public struct FloatNetPacket 
+public struct IntNetPacket 
 {
-    public PacketDataType DataType = PacketDataType.Float;
+    public PacketDataType DataType = PacketDataType.Int;
     public PacketType PacketType;
     public SteamId SenderId;
-    public float data;
+    public int data;
 
-    public FloatNetPacket()
+    public IntNetPacket()
     {
         PacketType = PacketType.Damage;
         SenderId = default;
@@ -49,14 +49,4 @@ public struct VectorNetPacket
         SenderId = default;
         data = default;
     }
-}
-public struct PlayerPacket
-{
-    public PlayerPacket( SteamId id, int playerId)
-    {
-        Id = id;
-        PlayerId = playerId;
-    }
-    public SteamId Id;
-    public int PlayerId;
 }

@@ -69,7 +69,7 @@ public class VGSocketManager : SocketManager
 
         if (Marshal.ReadInt16(data) == 0)
         {
-            var packet = Marshal.PtrToStructure<FloatNetPacket>(data);
+            var packet = Marshal.PtrToStructure<IntNetPacket>(data);
             if(packet.PacketType == PacketType.Loaded)
                 Plugin.Logger.LogError("Loaded Recieved");
             GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.data);
@@ -92,7 +92,7 @@ public class VGSocketManager : SocketManager
         }
     }
 
-    void SendMessages(HashSet<Connection> connections, FloatNetPacket packet, SendType sendType = SendType.Reliable)
+    void SendMessages(IntNetPacket packet, SendType sendType = SendType.Reliable)
     {
         int length = Marshal.SizeOf(packet);
         IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
@@ -100,7 +100,7 @@ public class VGSocketManager : SocketManager
         SendMessages(Connected, unmanagedPointer, length, sendType);
         Marshal.FreeHGlobal(unmanagedPointer);
     }
-    void SendMessages(HashSet<Connection> connections, VectorNetPacket packet, SendType sendType = SendType.Reliable)
+    void SendMessages(VectorNetPacket packet, SendType sendType = SendType.Reliable)
     {
         int length = Marshal.SizeOf(packet);
         IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
@@ -110,7 +110,7 @@ public class VGSocketManager : SocketManager
     }
 
     
-    void SendHostPacket(FloatNetPacket packet, SendType sendType = SendType.Reliable)
+    void SendHostPacket(IntNetPacket packet, SendType sendType = SendType.Reliable)
     {
         int length = Marshal.SizeOf(packet);
         IntPtr unmanagedData = Marshal.AllocHGlobal(length);
@@ -134,15 +134,15 @@ public class VGSocketManager : SocketManager
     #endregion
     public void StartLevel()
     {
-        var packet = new FloatNetPacket() { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Start };
-        SendMessages(Connected, packet);
+        var packet = new IntNetPacket() { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Start };
+        SendMessages(packet);
     }
 
     public void SendCheckpointHit(int index)
     {
         _latestCheckpoint = index;
-        var packet = new FloatNetPacket() { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Checkpoint, data = index };
-        SendMessages(Connected, packet);
+        var packet = new IntNetPacket() { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Checkpoint, data = index };
+        SendMessages(packet);
         if (PacketHandler.PacketHandlers.TryGetValue(PacketType.Checkpoint, out var handler))
         {
             handler.ProcessPacket(packet.SenderId, packet.data);
@@ -151,9 +151,9 @@ public class VGSocketManager : SocketManager
 
     public void SendRewindToCheckpoint()
     {
-        var packet = new FloatNetPacket()
+        var packet = new IntNetPacket()
             { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Rewind, data = _latestCheckpoint };
-        SendMessages(Connected, packet);
+        SendMessages(packet);
         if (PacketHandler.PacketHandlers.TryGetValue(PacketType.Rewind, out var handler))
         {
             handler.ProcessPacket(packet.SenderId, packet.data);
@@ -198,11 +198,11 @@ public class VGSocketManager : SocketManager
                 SenderId = steamId,
                 data = new Vector2(id, 1)
             };
-            SendMessages(Connected, info);
+            SendMessages(info);
     }
     public void SendHostLoaded()
     {
-        var packet = new FloatNetPacket()
+        var packet = new IntNetPacket()
         {
             PacketType = PacketType.Loaded,
             SenderId = StaticManager.LocalPlayer
@@ -212,7 +212,7 @@ public class VGSocketManager : SocketManager
 
     public void SendHostDamage()
     {
-        var packet = new FloatNetPacket()
+        var packet = new IntNetPacket()
         {
             PacketType = PacketType.Damage,
             SenderId = StaticManager.LocalPlayer,
@@ -262,7 +262,7 @@ public class VGConnectionManager : ConnectionManager
         {
             if (Marshal.ReadInt16(data) == 0)
             {
-                var packet = Marshal.PtrToStructure<FloatNetPacket>(data);
+                var packet = Marshal.PtrToStructure<IntNetPacket>(data);
                 if(PacketHandler.PacketHandlers.TryGetValue(packet.PacketType, out var handler))
                 {
                     handler.ProcessPacket(packet.SenderId, packet.data);
@@ -285,7 +285,7 @@ public class VGConnectionManager : ConnectionManager
     }
     #endregion
 
-    void SendPacket(FloatNetPacket packet, SendType sendType = SendType.Reliable)
+    void SendPacket(IntNetPacket packet, SendType sendType = SendType.Reliable)
     {
         int length = Marshal.SizeOf(packet);
         IntPtr unmanagedData = Marshal.AllocHGlobal(length);
@@ -304,7 +304,7 @@ public class VGConnectionManager : ConnectionManager
     public void SendLoaded()
     {
         Plugin.Logger.LogError("Sending Loaded");
-        var packet = new FloatNetPacket()
+        var packet = new IntNetPacket()
         {
             PacketType = PacketType.Loaded,
             SenderId = StaticManager.LocalPlayer
@@ -314,7 +314,7 @@ public class VGConnectionManager : ConnectionManager
 
     public void SendDamage()
     {
-        var packet = new FloatNetPacket()
+        var packet = new IntNetPacket()
         {
             PacketType = PacketType.Damage,
             SenderId = StaticManager.LocalPlayer,
