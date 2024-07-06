@@ -85,7 +85,6 @@ public class LoadedPacket : PacketHandler
     public override void ProcessPacket(SteamId senderId, object data)
     {
         Plugin.Logger.LogInfo($"Received Loaded Confirmation from [{senderId}]");
-        Plugin.Logger.LogInfo($"DebugInfo : LocalId [{StaticManager.LocalPlayer}]");
         
         if (senderId == StaticManager.LocalPlayer) return;
 
@@ -111,24 +110,15 @@ public class SpawnPacket : PacketHandler
 
         try
         {
-            if (senderId == StaticManager.LocalPlayer)
-                StaticManager.LocalPlayerId = id;
+            var player = StaticManager.Players[senderId];
+            player.PlayerID = id;
+            if (player.PlayerObject)
+            {
+                Plugin.Logger.LogError("Player Object");
+                player.PlayerObject.PlayerID = id;
+            }
 
-            //TEST
-            //so, gotta fix this lol
-            //these lists hold a copy of one another so changing one doesnt change the other
-           //damn
-           var player = VGPlayerManager.inst.players.Find(
-               new Predicate<VGPlayerManager.VGPlayerData>(
-                   x => x.ControllerID == StaticManager.Players[senderId].ControllerID).ToIL2CPP());
-           player.PlayerID = id;
-           if (player.PlayerObject)
-           {
-               Plugin.Logger.LogError("Player Object");
-               player.PlayerObject.PlayerID = id;
-           }
-
-           StaticManager.Players[senderId].PlayerID = id;
+            StaticManager.Players[senderId].PlayerID = id;
         }
         catch (Exception e)
         {

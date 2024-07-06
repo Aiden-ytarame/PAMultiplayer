@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using PAMultiplayer;
 using PAMultiplayer.Managers;
 
 namespace PAMultiplayer.Patch
@@ -12,17 +11,17 @@ namespace PAMultiplayer.Patch
         [HarmonyPrefix]
         static bool PreCollision(ref VGPlayer __instance)
         {
-            if (StaticManager.IsMultiplayer && __instance.PlayerID != StaticManager.LocalPlayerId)
-                return false;
+            if (StaticManager.IsMultiplayer && __instance.IsLocalPlayer())
+                return true;
             
-            return true; //only collide if is local player
+            return false; //only collide if is local player
         }
 
         [HarmonyPatch(nameof(VGPlayer.PlayerHit))]
         [HarmonyPrefix]
         static void Hit_Pre(ref VGPlayer __instance)
         {
-            if (StaticManager.IsMultiplayer && __instance.PlayerID == StaticManager.LocalPlayerId) 
+            if (StaticManager.IsMultiplayer && __instance.IsLocalPlayer()) 
             {
                 if(StaticManager.IsHosting)
                     SteamManager.Inst.Server.SendHostDamage();
@@ -37,11 +36,8 @@ namespace PAMultiplayer.Patch
         static bool Boost_Pre(ref VGPlayer __instance)
         {
             if (!StaticManager.IsMultiplayer) return true;
-            if (__instance.IsLocalPlayer()) return false;
-            return true;
-            if (__instance.IsLocalPlayer()) return true;
 
-            return false;
+            return __instance.IsLocalPlayer();
         }
     }
 }
@@ -51,6 +47,6 @@ static class PlayerIsLocalExtension
 {
     public static bool IsLocalPlayer(this VGPlayer player)
     {
-        return VGPlayerManager.Inst.players[0].PlayerID == player.PlayerID;
+        return VGPlayerManager.Inst.players[0].PlayerObject.Equals(player);
     }
 }

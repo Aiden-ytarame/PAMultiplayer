@@ -41,12 +41,12 @@ namespace PAMultiplayer.Managers
             {
                 SteamManager.Inst.EndServer();
                 SteamManager.Inst.EndClient();
+                StaticManager.Players.Clear();
             }
             catch(Exception e)
             {
                 Plugin.Inst.Log.LogError(e);
             }
         }
-
     }
 }

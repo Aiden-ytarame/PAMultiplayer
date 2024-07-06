@@ -97,7 +97,7 @@ public class SteamLobbyManager : MonoBehaviour
         Plugin.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
         CurrentLobby = lobby;
         InLobby = true;
-      
+        
         if (StaticManager.LocalPlayer == lobby.Owner.Id) return; 
         
         //this could be moved to somewhere before even joining

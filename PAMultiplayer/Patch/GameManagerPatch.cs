@@ -135,9 +135,10 @@ public class GameManagerPatch
     [HarmonyPostfix]
     public static void Postfix(ref GameManager __instance)
     {
-        VGPlayerManager.Inst.players[0].PlayerID = 3;
         if (StaticManager.IsMultiplayer && !GameManager.Inst.IsEditor)
         {
+            Plugin.Logger.LogError($"Id ::: {VGPlayerManager.Inst.players[0].PlayerID}");
+            
             SteamManager.Inst.Client?.SendLoaded();
             __instance.Pause(false);
             __instance.gameObject.AddComponent<LobbyManager>();
