@@ -1,5 +1,6 @@
 using System;
 using HarmonyLib;
+using Il2CppSystems.SceneManagement;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -67,6 +68,7 @@ public class SteamManager : MonoBehaviour
             SteamNetworkingUtils.InitRelayNetworkAccess();
             SteamNetworkingUtils.DebugLevel = NetDebugOutput.Warning;
             SteamNetworkingUtils.ConnectionTimeout = 5000;
+            SteamNetworkingUtils.Timeout = 6000;
    
             StaticManager.LocalPlayer = SteamClient.SteamId;
             
@@ -115,6 +117,7 @@ public class SteamManager : MonoBehaviour
             StaticManager.IsReloadingLobby = false;
             return;
         }
+        
         StaticManager.IsMultiplayer = false;
         StaticManager.IsHosting = false;
     }
@@ -131,6 +134,14 @@ public class SteamManager : MonoBehaviour
     {
         SteamLobbyManager.Inst.LeaveLobby();
         Server.Close();
+        
+        if (StaticManager.IsReloadingLobby)
+        {
+            StaticManager.IsReloadingLobby = false;
+            return;
+        }
+        StaticManager.IsMultiplayer = false;
+        StaticManager.IsHosting = false;
     }
     
 }

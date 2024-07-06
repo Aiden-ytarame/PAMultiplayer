@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using PAMultiplayer;
 using PAMultiplayer.Managers;
 
 namespace PAMultiplayer.Patch
@@ -35,13 +36,13 @@ namespace PAMultiplayer.Patch
         [HarmonyPrefix]
         static void Update_Pre(ref VGPlayer __instance)
         {
-            if (!StaticManager.IsMultiplayer || __instance.PlayerID != StaticManager.LocalPlayerId) return;
+            if (!StaticManager.IsMultiplayer || !__instance.IsLocalPlayer()) return;
             
             if (StaticManager.Players.TryGetValue(StaticManager.LocalPlayer, out var player))
             {
                 if (__instance.Player_Rigidbody)
                 {
-                    var V2 = __instance.Player_Rigidbody.transform.position;
+                    var V2 = player.PlayerObject.Player_Rigidbody.transform.position;
                     if(StaticManager.IsHosting)
                         SteamManager.Inst.Server?.SendHostPosition(V2);
                     else
@@ -54,5 +55,25 @@ namespace PAMultiplayer.Patch
             }
         }
 
+        [HarmonyPatch(nameof(VGPlayer.HandleBoost))]
+        [HarmonyPrefix]
+        static bool Boost_Pre(ref VGPlayer __instance)
+        {
+            if (!StaticManager.IsMultiplayer) return true;
+            if (__instance.IsLocalPlayer()) return false;
+            return true;
+            if (__instance.IsLocalPlayer()) return true;
+
+            return false;
+        }
+    }
+}
+
+
+static class PlayerIsLocalExtension
+{
+    public static bool IsLocalPlayer(this VGPlayer player)
+    {
+        return VGPlayerManager.Inst.players[0].PlayerID == player.PlayerID;
     }
 }

@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
+using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Packet;
-using Rewired.Data;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -42,29 +39,45 @@ public class VGSocketManager : SocketManager
     public override void OnMessage(Connection connection, NetIdentity identity, IntPtr data, int size, long messageNum,
         long recvTime, int channel)
     {
-        // Read PacketType
-        NetPacket packet = Il2CppSystem.Runtime.InteropServices.Marshal.PtrToStructure<NetPacket>(data); //wtf is this man
-
-        switch (packet.PacketType)
+        PacketHandler GetHandler(PacketType type)
         {
-            case PacketType.Damage:
-                PacketHandler.HandleClientPacket(packet);
-                SendMessages(Connected, data, size);
-                break;
-            case PacketType.Start:
-                break;
-            case PacketType.Loaded:
-                PacketHandler.HandleClientPacket(packet);
-                SendMessages(Connected, data, size);
-                break;
-            case PacketType.Position:
-                PacketHandler.HandleClientPacket(packet);
-                SendMessages(Connected, data, size, SendType.Unreliable);
-                break;
-            case PacketType.Rotation:
-                break;
-            case PacketType.Spawn:
-                break;
+            switch (type)
+            {
+                case PacketType.Damage:
+                    SendMessages(Connected, data, size);
+                    break;
+                case PacketType.Loaded:
+                    SendMessages(Connected, data, size);
+                    break;
+                case PacketType.Position:
+                    SendMessages(Connected, data, size, SendType.Unreliable);
+                    break;
+                default:
+                    return null;
+            }
+
+            if (PacketHandler.PacketHandlers.TryGetValue(type, out var handler))
+            {
+                return handler;
+            }
+
+            return null;
+        }
+        
+        // Read PacketType
+        PacketDataType dataType = (PacketDataType)Marshal.ReadInt16(data);
+
+        if (Marshal.ReadInt16(data) == 0)
+        {
+            var packet = Marshal.PtrToStructure<FloatNetPacket>(data);
+            if(packet.PacketType == PacketType.Loaded)
+                Plugin.Logger.LogError("Loaded Recieved");
+            GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.data);
+        }
+        else
+        {
+            var packet = Marshal.PtrToStructure<VectorNetPacket>(data);
+            GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.data);
         }
     }
 
@@ -79,22 +92,36 @@ public class VGSocketManager : SocketManager
         }
     }
 
-    void SendMessages(HashSet<Connection> connections, NetPacket packet, SendType sendType = SendType.Reliable)
+    void SendMessages(HashSet<Connection> connections, FloatNetPacket packet, SendType sendType = SendType.Reliable)
     {
         int length = Marshal.SizeOf(packet);
-
         IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
         Marshal.StructureToPtr(packet, unmanagedPointer, false);
-
-        foreach (var connection in connections)
-        {
-            connection.SendMessage(unmanagedPointer, length, sendType);
-        }
-
+        SendMessages(Connected, unmanagedPointer, length, sendType);
         Marshal.FreeHGlobal(unmanagedPointer);
     }
+    void SendMessages(HashSet<Connection> connections, VectorNetPacket packet, SendType sendType = SendType.Reliable)
+    {
+        int length = Marshal.SizeOf(packet);
+        IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
+        Marshal.StructureToPtr(packet, unmanagedPointer, false);
+        SendMessages(Connected, unmanagedPointer, length, sendType);
+        Marshal.FreeHGlobal(unmanagedPointer);
+    }
+
     
-    void SendHostPacket(NetPacket packet, SendType sendType = SendType.Reliable)
+    void SendHostPacket(FloatNetPacket packet, SendType sendType = SendType.Reliable)
+    {
+        int length = Marshal.SizeOf(packet);
+        IntPtr unmanagedData = Marshal.AllocHGlobal(length);
+        Marshal.StructureToPtr(packet, unmanagedData, false);
+        
+        SendMessages(Connected, unmanagedData, length, sendType);
+        
+        Marshal.FreeHGlobal(unmanagedData);
+    }
+    
+    void SendHostPacket(VectorNetPacket packet, SendType sendType = SendType.Reliable)
     {
         int length = Marshal.SizeOf(packet);
         IntPtr unmanagedData = Marshal.AllocHGlobal(length);
@@ -107,54 +134,75 @@ public class VGSocketManager : SocketManager
     #endregion
     public void StartLevel()
     {
-        NetPacket packet = new NetPacket() { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Start };
+        var packet = new FloatNetPacket() { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Start };
         SendMessages(Connected, packet);
     }
 
     public void SendCheckpointHit(int index)
     {
         _latestCheckpoint = index;
-        NetPacket packet = new NetPacket() { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Checkpoint, Data = index };
+        var packet = new FloatNetPacket() { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Checkpoint, data = index };
         SendMessages(Connected, packet);
-        PacketHandler.HandleClientPacket(packet);
+        if (PacketHandler.PacketHandlers.TryGetValue(PacketType.Checkpoint, out var handler))
+        {
+            handler.ProcessPacket(packet.SenderId, packet.data);
+        }
     }
 
     public void SendRewindToCheckpoint()
     {
-        NetPacket packet = new NetPacket()
-            { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Rewind, Data = _latestCheckpoint };
+        var packet = new FloatNetPacket()
+            { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Rewind, data = _latestCheckpoint };
         SendMessages(Connected, packet);
-        PacketHandler.HandleClientPacket(packet);
+        if (PacketHandler.PacketHandlers.TryGetValue(PacketType.Rewind, out var handler))
+        {
+            handler.ProcessPacket(packet.SenderId, packet.data);
+        }
+        
     }
     
     //this function sucks
     private void SendPlayerId(Connection connection, SteamId steamId, int id)
     {
-        List<PlayersPacket.PlayerInfo> infoList = new();
-        foreach (var vgPlayerData in StaticManager.Players)
+        bool hasValue = false;
+        int length = sizeof(short) + sizeof(short) + sizeof(ulong) + sizeof(float);
+        IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
+        try
         {
-            infoList.Add(new PlayersPacket.PlayerInfo(vgPlayerData.Key, vgPlayerData.Value.PlayerID));
+            foreach (var vgPlayerData in StaticManager.Players)
+            {
+                var packet = new VectorNetPacket()
+                {
+                    PacketType = PacketType.Spawn,
+                    SenderId = vgPlayerData.Key,
+                    data = new Vector2(vgPlayerData.Value.PlayerID, StaticManager.Players.Count)
+                };
+                // int length = Marshal.SizeOf(packet);
+                //IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
+            
+                Marshal.StructureToPtr(packet, unmanagedPointer, hasValue);
+                if (!hasValue)
+                    hasValue = true;
+                connection.SendMessage(unmanagedPointer, length);
+            }
         }
-
-        var packet = new NetPacket()
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+        Marshal.FreeHGlobal(unmanagedPointer);
+        
+            var info = new VectorNetPacket()
             {
                 PacketType = PacketType.Spawn,
-                SenderId = StaticManager.LocalPlayer,
-                Data = new PlayersPacket(infoList.ToArray())
+                SenderId = steamId,
+                data = new Vector2(id, 1)
             };
-            int length = Marshal.SizeOf(packet);
-
-            IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
-            Marshal.StructureToPtr(packet, unmanagedPointer, false);
-            connection.SendMessage(unmanagedPointer, length);
-            Marshal.FreeHGlobal(unmanagedPointer);
-
-            var info = new PlayersPacket.PlayerInfo[] { new(steamId, id)};
-            SendMessages(Connected, new NetPacket(){PacketType = PacketType.Spawn, SenderId = StaticManager.LocalPlayer, Data = new PlayersPacket(info)});
+            SendMessages(Connected, info);
     }
     public void SendHostLoaded()
     {
-        var packet = new NetPacket()
+        var packet = new FloatNetPacket()
         {
             PacketType = PacketType.Loaded,
             SenderId = StaticManager.LocalPlayer
@@ -164,21 +212,21 @@ public class VGSocketManager : SocketManager
 
     public void SendHostDamage()
     {
-        var packet = new NetPacket()
+        var packet = new FloatNetPacket()
         {
             PacketType = PacketType.Damage,
             SenderId = StaticManager.LocalPlayer,
-            Data = VGPlayerManager.Inst.players[0].PlayerObject.Health
+            data = VGPlayerManager.Inst.players[0].PlayerObject.Health
         };
         SendHostPacket(packet);
     }
     public void SendHostPosition(Vector2 pos)
     {
-        var packet = new NetPacket()
+        var packet = new VectorNetPacket()
         {
             PacketType = PacketType.Position,
             SenderId = StaticManager.LocalPlayer,
-            Data = pos
+            data = pos
         };
         SendHostPacket(packet, SendType.Unreliable);
     }
@@ -186,7 +234,7 @@ public class VGSocketManager : SocketManager
 
 public class VGConnectionManager : ConnectionManager
 {
-    private Dictionary<string, PacketHandler> PacketHandlers = new();
+    
     #region ConnectionManager Overrides
     
     public override void OnConnecting(ConnectionInfo info)
@@ -205,14 +253,29 @@ public class VGConnectionManager : ConnectionManager
     {
         base.OnDisconnected(info);
         Plugin.Logger.LogInfo($"Client: Disconnected Steam user {info.Identity.SteamId}.");
+        SceneLoader.Inst.LoadSceneGroup("Menu");
     }
     
     public override void OnMessage(IntPtr data, int size, long messageNum, long recvTime, int channel)
     {
         try
         {
-            NetPacket packet = Il2CppSystem.Runtime.InteropServices.Marshal.PtrToStructure<NetPacket>(data);
-            PacketHandler.HandleClientPacket(packet);
+            if (Marshal.ReadInt16(data) == 0)
+            {
+                var packet = Marshal.PtrToStructure<FloatNetPacket>(data);
+                if(PacketHandler.PacketHandlers.TryGetValue(packet.PacketType, out var handler))
+                {
+                    handler.ProcessPacket(packet.SenderId, packet.data);
+                }
+            }
+            else
+            {
+                var packet = Marshal.PtrToStructure<VectorNetPacket>(data);
+                if(PacketHandler.PacketHandlers.TryGetValue(packet.PacketType, out var handler))
+                {
+                    handler.ProcessPacket(packet.SenderId, packet.data);
+                }
+            }
         }
         catch (Exception e)
         {
@@ -222,7 +285,15 @@ public class VGConnectionManager : ConnectionManager
     }
     #endregion
 
-    void SendPacket(NetPacket packet, SendType sendType = SendType.Reliable)
+    void SendPacket(FloatNetPacket packet, SendType sendType = SendType.Reliable)
+    {
+        int length = Marshal.SizeOf(packet);
+        IntPtr unmanagedData = Marshal.AllocHGlobal(length);
+        Marshal.StructureToPtr(packet, unmanagedData, false);
+        Connection.SendMessage(unmanagedData, length, sendType);
+        Marshal.FreeHGlobal(unmanagedData);
+    } 
+    void SendPacket(VectorNetPacket packet, SendType sendType = SendType.Reliable)
     {
         int length = Marshal.SizeOf(packet);
         IntPtr unmanagedData = Marshal.AllocHGlobal(length);
@@ -230,46 +301,10 @@ public class VGConnectionManager : ConnectionManager
         Connection.SendMessage(unmanagedData, length, sendType);
         Marshal.FreeHGlobal(unmanagedData);
     }
-    
-    public unsafe void SendPacket<T>(string eventName, T data, SendType sendType = SendType.Reliable) where T : unmanaged
-    {
-        var length = Unsafe.SizeOf<T>();
-        using var stream = new MemoryStream();
-        using var writer = new BinaryWriter(stream);
-        writer.Write(sizeof(int) + sizeof(ulong) + eventName.Length + sizeof(int) + length); // write total packet size
-        writer.Write(eventName.Length); // write event name length
-        writer.Write(Encoding.UTF8.GetBytes(eventName)); // write event name content
-        writer.Write(StaticManager.LocalPlayer);
-        writer.Write(length); // write struct length
-        var dataArray = stackalloc byte[length];
-        Marshal.StructureToPtr(data, (IntPtr)dataArray, false);
-        writer.Write(new ReadOnlySpan<byte>(dataArray, length));
-        Connection.SendMessage(stream.ToArray(), sendType);
-    }
-
-    public void HandleEvent(ReadOnlySpan<byte> data)
-    {
-        using var stream = new MemoryStream(data.ToArray());
-        using var reader = new BinaryReader(stream);
-        var packetSize = reader.ReadInt32();
-        if (packetSize - 4 != data.Length)
-            throw new ArgumentException(nameof(data), "Packet size does not match received data buffer size");
-        var eventNameLength = reader.ReadInt32();
-        var eventNameBytes = reader.ReadBytes(eventNameLength);
-        var eventName = Encoding.UTF8.GetString(eventNameBytes);
-        var steamid = reader.ReadUInt64();
-        var dataSize = reader.ReadInt32();
-        var dataBytes = reader.ReadBytes(dataSize);
-        if (!PacketHandlers.TryGetValue(eventName, out var handler))
-        {
-            Plugin.Logger.LogWarning($"No event handler registered for event type '{eventName}'");
-            return;
-        }
-        handler.ProcessPacket(steamid, dataBytes);
-    }
     public void SendLoaded()
     {
-        var packet = new NetPacket()
+        Plugin.Logger.LogError("Sending Loaded");
+        var packet = new FloatNetPacket()
         {
             PacketType = PacketType.Loaded,
             SenderId = StaticManager.LocalPlayer
@@ -279,22 +314,23 @@ public class VGConnectionManager : ConnectionManager
 
     public void SendDamage()
     {
-        var packet = new NetPacket()
+        var packet = new FloatNetPacket()
         {
             PacketType = PacketType.Damage,
             SenderId = StaticManager.LocalPlayer,
-            Buffer = VGPlayerManager.Inst.players[0].PlayerObject.Health
+            data = VGPlayerManager.Inst.players[0].PlayerObject.Health
         };
         SendPacket(packet);
     }
 
     public void SendPosition(Vector2 pos)
     {
-        var packet = new NetPacket()
+        var packet = new VectorNetPacket()
         {
             PacketType = PacketType.Position,
             SenderId = StaticManager.LocalPlayer,
+            data = pos
         };
-        SendPacket("Pos", pos, SendType.Unreliable);
+        SendPacket(packet, SendType.Unreliable);
     }
 }

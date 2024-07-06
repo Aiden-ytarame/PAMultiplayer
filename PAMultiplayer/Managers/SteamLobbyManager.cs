@@ -17,7 +17,7 @@ public class SteamLobbyManager : MonoBehaviour
     public void CreateLobby()
     {
         SteamManager.Inst.StartServer();
-        SteamMatchmaking.CreateLobbyAsync(4);
+        SteamMatchmaking.CreateLobbyAsync(8);
     }
     private void Awake()
     {
@@ -53,11 +53,9 @@ public class SteamLobbyManager : MonoBehaviour
     private void OnLobbyMemberDisconnected(Lobby lobby, Friend friend)
     {
         Plugin.Logger.LogInfo($"Member Left : [{friend.Name}]");
-        RemovePlayerFromLoadList(friend.Id);
-
-        if (LobbyManager.Instance)
-            LobbyManager.Instance.RemovePlayerFromLobby(friend.Id);
         
+        LobbyManager.Instance?.RemovePlayerFromLobby(friend.Id);
+        RemovePlayerFromLoadList(friend.Id);
         var player = StaticManager.Players[friend.Id].PlayerObject;
         player?.PlayerDeath();
         VGPlayerManager.Inst.players.Remove(StaticManager.Players[friend.Id]);
@@ -71,28 +69,27 @@ public class SteamLobbyManager : MonoBehaviour
         
         AddPlayerToLoadList(friend.Id);
 
-        if (LobbyManager.Instance)
-            LobbyManager.Instance.AddPlayerToLobby(friend.Id, friend.Name);
+        if (!LobbyManager.Instance) return;
+        
+        LobbyManager.Instance.AddPlayerToLobby(friend.Id, friend.Name);
           
       
         if (friend.Id == StaticManager.LocalPlayer)
             return;
+
+        int offset = 10;
+        if (StaticManager.IsHosting)
+            offset = 1;
         
         VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
-        NewData.PlayerID = StaticManager.Players.Count + 1; //by the way, this can cause problems
-        NewData.ControllerID = StaticManager.Players.Count + 1;
+        NewData.PlayerID = StaticManager.Players.Count + offset; //by the way, this can cause problems
+        NewData.ControllerID = StaticManager.Players.Count + offset;
         Plugin.Logger.LogInfo($"Member Joined : [{friend.Name}]");
         
-        if (!VGPlayerManager.Inst.players.Contains(NewData))
-            VGPlayerManager.Inst.players.Add(NewData);
-      
-
-        StaticManager.Players.TryAdd(friend.Id, NewData);
-        
-        
-        if (!SceneLoader.Inst.isLoading && !LobbyManager.Instance)
-            VGPlayerManager.inst.RespawnPlayers();
-        //handle lobby screen;
+        if (StaticManager.Players.TryAdd(friend.Id, NewData))
+        {
+            VGPlayerManager.Inst.players.Add(StaticManager.Players[friend.Id]);
+        }
     }
 
     private void OnLobbyEntered(Lobby lobby)
@@ -111,6 +108,24 @@ public class SteamLobbyManager : MonoBehaviour
         {
             if (level.SteamInfo.ItemID.Value == id)
             {
+                StaticManager.HasLoadedAllInfo = false;
+                
+                
+                VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
+                NewData.PlayerID = StaticManager.Players.Count + 10; //by the way, this can cause problems
+                NewData.ControllerID = StaticManager.Players.Count + 10;
+
+                var Enu = lobby.Members.GetEnumerator();
+                while (Enu.MoveNext())
+                {
+                    if (StaticManager.Players.TryAdd(Enu.Current.Id, NewData))
+                    {
+                        if (StaticManager.LocalPlayer == Enu.Current.Id) continue;
+                        VGPlayerManager.Inst.players.Add(StaticManager.Players[Enu.Current.Id]);
+                    }
+                }
+                Enu.Dispose();
+
                 SteamManager.Inst.StartClient(lobby.Owner.Id);
                 SaveManager.Inst.CurrentArcadeLevel = level;
                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");

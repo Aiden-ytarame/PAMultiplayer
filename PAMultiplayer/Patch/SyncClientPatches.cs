@@ -55,6 +55,12 @@ public static class RewindHandler
         {
             _deathAction = new Action<Vector3>(x =>
             {
+                foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+                {
+                   if(vgPlayerData.PlayerObject) //if player object exists
+                       if (!vgPlayerData.PlayerObject.isDead) //if not dead
+                           return; //dont rewind
+                }
                 SteamManager.Inst.Server?.SendRewindToCheckpoint();
             });
         }

@@ -1,5 +1,5 @@
-using System;
 using Steamworks;
+using UnityEngine;
 
 namespace PAMultiplayer.Packet;
 
@@ -15,29 +15,48 @@ public enum PacketType : short
     Rewind
 }
 
-public struct NetPacket
+public enum PacketDataType : short
 {
-    public PacketType PacketType;
-    public SteamId SenderId;
-    public unsafe fixed byte Buffer[12];
+    Float,
+    Vector
 }
 
-public struct PlayersPacket
+public struct FloatNetPacket 
 {
-    public struct PlayerInfo
-    {
-        public PlayerInfo( SteamId id, int playerId)
-        {
-            Id = id;
-            PlayerId = playerId;
-        }
-        public SteamId Id;
-        public int PlayerId;
-    }
+    public PacketDataType DataType = PacketDataType.Float;
+    public PacketType PacketType;
+    public SteamId SenderId;
+    public float data;
 
-    public PlayersPacket(PlayerInfo[] info)
+    public FloatNetPacket()
     {
-        Info = info;
+        PacketType = PacketType.Damage;
+        SenderId = default;
+        data = default;
     }
-    public PlayerInfo[] Info;
+}
+
+public struct VectorNetPacket
+{
+    public PacketDataType DataType = PacketDataType.Vector;
+    public PacketType PacketType;
+    public SteamId SenderId;
+    public Vector2 data;
+
+    public VectorNetPacket()
+    {
+        PacketType = PacketType.Damage;
+        SenderId = default;
+        data = default;
+    }
+}
+public struct PlayerPacket
+{
+    public PlayerPacket( SteamId id, int playerId)
+    {
+        Id = id;
+        PlayerId = playerId;
+    }
+    public SteamId Id;
+    public int PlayerId;
 }

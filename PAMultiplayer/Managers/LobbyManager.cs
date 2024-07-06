@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
-using BepInEx;
 using Cpp2IL.Core.Extensions;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
+using LibCpp2IL.Wasm;
 using Steamworks;
 using TMPro;
 using UnityEngine;
-using Action = Il2CppSystem.Action;
 using Object = UnityEngine.Object;
 
 namespace PAMultiplayer.Managers
@@ -22,28 +20,43 @@ namespace PAMultiplayer.Managers
         [HarmonyPrefix]
         public static bool Prefix()
         {
-            if (!StaticManager.IsMultiplayer || LobbyManager.Instance.shouldStart || (StaticManager.IsHosting && SteamLobbyManager.Inst.IsEveryoneLoaded))
+            if (!StaticManager.IsMultiplayer || LobbyManager.Instance.shouldStart ||
+                (StaticManager.IsHosting))
             {
-                return true;
-            }
-            return false;
-        }
-
-
-        [HarmonyPatch(nameof(PauseMenu.UnPause))]
-        [HarmonyPostfix]
-        public static void Postfix(ref PauseMenu __instance)
-        {
-            if (LobbyManager.Instance && SteamLobbyManager.Inst.IsEveryoneLoaded)
-            {  
-                Object.Destroy(LobbyManager.Instance);
-                VGPlayerManager.inst.RespawnPlayers();
-
                 if (StaticManager.IsHosting)
                     SteamManager.Inst.Server.StartLevel();
+                LobbyManager.Instance.shouldStart = false;
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(GameManager))]
+    public class GMPauseLobbyPatch
+    {
+        [HarmonyPatch(nameof(GameManager.UnPause))]
+        [HarmonyPrefix]
+        public static void Postfix()
+        {
+            if (!StaticManager.IsMultiplayer) return;
+            
+            VGPlayerManager.inst.RespawnPlayers(); //maybe this is the issue?
+            
+            if (StaticManager.IsHosting)
+                SteamManager.Inst.Server.StartLevel();
+            if (LobbyManager.Instance)
+            {
+                if (StaticManager.IsHosting)
+                    SteamManager.Inst.Server.StartLevel();
+                
+                VGPlayerManager.inst.RespawnPlayers();
+                Object.Destroy(LobbyManager.Instance);
             }
         }
     }
+
     public class LobbyManager : MonoBehaviour
     {
         public static LobbyManager Instance { get; private set; }
@@ -116,11 +129,11 @@ namespace PAMultiplayer.Managers
             while(Enu.MoveNext())
             {
                 AddPlayerToLobby(Enu.Current.Id, Enu.Current.Name);
-                
                 //this means that when you join a lobby
                 //every player that joined before you will get shown as Loaded, even if they're not. 
                 //it's easier than send if the player loaded or not to every new client.
-                SetPlayerLoaded(Enu.Current.Id); 
+                SetPlayerLoaded(Enu.Current.Id);
+               
             }
             Enu.Dispose();
             
@@ -136,20 +149,13 @@ namespace PAMultiplayer.Managers
 
         public void AddPlayerToLobby(SteamId player, string playerName)
         {
-            try
-            {
-                var playerEntry = Instantiate(_playerPrefab, _playersListGo.transform);
-                playerEntry.name = $"PAM_Player {player}";
+            var playerEntry = Instantiate(_playerPrefab, _playersListGo.transform);
+            playerEntry.name = $"PAM_Player {player}";
 
-                Transform entry = _playersListGo.Find($"PAM_Player {player}");
-                entry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
-                _playerList.Add(player, entry);
-            }
-            catch (Exception e)
-            {
-                Plugin.Logger.LogError(e);
-                throw;
-            }
+            Transform entry = _playersListGo.Find($"PAM_Player {player}");
+            entry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
+            _playerList.Add(player, entry);
+
         }
 
         public void RemovePlayerFromLobby(SteamId player)
