@@ -59,7 +59,6 @@ public class SteamLobbyManager : MonoBehaviour
         var player = StaticManager.Players[friend.Id].PlayerObject;
         player?.PlayerDeath();
         VGPlayerManager.Inst.players.Remove(StaticManager.Players[friend.Id]);
-        StaticManager.PlayerPositions.Remove(friend.Id);
         StaticManager.Players.Remove(friend.Id);
     }
 
@@ -83,7 +82,7 @@ public class SteamLobbyManager : MonoBehaviour
         
         VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
         NewData.PlayerID = StaticManager.Players.Count + offset; //by the way, this can cause problems
-        NewData.ControllerID = StaticManager.Players.Count + offset;
+        NewData.ControllerID = StaticManager.Players.Count + 2;
         Plugin.Logger.LogInfo($"Member Joined : [{friend.Name}]");
         
         if (StaticManager.Players.TryAdd(friend.Id, NewData))

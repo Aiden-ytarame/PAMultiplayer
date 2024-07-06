@@ -31,29 +31,6 @@ namespace PAMultiplayer.Patch
                 
             }
         }
-        
-        [HarmonyPatch(nameof(VGPlayer.Update))]
-        [HarmonyPrefix]
-        static void Update_Pre(ref VGPlayer __instance)
-        {
-            if (!StaticManager.IsMultiplayer || !__instance.IsLocalPlayer()) return;
-            
-            if (StaticManager.Players.TryGetValue(StaticManager.LocalPlayer, out var player))
-            {
-                if (__instance.Player_Rigidbody)
-                {
-                    var V2 = player.PlayerObject.Player_Rigidbody.transform.position;
-                    if(StaticManager.IsHosting)
-                        SteamManager.Inst.Server?.SendHostPosition(V2);
-                    else
-                        SteamManager.Inst.Client?.SendPosition(V2);
-                }
-            }
-            else
-            {
-                StaticManager.Players.Add(StaticManager.LocalPlayer, VGPlayerManager.Inst.players[0]);
-            }
-        }
 
         [HarmonyPatch(nameof(VGPlayer.HandleBoost))]
         [HarmonyPrefix]

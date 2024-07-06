@@ -1,7 +1,5 @@
 ﻿using System;
-using PAMultiplayer.Patch;
 using UnityEngine;
-using UnityEngine.Playables;
 
 namespace PAMultiplayer.Managers
 {
@@ -17,33 +15,24 @@ namespace PAMultiplayer.Managers
             }
         }
 
-        //everything here will go into its own steam manager later on
-        //this is all testing
-      
-        void Update() //Not sure if FixedUpdate is better.
+        void Update()
         {
             SteamManager.Inst.Server?.Receive();
             SteamManager.Inst.Client?.Receive();
-            var PosEnu = StaticManager.PlayerPositions.GetEnumerator();
 
-            while (PosEnu.MoveNext())
-            {
-                if (PosEnu.Current.Key == StaticManager.LocalPlayer)
-                    continue;
-
-                if (!StaticManager.Players[PosEnu.Current.Key].PlayerObject)
-                    continue;
+            if (!StaticManager.IsMultiplayer || VGPlayerManager.Inst.players.Count == 0) return;
             
-                Rigidbody2D rb = StaticManager.Players[PosEnu.Current.Key].PlayerObject.Player_Rigidbody;
-
-                Vector2 DeltaPos = rb.position - PosEnu.Current.Value;
-                StaticManager.Players[PosEnu.Current.Key].PlayerObject.Player_Wrapper.transform.Rotate(new Vector3(0, 0, Mathf.Atan2(DeltaPos.x, DeltaPos.y)), Space.World);
-
-                rb.position = PosEnu.Current.Value;
-
+            VGPlayer player = VGPlayerManager.Inst.players[0].PlayerObject;
+            if (!player) return;
+            
+            if (player.Player_Rigidbody)
+            {
+                var V2 = player.Player_Rigidbody.transform.position;
+                if (StaticManager.IsHosting)
+                    SteamManager.Inst.Server?.SendHostPosition(V2);
+                else
+                    SteamManager.Inst.Client?.SendPosition(V2);
             }
-
-            PosEnu.Dispose();
         }
 
         void OnDisable()

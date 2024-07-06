@@ -33,22 +33,23 @@ public class PositionPacket : PacketHandler
         {
             if (playerData.PlayerObject)
             {
-                if (!StaticManager.PlayerPositions.ContainsKey(senderId))
-                {
-                    StaticManager.PlayerPositions.Add(senderId, Vector2.zero);
-                    return;
-                }
+                VGPlayer player = StaticManager.Players[senderId].PlayerObject;
+                
+                if(!player) return;
+                
+                Rigidbody2D rb = player.Player_Rigidbody;
+               // Vector2 DeltaPos = rb.position - PosEnu.Current.Value;
+                //StaticManager.Players[PosEnu.Current.Key].PlayerObject.Player_Wrapper.transform.Rotate(new Vector3(0, 0, Mathf.Atan2(DeltaPos.x, DeltaPos.y)), Space.World);
 
-                VGPlayer player;
-                var rot = pos - StaticManager.PlayerPositions[senderId];
-                if (rot.sqrMagnitude > 0.0001f && (player = StaticManager.Players[senderId].PlayerObject))
+                var rot = pos - rb.position;
+                rb.position = pos;
+                
+                if (rot.sqrMagnitude > 0.0001f)
                 {
                     rot.Normalize();
                     player.p_lastMoveX = rot.x;
                     player.p_lastMoveY = rot.y;
                 }
-
-                StaticManager.PlayerPositions[senderId] = pos;
             }
         }
     }
