@@ -28,8 +28,8 @@ namespace PAMultiplayer.Patch
            //     toggle.onValueChanged.AddListener(new System.Action<bool>(_ => {AudioManager.Inst.PlaySound("UI_Select", 1);}));
                 toggle.onValueChanged.AddListener(new Action<bool>(x =>
                 {
-                    StaticManager.IsHosting = x;
-                    StaticManager.IsMultiplayer = x;
+                    GlobalsManager.IsHosting = x;
+                    GlobalsManager.IsMultiplayer = x;
                 }));
 
                 multiplayer.GetComponent<GhostUIElement>().subGraphics = null;

@@ -6,6 +6,7 @@ using PAMultiplayer.Packet;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
+using VGFunctions;
 
 namespace PAMultiplayer.Managers;
 
@@ -26,7 +27,7 @@ public class VGSocketManager : SocketManager
     public override void OnConnected(Connection connection, ConnectionInfo data)
     {
         base.OnConnected(connection, data);
-        SendPlayerId(connection, data.Identity.SteamId, StaticManager.Players[data.Identity.SteamId].PlayerID);
+        SendPlayerId(connection, data.Identity.SteamId, GlobalsManager.Players[data.Identity.SteamId].PlayerID);
         Plugin.Inst.Log.LogInfo($"Server: {data.Identity.SteamId} has joined the game");
     }
 
@@ -134,14 +135,14 @@ public class VGSocketManager : SocketManager
     #endregion
     public void StartLevel()
     {
-        var packet = new IntNetPacket() { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Start };
+        var packet = new IntNetPacket() { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Start };
         SendMessages(packet);
     }
 
     public void SendCheckpointHit(int index)
     {
         _latestCheckpoint = index;
-        var packet = new IntNetPacket() { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Checkpoint, data = index };
+        var packet = new IntNetPacket() { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Checkpoint, data = index };
         SendMessages(packet);
         if (PacketHandler.PacketHandlers.TryGetValue(PacketType.Checkpoint, out var handler))
         {
@@ -152,7 +153,7 @@ public class VGSocketManager : SocketManager
     public void SendRewindToCheckpoint()
     {
         var packet = new IntNetPacket()
-            { SenderId = StaticManager.LocalPlayer, PacketType = PacketType.Rewind, data = _latestCheckpoint };
+            { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Rewind, data = _latestCheckpoint };
         SendMessages(packet);
         if (PacketHandler.PacketHandlers.TryGetValue(PacketType.Rewind, out var handler))
         {
@@ -162,23 +163,21 @@ public class VGSocketManager : SocketManager
     }
     
     //this function sucks
-    private void SendPlayerId(Connection connection, SteamId steamId, int id)
+    private void SendPlayerId(Connection connection, SteamId steamId, int id) 
     {
         bool hasValue = false;
         int length = sizeof(short) + sizeof(short) + sizeof(ulong) + sizeof(float);
         IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
         try
         {
-            foreach (var vgPlayerData in StaticManager.Players)
+            foreach (var vgPlayerData in GlobalsManager.Players)
             {
                 var packet = new VectorNetPacket()
                 {
                     PacketType = PacketType.Spawn,
                     SenderId = vgPlayerData.Key,
-                    data = new Vector2(vgPlayerData.Value.PlayerID, StaticManager.Players.Count)
+                    data = new Vector2(vgPlayerData.Value.PlayerID, GlobalsManager.Players.Count)
                 };
-                // int length = Marshal.SizeOf(packet);
-                //IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
             
                 Marshal.StructureToPtr(packet, unmanagedPointer, hasValue);
                 if (!hasValue)
@@ -205,7 +204,7 @@ public class VGSocketManager : SocketManager
         var packet = new IntNetPacket()
         {
             PacketType = PacketType.Loaded,
-            SenderId = StaticManager.LocalPlayer
+            SenderId = GlobalsManager.LocalPlayer
         };
         SendHostPacket(packet);
     }
@@ -215,7 +214,7 @@ public class VGSocketManager : SocketManager
         var packet = new IntNetPacket()
         {
             PacketType = PacketType.Damage,
-            SenderId = StaticManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayer,
             data = VGPlayerManager.Inst.players[0].PlayerObject.Health
         };
         SendHostPacket(packet);
@@ -225,7 +224,7 @@ public class VGSocketManager : SocketManager
         var packet = new VectorNetPacket()
         {
             PacketType = PacketType.Position,
-            SenderId = StaticManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayer,
             data = pos
         };
         SendHostPacket(packet, SendType.Unreliable);
@@ -307,7 +306,7 @@ public class VGConnectionManager : ConnectionManager
         var packet = new IntNetPacket()
         {
             PacketType = PacketType.Loaded,
-            SenderId = StaticManager.LocalPlayer
+            SenderId = GlobalsManager.LocalPlayer
         };
         SendPacket(packet);
     }
@@ -317,7 +316,7 @@ public class VGConnectionManager : ConnectionManager
         var packet = new IntNetPacket()
         {
             PacketType = PacketType.Damage,
-            SenderId = StaticManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayer,
             data = VGPlayerManager.Inst.players[0].PlayerObject.Health
         };
         SendPacket(packet);
@@ -328,7 +327,7 @@ public class VGConnectionManager : ConnectionManager
         var packet = new VectorNetPacket()
         {
             PacketType = PacketType.Position,
-            SenderId = StaticManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayer,
             data = pos
         };
         SendPacket(packet, SendType.Unreliable);

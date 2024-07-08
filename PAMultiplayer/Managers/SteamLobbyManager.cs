@@ -13,7 +13,7 @@ public class SteamLobbyManager : MonoBehaviour
     public bool InLobby { get; private set; }
     public static SteamLobbyManager Inst;
     private Dictionary<SteamId, bool> _loadedPlayers = new();
-    
+    int amount = 10;
     public void CreateLobby()
     {
         SteamManager.Inst.StartServer();
@@ -54,12 +54,12 @@ public class SteamLobbyManager : MonoBehaviour
     {
         Plugin.Logger.LogInfo($"Member Left : [{friend.Name}]");
         
-        LobbyManager.Instance?.RemovePlayerFromLobby(friend.Id);
+        LobbyScreenManager.Instance?.RemovePlayerFromLobby(friend.Id);
         RemovePlayerFromLoadList(friend.Id);
-        var player = StaticManager.Players[friend.Id].PlayerObject;
+        var player = GlobalsManager.Players[friend.Id].PlayerObject;
         player?.PlayerDeath();
-        VGPlayerManager.Inst.players.Remove(StaticManager.Players[friend.Id]);
-        StaticManager.Players.Remove(friend.Id);
+        VGPlayerManager.Inst.players.Remove(GlobalsManager.Players[friend.Id]);
+        GlobalsManager.Players.Remove(friend.Id);
     }
 
     private void OnLobbyMemberJoined(Lobby lobby, Friend friend)
@@ -67,28 +67,25 @@ public class SteamLobbyManager : MonoBehaviour
         Plugin.Logger.LogInfo($"Member Joined : [{friend.Name}]");
         
         AddPlayerToLoadList(friend.Id);
-
-        if (!LobbyManager.Instance) return;
         
-        LobbyManager.Instance.AddPlayerToLobby(friend.Id, friend.Name);
+        LobbyScreenManager.Instance?.AddPlayerToLobby(friend.Id, friend.Name);
           
       
-        if (friend.Id == StaticManager.LocalPlayer)
+        if (friend.Id.IsLocalPlayer())
             return;
-
-        int offset = 10;
-        if (StaticManager.IsHosting)
-            offset = 1;
         
         VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
-        NewData.PlayerID = StaticManager.Players.Count + offset; //by the way, this can cause problems
-        NewData.ControllerID = StaticManager.Players.Count + 2;
+        NewData.PlayerID = amount; //by the way, this can cause problems
+        NewData.ControllerID = amount;
         Plugin.Logger.LogInfo($"Member Joined : [{friend.Name}]");
         
-        if (StaticManager.Players.TryAdd(friend.Id, NewData))
+        if (GlobalsManager.Players.TryAdd(friend.Id, NewData))
         {
-            VGPlayerManager.Inst.players.Add(StaticManager.Players[friend.Id]);
+            VGPlayerManager.Inst.players.Add(GlobalsManager.Players[friend.Id]);
         }
+
+        VGPlayerManager.Inst.RespawnPlayers();
+        amount++;
     }
 
     private void OnLobbyEntered(Lobby lobby)
@@ -97,9 +94,14 @@ public class SteamLobbyManager : MonoBehaviour
         Plugin.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
         CurrentLobby = lobby;
         InLobby = true;
-        
-        if (StaticManager.LocalPlayer == lobby.Owner.Id) return; 
-        
+
+        if (lobby.Owner.Id.IsLocalPlayer())
+        {
+            amount = 1;
+            return;
+        }
+
+        amount = 1;
         //this could be moved to somewhere before even joining
         //but if it works, we keep
         ulong id = ulong.Parse(lobby.GetData("LevelId"));
@@ -107,25 +109,25 @@ public class SteamLobbyManager : MonoBehaviour
         {
             if (level.SteamInfo.ItemID.Value == id)
             {
-                StaticManager.HasLoadedAllInfo = false;
-                
-                
-                VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
-                NewData.PlayerID = StaticManager.Players.Count + 10; //by the way, this can cause problems
-                NewData.ControllerID = StaticManager.Players.Count + 10;
+                GlobalsManager.HasLoadedAllInfo = false;
 
+                
                 var Enu = lobby.Members.GetEnumerator();
                 while (Enu.MoveNext())
                 {
-                    if (StaticManager.Players.TryAdd(Enu.Current.Id, NewData))
+                    VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
+                    NewData.PlayerID = amount; //by the way, this can cause problems
+                    NewData.ControllerID = amount;
+                    
+                    if (GlobalsManager.Players.TryAdd(Enu.Current.Id, NewData))
                     {
-                        if (StaticManager.LocalPlayer == Enu.Current.Id) continue;
-                        VGPlayerManager.Inst.players.Add(StaticManager.Players[Enu.Current.Id]);
+                        VGPlayerManager.Inst.players.Add(GlobalsManager.Players[Enu.Current.Id]);
                     }
+
+                    amount++;
                 }
                 Enu.Dispose();
-
-                SteamManager.Inst.StartClient(lobby.Owner.Id);
+                
                 SaveManager.Inst.CurrentArcadeLevel = level;
                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
                 return;
@@ -154,10 +156,10 @@ public class SteamLobbyManager : MonoBehaviour
         
         lobby.SetData("LevelId", SaveManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
       
-        if (!LobbyManager.Instance?.pauseMenu) return; //this is for the "Lobby failed to be created" message
+        if (!LobbyScreenManager.Instance?.pauseMenu) return; //this is for the "Lobby failed to be created" message
         
-        LobbyManager.Instance.pauseMenu.transform.Find("Content/buttons").gameObject.SetActive(true);
-        LobbyManager.Instance.pauseMenu.transform.Find("Content/LobbyFailed").gameObject.SetActive(false);
+        LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/buttons").gameObject.SetActive(true);
+        LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/LobbyFailed").gameObject.SetActive(false);
         
         
     }
@@ -165,6 +167,7 @@ public class SteamLobbyManager : MonoBehaviour
     public void StartGame()
     {
         CurrentLobby.SetJoinable(false);
+        CurrentLobby.SetPrivate();
     }
 
     public void LeaveLobby()

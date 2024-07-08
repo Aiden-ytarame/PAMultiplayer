@@ -23,7 +23,7 @@ public class Plugin : BasePlugin
     public override void Load()
     {
         ClassInjector.RegisterTypeInIl2Cpp<NetworkManager>();
-        ClassInjector.RegisterTypeInIl2Cpp<LobbyManager>();
+        ClassInjector.RegisterTypeInIl2Cpp<LobbyScreenManager>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamManager>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamLobbyManager>();
         

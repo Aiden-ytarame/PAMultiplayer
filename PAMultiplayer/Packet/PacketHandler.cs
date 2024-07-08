@@ -27,13 +27,13 @@ public class PositionPacket : PacketHandler
 {
     public override void ProcessPacket(SteamId senderId, object data)
     {
-        if (senderId == StaticManager.LocalPlayer) return;
+        if (senderId.IsLocalPlayer()) return;
         var pos = (Vector2)data;
-        if (StaticManager.Players.TryGetValue(senderId, out var playerData))
+        if (GlobalsManager.Players.TryGetValue(senderId, out var playerData))
         {
             if (playerData.PlayerObject)
             {
-                VGPlayer player = StaticManager.Players[senderId].PlayerObject;
+                VGPlayer player = GlobalsManager.Players[senderId].PlayerObject;
                 
                 if(!player) return;
                 
@@ -43,7 +43,7 @@ public class PositionPacket : PacketHandler
 
                 var rot = pos - rb.position;
                 rb.position = pos;
-                
+                Plugin.Logger.LogWarning(player.PlayerID);
                 if (rot.sqrMagnitude > 0.0001f)
                 {
                     rot.Normalize();
@@ -61,10 +61,10 @@ public class DamagePacket : PacketHandler
     {
         Plugin.Inst.Log.LogWarning($"Damaging player { senderId}");
 
-        if ( senderId == StaticManager.LocalPlayer) return;
+        if ( senderId.IsLocalPlayer()) return;
 
         int health = (int)data;
-        VGPlayer player = StaticManager.Players[senderId].PlayerObject;
+        VGPlayer player = GlobalsManager.Players[senderId].PlayerObject;
         if (!player) return;
         player.Health = health;
         player.PlayerHit();
@@ -75,7 +75,7 @@ public class StartPacket : PacketHandler
 {
     public override void ProcessPacket(SteamId senderId, object data)
     {
-        LobbyManager.Instance?.StartLevel();
+        LobbyScreenManager.Instance?.StartLevel();
     }
 }
 
@@ -85,10 +85,10 @@ public class LoadedPacket : PacketHandler
     {
         Plugin.Logger.LogInfo($"Received Loaded Confirmation from [{senderId}]");
         
-        if (senderId == StaticManager.LocalPlayer) return;
+        if (senderId.IsLocalPlayer()) return;
 
         SteamLobbyManager.Inst.SetLoaded(senderId);
-        LobbyManager.Instance.SetPlayerLoaded(senderId);
+        LobbyScreenManager.Instance.SetPlayerLoaded(senderId);
         
     }
 }
@@ -103,31 +103,21 @@ public class SpawnPacket : PacketHandler
 
         int id = (int)info.x;
         int amount = (int)info.y;
-        StaticManager.HasLoadedAllInfo = false;
+        GlobalsManager.HasLoadedAllInfo = false;
         _amountOfInfo++;
-        Plugin.Logger.LogInfo($"Players Id from [{senderId}] Received");
+        Plugin.Logger.LogInfo($"Player Id from [{senderId}] Received");
 
-        try
+        if (GlobalsManager.Players.TryGetValue(senderId, out var player))
         {
-            var player = StaticManager.Players[senderId];
+            if (senderId.IsLocalPlayer())
+                GlobalsManager.LocalPlayerObjectId = id;
+            
             player.PlayerID = id;
-            if (player.PlayerObject)
-            {
-                Plugin.Logger.LogError("Player Object");
-                player.PlayerObject.PlayerID = id;
-            }
-
-            StaticManager.Players[senderId].PlayerID = id;
         }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
-
         if (_amountOfInfo >= amount)
         {
             amount = 0;
-            StaticManager.HasLoadedAllInfo = true;
+            GlobalsManager.HasLoadedAllInfo = true;
         }
     }
 }
@@ -149,9 +139,9 @@ public class RewindPacket : PacketHandler
     public override void ProcessPacket(SteamId senderId, object data)
     {
         Plugin.Logger.LogInfo($"Rewind to Checkpoint [{(int)data}] Received");
-        VGPlayerManager.Inst.players.ForEach(new System.Action<VGPlayerManager.VGPlayerData>(x =>
+        VGPlayerManager.Inst.players.ForEach(new Action<VGPlayerManager.VGPlayerData>(x =>
         {
-            if (!x.PlayerObject.isDead)
+            if (x.PlayerObject && !x.PlayerObject.isDead)
             {
                 x.PlayerObject.Health = 1;
                 x.PlayerObject.PlayerHit();

@@ -52,7 +52,7 @@ public class SteamManager : MonoBehaviour
             SteamNetworkingUtils.ConnectionTimeout = 5000;
             SteamNetworkingUtils.Timeout = 6000;
    
-            StaticManager.LocalPlayer = SteamClient.SteamId;
+            GlobalsManager.LocalPlayer = SteamClient.SteamId;
             
         }
         catch(Exception e)
@@ -64,8 +64,8 @@ public class SteamManager : MonoBehaviour
     
     private void OnGameLobbyJoinRequested(Lobby lobby, SteamId steamId)
     {
-        StaticManager.IsHosting = false;
-        StaticManager.IsMultiplayer = true;
+        GlobalsManager.IsHosting = false;
+        GlobalsManager.IsMultiplayer = true;
         Plugin.Logger.LogInfo($"Joining friend's lobby owned by [{steamId}]");
         Plugin.Logger.LogError($"Lobby Id [{lobby.Id.ToString()}]");
         lobby.Join();
@@ -89,14 +89,14 @@ public class SteamManager : MonoBehaviour
         Client?.Close();
         SteamLobbyManager.Inst.LeaveLobby();
 
-        if (StaticManager.IsReloadingLobby)
+        if (GlobalsManager.IsReloadingLobby)
         {
-            StaticManager.IsReloadingLobby = false;
+            GlobalsManager.IsReloadingLobby = false;
             return;
         }
         
-        StaticManager.IsMultiplayer = false;
-        StaticManager.IsHosting = false;
+        GlobalsManager.IsMultiplayer = false;
+        GlobalsManager.IsHosting = false;
     }
     public void StartServer()
     {
@@ -112,13 +112,13 @@ public class SteamManager : MonoBehaviour
         SteamLobbyManager.Inst.LeaveLobby();
         Server.Close();
         
-        if (StaticManager.IsReloadingLobby)
+        if (GlobalsManager.IsReloadingLobby)
         {
-            StaticManager.IsReloadingLobby = false;
+            GlobalsManager.IsReloadingLobby = false;
             return;
         }
-        StaticManager.IsMultiplayer = false;
-        StaticManager.IsHosting = false;
+        GlobalsManager.IsMultiplayer = false;
+        GlobalsManager.IsHosting = false;
     }
     
 }
@@ -134,5 +134,14 @@ public class SystemManager_Patch
         Plugin.Logger.LogError("Adding Steam Stuff");
         __instance.gameObject.AddComponent<SteamManager>();
         __instance.gameObject.AddComponent<SteamLobbyManager>();
+    }
+}
+
+
+public static class SteamIdLocalExtension
+{
+    public static bool IsLocalPlayer(this SteamId id)
+    {
+        return id == GlobalsManager.LocalPlayer;
     }
 }

@@ -14,9 +14,9 @@ public static class CheckpointHandler
     [HarmonyPrefix]
     static bool CheckpointHit(ref GameManager __instance)
     {
-        if (!StaticManager.IsMultiplayer) return true; //if single player run as normal
+        if (!GlobalsManager.IsMultiplayer) return true; //if single player run as normal
 
-        if (!StaticManager.IsHosting) return false; //only host runs checkpoint logic.
+        if (!GlobalsManager.IsHosting) return false; //only host runs checkpoint logic.
         
         float songTime = __instance.CurrentSongTimeSmoothed;
         var activated = __instance.checkpointsActivated;
@@ -49,9 +49,9 @@ public static class RewindHandler
     [HarmonyPrefix]
     static void ReplaceDeathAction(ref Il2CppSystem.Action<Vector3> _deathAction)
     {
-        if (!StaticManager.IsMultiplayer) return;
+        if (!GlobalsManager.IsMultiplayer) return;
    
-        if (StaticManager.IsHosting)
+        if (GlobalsManager.IsHosting)
         {
             _deathAction = new Action<Vector3>(x =>
             {

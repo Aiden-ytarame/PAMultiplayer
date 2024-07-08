@@ -1,12 +1,9 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
-using Steamworks;
 using UnityEngine;
-using UnityEngine.Playables;
 using TaskStatus = Il2CppSystem.Threading.Tasks.TaskStatus;
 
 namespace PAMultiplayer.Patch;
@@ -21,15 +18,15 @@ public class GameManagerPatch
         if (__instance.IsEditor)
             return;
         
-        if (!StaticManager.IsMultiplayer) return;
-
+        if (!GlobalsManager.IsMultiplayer) return;
+        
         var netMan = new GameObject("Network");
         netMan.AddComponent<NetworkManager>();
 
         
         
         //"loading client/Server" in the loading screen
-        if (StaticManager.IsHosting)
+        if (GlobalsManager.IsHosting)
         {
             var newTask = new TaskData
             {
@@ -60,6 +57,7 @@ public class GameManagerPatch
         }
         else
         {
+            
             int index = 0;
             for (var i = 0; i < SceneLoader.Inst.manager.ExtraLoadingTasks.Count; i++)
             {
@@ -69,11 +67,22 @@ public class GameManagerPatch
                     break;
                 }
             }
+            
             var newTask = new TaskData
             {
                 Name = "Loading Client",
                 Task = Task.Run(async () =>
                 {
+                    //wait for objects to load before attempting to connect to server
+                    //if the level is too heavy sometimes the game outright freezes loading objects
+                    //while frozen the connection can timeout, so we wait for objects to load first
+                    while (SceneLoader.Inst.manager.ExtraLoadingTasks[index].Task.Status != TaskStatus.RanToCompletion)
+                    {
+                        await Task.Delay(100);
+                    }
+                    
+                    SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
+                    
                     var ct = new CancellationTokenSource();
                     var waitClient = Task.Run(async () =>
                     {
@@ -96,6 +105,7 @@ public class GameManagerPatch
             };
             SceneLoader.Inst.manager.AddToLoadingTasks(newTask);
             
+            
             //task for awaiting host send player ids
             var newTask2 = new TaskData
             {
@@ -110,7 +120,7 @@ public class GameManagerPatch
                     var ct = new CancellationTokenSource();
                     var waitClient = Task.Run(async () =>
                     {
-                        while (!StaticManager.HasLoadedAllInfo)
+                        while (!GlobalsManager.HasLoadedAllInfo)
                         {
                             ct.Token.ThrowIfCancellationRequested();
                             await Task.Delay(100, ct.Token);
@@ -131,32 +141,35 @@ public class GameManagerPatch
         }
     }
 
+
     [HarmonyPatch(nameof(GameManager.PlayGame))]
     [HarmonyPostfix]
     public static void Postfix(ref GameManager __instance)
     {
-        if (StaticManager.IsMultiplayer && !GameManager.Inst.IsEditor)
-        {
-            Plugin.Logger.LogError($"Id ::: {VGPlayerManager.Inst.players[0].PlayerID}");
-            
-            SteamManager.Inst.Client?.SendLoaded();
-            __instance.Pause(false);
-            __instance.gameObject.AddComponent<LobbyManager>();
+        if (!GlobalsManager.IsMultiplayer || GameManager.Inst.IsEditor) return;
+
+        __instance.Pause(false);
+        __instance.gameObject.AddComponent<LobbyScreenManager>();
         
-            if (StaticManager.IsHosting)
+        if (GlobalsManager.IsHosting)
+        {
+            SteamManager.Inst.Server?.SendHostLoaded();
+        }
+        else if (!SteamManager.Inst.Client.Connected)
+        {
+            SceneLoader.Inst.LoadSceneGroup("Menu");
+        }
+        else
+        {
+            SteamManager.Inst.Client.SendLoaded();
+            foreach (var vgPlayerData in GlobalsManager.Players)
             {
-                SteamManager.Inst.Server?.SendHostLoaded();
-            }
-            else if (!SteamManager.Inst.Client.Connected)
-            {
-                SceneLoader.Inst.LoadSceneGroup("Menu");
-            }
-            else
-            {
-                SteamManager.Inst.Client.SendLoaded();
+                Plugin.Logger.LogError(
+                    $"Player Id [{vgPlayerData.Value.PlayerID}] : Controller Id : [{vgPlayerData.Value.ControllerID}]");
             }
         }
     }
+    
 }
 
 public static class TaskExtension

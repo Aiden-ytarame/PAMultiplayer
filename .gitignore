@@ -4,4 +4,6 @@ obj/
 .vs/
 .md
 .idea/
-.user
+Folder.DotSettings.user
+*.user
+PAMultiplayer/Folder.DotSettings.user

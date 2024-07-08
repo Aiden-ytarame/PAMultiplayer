@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Reflection;
 using Cpp2IL.Core.Extensions;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
-using LibCpp2IL.Wasm;
 using Steamworks;
 using TMPro;
 using UnityEngine;
@@ -20,12 +18,14 @@ namespace PAMultiplayer.Managers
         [HarmonyPrefix]
         public static bool Prefix()
         {
-            if (!StaticManager.IsMultiplayer || LobbyManager.Instance.shouldStart ||
-                (StaticManager.IsHosting))
+            if (!GlobalsManager.IsMultiplayer) return true;
+            
+            if(LobbyScreenManager.Instance.shouldStart ||
+                (GlobalsManager.IsHosting))
             {
-                if (StaticManager.IsHosting)
+                if (GlobalsManager.IsHosting)
                     SteamManager.Inst.Server.StartLevel();
-                LobbyManager.Instance.shouldStart = false;
+                LobbyScreenManager.Instance.shouldStart = false;
                 return true;
             }
 
@@ -40,26 +40,26 @@ namespace PAMultiplayer.Managers
         [HarmonyPrefix]
         public static void Postfix()
         {
-            if (!StaticManager.IsMultiplayer) return;
+            if (!GlobalsManager.IsMultiplayer) return;
             
             VGPlayerManager.inst.RespawnPlayers(); //maybe this is the issue?
             
-            if (StaticManager.IsHosting)
+            if (GlobalsManager.IsHosting)
                 SteamManager.Inst.Server.StartLevel();
-            if (LobbyManager.Instance)
+            if (LobbyScreenManager.Instance)
             {
-                if (StaticManager.IsHosting)
+                if (GlobalsManager.IsHosting)
                     SteamManager.Inst.Server.StartLevel();
                 
                 VGPlayerManager.inst.RespawnPlayers();
-                Object.Destroy(LobbyManager.Instance);
+                Object.Destroy(LobbyScreenManager.Instance);
             }
         }
     }
 
-    public class LobbyManager : MonoBehaviour
+    public class LobbyScreenManager : MonoBehaviour
     {
-        public static LobbyManager Instance { get; private set; }
+        public static LobbyScreenManager Instance { get; private set; }
         public bool shouldStart = false;
         readonly Dictionary<SteamId, Transform> _playerList = new();
         Transform _playersListGo;
@@ -94,7 +94,7 @@ namespace PAMultiplayer.Managers
 
             _playersListGo = lobbyGo.transform.Find("Content/PlayerList");
          
-            if (StaticManager.IsHosting)
+            if (GlobalsManager.IsHosting)
             {
                 var buttons = lobbyGo.transform.Find("Content/buttons");
                 buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(new System.Action(() =>
@@ -114,7 +114,7 @@ namespace PAMultiplayer.Managers
                         () =>
                         {
                             Plugin.Logger.LogDebug("RETRY");
-                            StaticManager.IsReloadingLobby = true;
+                            GlobalsManager.IsReloadingLobby = true;
                             SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
                         }));
                 }

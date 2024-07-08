@@ -8,7 +8,7 @@ namespace PAMultiplayer.Managers
     {
         void OnEnable()
         {
-            if (StaticManager.IsHosting && !GameManager.Inst.IsEditor)
+            if (GlobalsManager.IsHosting && !GameManager.Inst.IsEditor)
             {
                 Plugin.Inst.Log.LogError("Init Server");
                 SteamLobbyManager.Inst.CreateLobby();
@@ -17,22 +17,10 @@ namespace PAMultiplayer.Managers
 
         void Update()
         {
+            if (!GlobalsManager.IsMultiplayer) return;
+            
             SteamManager.Inst.Server?.Receive();
             SteamManager.Inst.Client?.Receive();
-
-            if (!StaticManager.IsMultiplayer || VGPlayerManager.Inst.players.Count == 0) return;
-            
-            VGPlayer player = VGPlayerManager.Inst.players[0].PlayerObject;
-            if (!player) return;
-            
-            if (player.Player_Rigidbody)
-            {
-                var V2 = player.Player_Rigidbody.transform.position;
-                if (StaticManager.IsHosting)
-                    SteamManager.Inst.Server?.SendHostPosition(V2);
-                else
-                    SteamManager.Inst.Client?.SendPosition(V2);
-            }
         }
 
         void OnDisable()
@@ -41,7 +29,7 @@ namespace PAMultiplayer.Managers
             {
                 SteamManager.Inst.EndServer();
                 SteamManager.Inst.EndClient();
-                StaticManager.Players.Clear();
+                GlobalsManager.Players.Clear();
             }
             catch(Exception e)
             {
