@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using System;
+using HarmonyLib;
 using PAMultiplayer.Managers;
 using Rewired;
 using UnityEngine;
@@ -6,7 +7,7 @@ using UnityEngine;
 namespace PAMultiplayer.Patch
 {
     [HarmonyPatch(typeof(VGPlayer))]
-    public class Player_UpdatePatch
+    public class Player_Patch
     {
         [HarmonyPatch(nameof(VGPlayer.OnChildTriggerEnter))]
         [HarmonyPatch(nameof(VGPlayer.OnChildTriggerStay))]
@@ -58,7 +59,20 @@ namespace PAMultiplayer.Patch
 
             return __instance.IsLocalPlayer();
         }
-        
+
+        public static Mesh CircleMesh;
+        [HarmonyPatch(nameof(VGPlayer.Init), new Type[]{ })]
+        [HarmonyPostfix]
+        static void PostSpawn(ref VGPlayer __instance)
+        {
+            if (!GlobalsManager.IsMultiplayer) return;
+
+            if (__instance.PlayerID < 4) return;
+            
+            __instance.Player_Wrapper.transform.Find("core").GetComponent<MeshFilter>().mesh = CircleMesh;
+            __instance.Player_Wrapper.transform.Find("zen-marker").GetComponent<MeshFilter>().mesh = CircleMesh;
+            __instance.Player_Wrapper.transform.Find("boost").GetComponent<MeshFilter>().mesh = CircleMesh;
+        }
         [HarmonyPatch(nameof(VGPlayer.RPlayer), MethodType.Getter)]
         [HarmonyPostfix]
         static void RPlayerGetter(ref VGPlayer __instance, ref Rewired.Player __result)

@@ -88,7 +88,6 @@ public class SteamManager : MonoBehaviour
     {
         Client?.Close();
         SteamLobbyManager.Inst.LeaveLobby();
-
         if (GlobalsManager.IsReloadingLobby)
         {
             GlobalsManager.IsReloadingLobby = false;

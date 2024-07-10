@@ -20,6 +20,11 @@ public class GameManagerPatch
             return;
         
         if (!GlobalsManager.IsMultiplayer) return;
+        foreach (var mesh in Resources.FindObjectsOfTypeAll<Mesh>())
+        {
+            if (mesh.name == "circle")
+                Player_Patch.CircleMesh = mesh;
+        }
         
         var netMan = new GameObject("Network");
         netMan.AddComponent<NetworkManager>();
