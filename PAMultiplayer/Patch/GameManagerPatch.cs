@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
+using Steamworks;
 using UnityEngine;
 using TaskStatus = Il2CppSystem.Threading.Tasks.TaskStatus;
 
@@ -23,7 +24,15 @@ public class GameManagerPatch
         var netMan = new GameObject("Network");
         netMan.AddComponent<NetworkManager>();
 
-        
+        int index = 0;
+        for (var i = 0; i < SceneLoader.Inst.manager.ExtraLoadingTasks.Count; i++)
+        {
+            if (SceneLoader.Inst.manager.ExtraLoadingTasks[i].Name == "Objects")
+            {
+                index = i;
+                break;
+            }
+        }
         
         //"loading client/Server" in the loading screen
         if (GlobalsManager.IsHosting)
@@ -33,6 +42,13 @@ public class GameManagerPatch
                 Name = "Loading Lobby",
                 Task = Task.Run(async () =>
                 {
+                    while (SceneLoader.Inst.manager.ExtraLoadingTasks[index].Task.Status != TaskStatus.RanToCompletion)
+                    {
+                        await Task.Delay(100);
+                    }
+                    
+                    SteamLobbyManager.Inst.CreateLobby();
+                    
                     var ct = new CancellationTokenSource();
                     var waitClient = Task.Run(async () =>
                     {
@@ -57,16 +73,6 @@ public class GameManagerPatch
         }
         else
         {
-            
-            int index = 0;
-            for (var i = 0; i < SceneLoader.Inst.manager.ExtraLoadingTasks.Count; i++)
-            {
-                if (SceneLoader.Inst.manager.ExtraLoadingTasks[i].Name == "Objects")
-                {
-                    index = i;
-                    break;
-                }
-            }
             
             var newTask = new TaskData
             {

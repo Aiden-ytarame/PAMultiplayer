@@ -19,12 +19,12 @@ namespace PAMultiplayer.Patch
                 return true;
             return false; //only collide if is local player
         }
-
-        private static Vector2 lastPos = Vector2.zero;
+        
         [HarmonyPatch(nameof(VGPlayer.Update))]
         [HarmonyPostfix]
         static void PostUpdate(ref VGPlayer __instance)
         {
+            //this could be moved out of here so it doesnt run for every player.
             if (!GlobalsManager.IsMultiplayer || !__instance.IsLocalPlayer()) return;
         
             if (__instance.Player_Rigidbody)
