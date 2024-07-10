@@ -1,6 +1,5 @@
 using System;
 using HarmonyLib;
-using Il2CppSystems.SceneManagement;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;

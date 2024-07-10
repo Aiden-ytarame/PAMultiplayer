@@ -6,7 +6,6 @@ using PAMultiplayer.Managers;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
-
 namespace PAMultiplayer.Patch
 {
   

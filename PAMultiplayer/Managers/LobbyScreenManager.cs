@@ -168,6 +168,7 @@ namespace PAMultiplayer.Managers
         public void StartLevel()
         {
             shouldStart = true;
+            SteamLobbyManager.Inst.HideLobby();
             pauseMenu.UnPause();
         }
     }

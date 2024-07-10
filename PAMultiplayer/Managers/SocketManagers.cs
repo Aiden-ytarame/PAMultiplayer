@@ -6,7 +6,6 @@ using PAMultiplayer.Packet;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
-using VGFunctions;
 
 namespace PAMultiplayer.Managers;
 

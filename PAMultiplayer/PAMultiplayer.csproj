@@ -13,7 +13,7 @@
       https://nuget.samboy.dev/v3/index.json;
     </RestoreAdditionalProjectSources>
     <RootNamespace>PAMultiplayer</RootNamespace>
-    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
 	   <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />

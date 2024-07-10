@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Il2CppSystems.SceneManagement;
 using Steamworks;
@@ -167,7 +166,7 @@ public class SteamLobbyManager : MonoBehaviour
         
     }
 
-    public void StartGame()
+    public void HideLobby()
     {
         CurrentLobby.SetJoinable(false);
         CurrentLobby.SetPrivate();

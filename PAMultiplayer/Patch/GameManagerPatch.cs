@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
-using Steamworks;
 using UnityEngine;
 using TaskStatus = Il2CppSystem.Threading.Tasks.TaskStatus;
 
@@ -12,6 +11,22 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch(typeof(GameManager))]
 public class GameManagerPatch
 {
+    [HarmonyPatch(nameof(GameManager.SpawnPlayers))]
+    [HarmonyPrefix]
+    static void PreSpawn(ref GameManager __instance)
+    {
+        if (!GlobalsManager.IsMultiplayer) return;
+        
+        //this is a band-aid fix for the ghost nano
+        var playerList = VGPlayerManager.Inst.players;
+        
+        if(playerList.Count > GlobalsManager.Players.Count)
+            playerList.RemoveAt(  playerList.Count - 1);
+        
+        //this is to prevent a weird bug where the game freezes post rewind
+        __instance.UnPause();
+    }
+
     [HarmonyPatch(nameof(GameManager.Start))]
     [HarmonyPostfix]
     static void PostStart(ref GameManager __instance)
@@ -184,7 +199,6 @@ public class GameManagerPatch
             VGPlayerManager.Inst.RespawnPlayers();
         }
     }
-    
 }
 public static class TaskExtension
 {
