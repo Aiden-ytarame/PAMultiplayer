@@ -163,42 +163,38 @@ public class VGSocketManager : SocketManager
     }
     
     //this function sucks
-    private void SendPlayerId(Connection connection, SteamId steamId, int id) 
+    private void SendPlayerId(Connection connection, SteamId steamId, int id)
     {
         bool hasValue = false;
-        int length = sizeof(short) + sizeof(short) + sizeof(ulong) + sizeof(float);
-        IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
-        try
+        int length = sizeof(short) + sizeof(short) + sizeof(ulong) + sizeof(float) + sizeof(float);
+
+        foreach (var vgPlayerData in GlobalsManager.Players)
         {
-            foreach (var vgPlayerData in GlobalsManager.Players)
-            {
-                var packet = new VectorNetPacket()
-                {
-                    PacketType = PacketType.Spawn,
-                    SenderId = vgPlayerData.Key,
-                    data = new Vector2(vgPlayerData.Value.PlayerID, GlobalsManager.Players.Count)
-                };
-            
-                Marshal.StructureToPtr(packet, unmanagedPointer, hasValue);
-                if (!hasValue)
-                    hasValue = true;
-                connection.SendMessage(unmanagedPointer, length);
-            }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
-        Marshal.FreeHGlobal(unmanagedPointer);
-        
-            var info = new VectorNetPacket()
+            IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
+            var packet = new VectorNetPacket()
             {
                 PacketType = PacketType.Spawn,
-                SenderId = steamId,
-                data = new Vector2(id, 1)
+                SenderId = vgPlayerData.Key,
+                data = new Vector2(vgPlayerData.Value.PlayerID, GlobalsManager.Players.Count)
             };
-            SendMessages(info);
+
+            Marshal.StructureToPtr(packet, unmanagedPointer, false);
+            //   if (!hasValue)
+            //      hasValue = true;
+            connection.SendMessage(unmanagedPointer, length);
+            Marshal.FreeHGlobal(unmanagedPointer);
+        }
+
+
+        var info = new VectorNetPacket()
+        {
+            PacketType = PacketType.Spawn,
+            SenderId = steamId,
+            data = new Vector2(id, 1)
+        };
+        SendMessages(info);
     }
+
     public void SendHostLoaded()
     {
         var packet = new IntNetPacket()
@@ -215,7 +211,7 @@ public class VGSocketManager : SocketManager
         {
             PacketType = PacketType.Damage,
             SenderId = GlobalsManager.LocalPlayer,
-            data = VGPlayerManager.Inst.players[0].PlayerObject.Health
+            data = GlobalsManager.Players[GlobalsManager.LocalPlayer].PlayerObject.Health
         };
         SendHostPacket(packet);
     }
@@ -317,7 +313,7 @@ public class VGConnectionManager : ConnectionManager
         {
             PacketType = PacketType.Damage,
             SenderId = GlobalsManager.LocalPlayer,
-            data = VGPlayerManager.Inst.players[0].PlayerObject.Health
+            data = GlobalsManager.Players[GlobalsManager.LocalPlayer].PlayerObject.Health
         };
         SendPacket(packet);
     }

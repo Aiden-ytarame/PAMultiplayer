@@ -43,7 +43,6 @@ public class PositionPacket : PacketHandler
 
                 var rot = pos - rb.position;
                 rb.position = pos;
-                Plugin.Logger.LogWarning(player.PlayerID);
                 if (rot.sqrMagnitude > 0.0001f)
                 {
                     rot.Normalize();
@@ -139,15 +138,15 @@ public class RewindPacket : PacketHandler
     public override void ProcessPacket(SteamId senderId, object data)
     {
         Plugin.Logger.LogInfo($"Rewind to Checkpoint [{(int)data}] Received");
-        VGPlayerManager.Inst.players.ForEach(new Action<VGPlayerManager.VGPlayerData>(x =>
+        foreach (var vgPlayerData in VGPlayerManager.Inst.players)
         {
-            if (x.PlayerObject && !x.PlayerObject.isDead)
+            if (vgPlayerData.PlayerObject && !vgPlayerData.PlayerObject.isDead)
             {
-                x.PlayerObject.Health = 1;
-                x.PlayerObject.PlayerHit();
+                vgPlayerData.PlayerObject.Health = 1;
+                vgPlayerData.PlayerObject.PlayerHit();
                 //forcekill() fucked up the game.
             }
-        }));
+        };
         GameManager.Inst.RewindToCheckpoint((int)data);
     }
 }

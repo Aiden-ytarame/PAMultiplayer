@@ -131,6 +131,7 @@ public class SystemManager_Patch
     [HarmonyPostfix]
     static void AddSteamManager(ref SystemManager __instance)
     {
+        __instance.transform.Find("Discord")?.gameObject.SetActive(false);
         Plugin.Logger.LogError("Adding Steam Stuff");
         __instance.gameObject.AddComponent<SteamManager>();
         __instance.gameObject.AddComponent<SteamLobbyManager>();

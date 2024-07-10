@@ -42,10 +42,6 @@ namespace PAMultiplayer.Managers
         {
             if (!GlobalsManager.IsMultiplayer) return;
             
-            VGPlayerManager.inst.RespawnPlayers(); //maybe this is the issue?
-            
-            if (GlobalsManager.IsHosting)
-                SteamManager.Inst.Server.StartLevel();
             if (LobbyScreenManager.Instance)
             {
                 if (GlobalsManager.IsHosting)
@@ -74,6 +70,8 @@ namespace PAMultiplayer.Managers
             
             //this is for when I bundle the assets into the dll.
             
+            GameObject lobbyGo;
+            
             using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("PAMultiplayer.Assets.lobby menu"))
             {
                 var lobbyBundle = AssetBundle.LoadFromMemory(stream.ReadBytes());
@@ -82,16 +80,12 @@ namespace PAMultiplayer.Managers
                 _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]);
                 var lobbyObj = Instantiate(lobbyPrefab, playerGUI.transform);
                 lobbyObj.name = "PAM_Lobby";
-                
+
+                lobbyGo = lobbyObj.Cast<GameObject>();
                 lobbyBundle.Unload(false);
             }
-
-            //again, if I can cast UnityEngine.Object to GameObject please tell me :)
-            //or load the GO from the asset bundle directly
-
-            var lobbyGo = playerGUI.transform.Find("PAM_Lobby").gameObject;
+            
             pauseMenu = lobbyGo.GetComponent<PauseMenu>();
-
             _playersListGo = lobbyGo.transform.Find("Content/PlayerList");
          
             if (GlobalsManager.IsHosting)
@@ -129,6 +123,7 @@ namespace PAMultiplayer.Managers
             while(Enu.MoveNext())
             {
                 AddPlayerToLobby(Enu.Current.Id, Enu.Current.Name);
+                
                 //this means that when you join a lobby
                 //every player that joined before you will get shown as Loaded, even if they're not. 
                 //it's easier than send if the player loaded or not to every new client.
@@ -149,18 +144,17 @@ namespace PAMultiplayer.Managers
 
         public void AddPlayerToLobby(SteamId player, string playerName)
         {
-            var playerEntry = Instantiate(_playerPrefab, _playersListGo.transform);
+            var playerEntry = Instantiate(_playerPrefab, _playersListGo.transform).Cast<GameObject>().transform;
             playerEntry.name = $"PAM_Player {player}";
-
-            Transform entry = _playersListGo.Find($"PAM_Player {player}");
-            entry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
-            _playerList.Add(player, entry);
+            
+            playerEntry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
+            _playerList.Add(player, playerEntry);
 
         }
 
         public void RemovePlayerFromLobby(SteamId player)
         {
-            Destroy(_playerList[player]);
+            Destroy(_playerList[player].gameObject);
             _playerList.Remove(player);
         }
 

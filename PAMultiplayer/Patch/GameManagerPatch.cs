@@ -43,7 +43,7 @@ public class GameManagerPatch
                         }
                     }, ct.Token);
 
-                    if (waitClient != await Task.WhenAny(waitClient, Task.Delay(5000, ct.Token)))
+                    if (waitClient != await Task.WhenAny(waitClient, Task.Delay(10000, ct.Token)))
                     {
                         ct.Cancel();
                         SteamManager.Inst.EndServer();
@@ -153,6 +153,8 @@ public class GameManagerPatch
         
         if (GlobalsManager.IsHosting)
         {
+            VGPlayerManager.Inst.players[0].PlayerID = 0;
+            GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayer, VGPlayerManager.Inst.players[0]);
             SteamManager.Inst.Server?.SendHostLoaded();
         }
         else if (!SteamManager.Inst.Client.Connected)
@@ -162,16 +164,17 @@ public class GameManagerPatch
         else
         {
             SteamManager.Inst.Client.SendLoaded();
+            
+            VGPlayerManager.Inst.players.Clear();
             foreach (var vgPlayerData in GlobalsManager.Players)
             {
-                Plugin.Logger.LogError(
-                    $"Player Id [{vgPlayerData.Value.PlayerID}] : Controller Id : [{vgPlayerData.Value.ControllerID}]");
+                VGPlayerManager.Inst.players.Add(vgPlayerData.Value);
             }
+            VGPlayerManager.Inst.RespawnPlayers();
         }
     }
     
 }
-
 public static class TaskExtension
 {
     public static Il2CppSystem.Threading.Tasks.Task ToIl2Cpp(this Task task)

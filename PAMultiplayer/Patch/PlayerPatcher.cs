@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using PAMultiplayer.Managers;
 using Rewired;
+using UnityEngine;
 
 namespace PAMultiplayer.Patch
 {
@@ -16,15 +17,15 @@ namespace PAMultiplayer.Patch
 
             if (__instance.IsLocalPlayer())
                 return true;
-            
             return false; //only collide if is local player
         }
-        
+
+        private static Vector2 lastPos = Vector2.zero;
         [HarmonyPatch(nameof(VGPlayer.Update))]
         [HarmonyPostfix]
         static void PostUpdate(ref VGPlayer __instance)
         {
-            if (!GlobalsManager.IsMultiplayer || __instance.PlayerID != GlobalsManager.LocalPlayerObjectId) return;
+            if (!GlobalsManager.IsMultiplayer || !__instance.IsLocalPlayer()) return;
         
             if (__instance.Player_Rigidbody)
             {
@@ -64,7 +65,7 @@ namespace PAMultiplayer.Patch
         {
             if (!GlobalsManager.IsMultiplayer) return;
 
-            if (__instance.PlayerID == GlobalsManager.LocalPlayerObjectId)
+            if (__instance.IsLocalPlayer())
             {
                 __result = ReInput.players.GetPlayer(0);
             }
@@ -73,6 +74,7 @@ namespace PAMultiplayer.Patch
                 __result = ReInput.players.GetPlayer(1);
             }
         }
+        
     }
 }
 

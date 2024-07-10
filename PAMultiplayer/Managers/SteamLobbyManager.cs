@@ -81,7 +81,8 @@ public class SteamLobbyManager : MonoBehaviour
         
         if (GlobalsManager.Players.TryAdd(friend.Id, NewData))
         {
-            VGPlayerManager.Inst.players.Add(GlobalsManager.Players[friend.Id]);
+            if(GameManager.Inst && GameManager.Inst.CurGameState != GameManager.GameState.Loading)
+                VGPlayerManager.Inst.players.Add(GlobalsManager.Players[friend.Id]);
         }
 
         VGPlayerManager.Inst.RespawnPlayers();
@@ -94,7 +95,7 @@ public class SteamLobbyManager : MonoBehaviour
         Plugin.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
         CurrentLobby = lobby;
         InLobby = true;
-
+        
         if (lobby.Owner.Id.IsLocalPlayer())
         {
             amount = 1;
@@ -118,10 +119,11 @@ public class SteamLobbyManager : MonoBehaviour
                     VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
                     NewData.PlayerID = amount; //by the way, this can cause problems
                     NewData.ControllerID = amount;
-                    
+                 
                     if (GlobalsManager.Players.TryAdd(Enu.Current.Id, NewData))
                     {
-                        VGPlayerManager.Inst.players.Add(GlobalsManager.Players[Enu.Current.Id]);
+                      //  if(GameManager.Inst && GameManager.Inst.CurGameState != GameManager.GameState.Loading)
+                      //      VGPlayerManager.Inst.players.Add(GlobalsManager.Players[Enu.Current.Id]);
                     }
 
                     amount++;
