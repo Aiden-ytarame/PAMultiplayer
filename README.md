@@ -10,8 +10,6 @@ Uses BepInEx.
 
 There's problems with closing the server and disconnecting a player.
 
-DOESNT WORK YET
-
 ## **Plans**
  
 * Sync random seed(help I cant figure how).
