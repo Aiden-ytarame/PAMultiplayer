@@ -20,7 +20,7 @@ DOESNT WORK YET
 ## **Instalation**
 **(WIP)**
 
-* Download the [BepInEx 6.0.0 il2cpp bleeding Edge build.](https://builds.bepinex.dev/projects/bepinex_be)
+* Download the [BepInEx 6.0.0 il2cpp Win64 bleeding Edge build.](https://builds.bepinex.dev/projects/bepinex_be)
 * Follow the BepInEx installation guide available on their [Github](https://github.com/BepInEx/BepInEx).
 * Extract the PAMultiplayer.ZIP file in the generated BepInNex->Plugins folder.
 
