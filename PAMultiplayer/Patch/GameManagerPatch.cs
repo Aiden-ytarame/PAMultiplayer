@@ -52,7 +52,14 @@ public class GameManagerPatch
 
         //this is for waiting for the Objects to load before initialing the server/client
         int index = 0;
-        index = SceneLoader.Inst.manager.ExtraLoadingTasks.FindIndex(new Predicate<TaskData>(x => x.Name == "Objects").ToIL2CPP());
+        for (var i = 0; i < SceneLoader.Inst.manager.ExtraLoadingTasks.Count; i++)
+        {
+            if (SceneLoader.Inst.manager.ExtraLoadingTasks[i].Name == "Objects")
+            {
+                index = i;
+                break;
+            }
+        }
         
         //"loading client/Server" in the loading screen
         if (GlobalsManager.IsHosting)
