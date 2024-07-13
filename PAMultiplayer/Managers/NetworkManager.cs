@@ -16,16 +16,11 @@ namespace PAMultiplayer.Managers
 
         void OnDisable()
         {
-            try
-            {
-                SteamManager.Inst.EndServer();
-                SteamManager.Inst.EndClient();
-                GlobalsManager.Players.Clear();
-            }
-            catch(Exception e)
-            {
-                Plugin.Inst.Log.LogError(e);
-            }
+            GlobalsManager.HasStarted = false;
+            SteamManager.Inst.EndServer();
+            SteamManager.Inst.EndClient();
+            GlobalsManager.Players.Clear();
+
         }
     }
 }

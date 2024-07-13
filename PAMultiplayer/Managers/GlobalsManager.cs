@@ -13,6 +13,7 @@ namespace PAMultiplayer.Managers
         public static bool IsHosting = false;
         public static bool IsMultiplayer = false;
         public static bool IsReloadingLobby = false;
-        
+        public static bool HasStarted = false;
+
     }
 }

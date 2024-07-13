@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
+using System.Threading.Tasks;
 using Cpp2IL.Core.Extensions;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
@@ -11,52 +12,84 @@ using Object = UnityEngine.Object;
 namespace PAMultiplayer.Managers
 {
 
-    [HarmonyPatch(typeof(PauseMenu))]
+    
+    //the reason there's both unpause functions here, its cuz the UI unpause calls PauseMenu.UnPause and pressing ESC calls GameManager.UnPause().
+    [HarmonyPatch]
     public class PauseLobbyPatch
     {
-        [HarmonyPatch(nameof(PauseMenu.UnPause))]
+        [HarmonyPatch(typeof(PauseMenu), nameof(PauseMenu.UnPause))]
         [HarmonyPrefix]
-        public static bool Prefix()
+        public static bool PreMenuUnpause()
+        {
+            if (!GlobalsManager.IsMultiplayer) return true;
+
+            if (!GlobalsManager.HasStarted
+                && !GlobalsManager.IsHosting)
+            {
+                return false;
+            }
+
+            return true;
+        }
+   
+        [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
+        [HarmonyPrefix]
+        public static bool PreGameUnpause()
         {
             if (!GlobalsManager.IsMultiplayer) return true;
             
-            if(LobbyScreenManager.Instance.shouldStart ||
-                (GlobalsManager.IsHosting))
+            if (!GlobalsManager.HasStarted
+                && !GlobalsManager.IsHosting)
             {
-                if (GlobalsManager.IsHosting)
-                    SteamManager.Inst.Server.StartLevel();
-                LobbyScreenManager.Instance.shouldStart = false;
-                return true;
+                return false;
+            }
+            if (GlobalsManager.IsHosting)
+            {
+                SteamManager.Inst.Server.StartLevel();
             }
 
-            return false;
-        }
-    }
-
-    [HarmonyPatch(typeof(GameManager))]
-    public class GMPauseLobbyPatch
-    {
-        [HarmonyPatch(nameof(GameManager.UnPause))]
-        [HarmonyPrefix]
-        public static void Postfix()
-        {
-            if (!GlobalsManager.IsMultiplayer) return;
-            
             if (LobbyScreenManager.Instance)
             {
-                if (GlobalsManager.IsHosting)
-                    SteamManager.Inst.Server.StartLevel();
-                
                 VGPlayerManager.inst.RespawnPlayers();
                 Object.Destroy(LobbyScreenManager.Instance);
             }
+            
+            return true;
+        }
+
+        [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
+        [HarmonyPostfix]
+        public static void PostGameUnpause()
+        {
+            if (!GlobalsManager.IsMultiplayer) return;
+            
+            Task.Run(async () =>
+            {
+                //for some reason if I run this logic 1 frame earlier it doesnt work on rewind, and I couldnt find a replacement function nor how to make it work
+                //I tried a bunch of spawn functions and player init, no luck
+                await Task.Delay(1);
+                
+                foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
+                {
+                    if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
+                    {
+                        string text =  "YOU";
+                        if (currentLobbyMember.Id != GlobalsManager.LocalPlayer)
+                        {
+                            text = currentLobbyMember.Name;
+                        }
+
+                        var test = player.PlayerObject.SpeechBubble;
+                        player.PlayerObject?.SpeechBubble?.DisplayText(text, 5);
+                    }
+                }
+            });
         }
     }
 
     public class LobbyScreenManager : MonoBehaviour
     {
         public static LobbyScreenManager Instance { get; private set; }
-        public bool shouldStart = false;
         readonly Dictionary<SteamId, Transform> _playerList = new();
         Transform _playersListGo;
         public PauseMenu pauseMenu;
@@ -167,7 +200,7 @@ namespace PAMultiplayer.Managers
 
         public void StartLevel()
         {
-            shouldStart = true;
+            GlobalsManager.HasStarted = true;
             SteamLobbyManager.Inst.HideLobby();
             pauseMenu.UnPause();
         }

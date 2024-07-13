@@ -59,14 +59,7 @@
   </ItemGroup>
 	
     <ItemGroup>
-      <None Remove="lib\Facepunch.Steamworks.Win64.dll" />
-      <Content Include="lib\Facepunch.Steamworks.Win64.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <None Remove="lib\steam_api64.dll" />
-      <Content Include="lib\steam_api64.dll">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+      <None Remove="lib\costura64\**" />
     </ItemGroup>
 	
     <ItemGroup>
@@ -74,5 +67,19 @@
       <EmbeddedResource Include="Assets\lobby menu">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </EmbeddedResource>
+      <EmbeddedResource Remove="lib\costura64\**" />
     </ItemGroup>
+	
+    <ItemGroup>
+      <None Remove="lib\Facepunch.Steamworks.Win64.dll" />
+      <Content Include="lib\Facepunch.Steamworks.Win64.dll" />
+    </ItemGroup>
+	
+    <ItemGroup>
+      <Compile Remove="lib\costura64\**" />
+    </ItemGroup>
+	
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+      <Exec Command="xcopy /q /Y &quot;D:\Downloads\UnityPorted\MODS\PAGit\PAMultiplayer\PAMultiplayer\bin\Debug\net6.0\PAMultiplayer.dll&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Project Arrhythmia\BepInEx\plugins\PAMultiplayer&quot; &gt; nul" />
+    </Target>
 </Project>

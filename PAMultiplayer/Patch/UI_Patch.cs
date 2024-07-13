@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using HarmonyLib;
+using Il2CppSystems.SceneManagement;
 using UnityEngine;
 using TMPro;
 using PAMultiplayer.Managers;
@@ -37,4 +39,22 @@ namespace PAMultiplayer.Patch
         }
     }
 
+    [HarmonyPatch(typeof(SceneLoader))]
+    public static class Test
+    {
+        [HarmonyPatch(nameof(SceneLoader.Start))]
+        [HarmonyPostfix]
+        static void GetterTips(ref SceneLoader __instance)
+        {
+            List<string> newVals = new List<string>(__instance.Tips)
+            {
+                "You should try the log Fallen Kingdom!",
+                "You can always call other Nanos for help!",
+                "Git Gud",
+                "I'm in your walls.",
+                "Good Nano."
+            };
+            __instance.Tips = newVals.ToArray();
+        }
+    }
 }

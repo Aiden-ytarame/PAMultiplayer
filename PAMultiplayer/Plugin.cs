@@ -1,4 +1,5 @@
-﻿using BepInEx;
+﻿using System.Reflection;
+using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
@@ -17,7 +18,7 @@ public class Plugin : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    const string Version = "0.2.0";
+    const string Version = "0.4.0";
 
     public override void Load()
     {
@@ -26,7 +27,6 @@ public class Plugin : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<SteamManager>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamLobbyManager>();
         
-    
         Inst = this;
         harmony = new Harmony(Guid);
         harmony.PatchAll();

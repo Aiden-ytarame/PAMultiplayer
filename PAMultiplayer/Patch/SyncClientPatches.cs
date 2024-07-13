@@ -49,7 +49,7 @@ public static class RewindHandler
     static void ReplaceDeathAction(ref Il2CppSystem.Action<Vector3> _deathAction)
     {
         if (!GlobalsManager.IsMultiplayer) return;
-   
+        
         if (GlobalsManager.IsHosting)
         {
             _deathAction = new Action<Vector3>(x =>

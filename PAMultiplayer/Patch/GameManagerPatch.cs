@@ -26,14 +26,15 @@ public class GameManagerPatch
         //this is to prevent a weird bug where the game freezes post rewind
         __instance.UnPause();
     }
-
+ 
     [HarmonyPatch(nameof(GameManager.Start))]
     [HarmonyPostfix]
     static void PostStart(ref GameManager __instance)
     {
         if (__instance.IsEditor)
             return;
-        
+      
+        var test = SceneLoader.Inst;
         if (!GlobalsManager.IsMultiplayer) return;
         foreach (var mesh in Resources.FindObjectsOfTypeAll<Mesh>())
         {
@@ -190,7 +191,7 @@ public class GameManagerPatch
         else
         {
             SteamManager.Inst.Client.SendLoaded();
-            
+       
             VGPlayerManager.Inst.players.Clear();
             foreach (var vgPlayerData in GlobalsManager.Players)
             {
@@ -200,6 +201,7 @@ public class GameManagerPatch
         }
     }
 }
+
 public static class TaskExtension
 {
     public static Il2CppSystem.Threading.Tasks.Task ToIl2Cpp(this Task task)
