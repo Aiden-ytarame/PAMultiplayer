@@ -24,6 +24,7 @@ public class GameManagerPatch
             playerList.RemoveAt(  playerList.Count - 1);
         
         //this is to prevent a weird bug where the game freezes post rewind
+        //pidge has acknowledged this bug.
         __instance.UnPause();
     }
  

@@ -19,7 +19,7 @@ namespace PAMultiplayer.Managers
     {
         [HarmonyPatch(typeof(PauseMenu), nameof(PauseMenu.UnPause))]
         [HarmonyPrefix]
-        public static bool PreMenuUnpause()
+        static bool PreMenuUnpause()
         {
             if (!GlobalsManager.IsMultiplayer) return true;
 
@@ -34,7 +34,7 @@ namespace PAMultiplayer.Managers
    
         [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
         [HarmonyPrefix]
-        public static bool PreGameUnpause()
+        static bool PreGameUnpause()
         {
             if (!GlobalsManager.IsMultiplayer) return true;
             
@@ -59,29 +59,27 @@ namespace PAMultiplayer.Managers
 
         [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
         [HarmonyPostfix]
-        public static void PostGameUnpause()
+        static async void PostGameUnpause()
         {
             if (!GlobalsManager.IsMultiplayer) return;
             
-            Task.Run(async () =>
+            //hacky fix, absolutely trash but we ignore it
+            //btw this can cause a crash at some point
+            await Task.Delay(1);
+
+            foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
             {
-                //hacky fix, absolutely trash but we ignore it
-                //btw this may crash at some point
-                await Task.Delay(1);
-                foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
+                if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
                 {
-                    if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
+                    string text = "YOU";
+                    if (currentLobbyMember.Id != GlobalsManager.LocalPlayer)
                     {
-                        string text =  "YOU";
-                        if (currentLobbyMember.Id != GlobalsManager.LocalPlayer)
-                        {
-                            text = currentLobbyMember.Name;
-                        }
-                        
-                        player.PlayerObject?.SpeechBubble?.DisplayText(text, 5);
+                        text = currentLobbyMember.Name;
                     }
+
+                    player.PlayerObject?.SpeechBubble?.DisplayText(text, 5);
                 }
-            });
+            }
         }
     }
 
