@@ -6,13 +6,19 @@ using UnityEngine;
 
 namespace PAMultiplayer.Managers;
 
+/// <summary>
+/// handles the steam lobby callbacks
+/// </summary>
 public class SteamLobbyManager : MonoBehaviour
 {
     public Lobby CurrentLobby;
     public bool InLobby { get; private set; }
     public static SteamLobbyManager Inst;
-    private Dictionary<SteamId, bool> _loadedPlayers = new();
-    int amount = 10;
+    private readonly Dictionary<SteamId, bool> _loadedPlayers = new();
+    
+    //used to prevent 2 players having the same id
+    //I should scrap this and make and instead find an open id.
+    int _playerAmount = 1;
     public void CreateLobby()
     {
         SteamManager.Inst.StartServer();
@@ -30,22 +36,16 @@ public class SteamLobbyManager : MonoBehaviour
         
         SteamMatchmaking.OnLobbyCreated += OnLobbyCreated;
         SteamMatchmaking.OnLobbyEntered += OnLobbyEntered;
-        SteamMatchmaking.OnLobbyGameCreated += OnLobbyGameCreated;
         SteamMatchmaking.OnLobbyMemberJoined += OnLobbyMemberJoined;
         
         SteamMatchmaking.OnLobbyMemberDisconnected += OnLobbyMemberDisconnected;
         SteamMatchmaking.OnLobbyMemberLeave += OnLobbyMemberDisconnected;
     }
 
+    //useless?
     private void OnApplicationQuit()
     {
         CurrentLobby.Leave();
-    }
-    
-
-    private void OnLobbyGameCreated(Lobby lobby, uint ip, ushort port, SteamId steamId)
-    {
-        Plugin.Logger.LogInfo($"Created Game Server! : {lobby.Owner.Name} , {ip} , {port} , {steamId}");
     }
     
     
@@ -55,11 +55,13 @@ public class SteamLobbyManager : MonoBehaviour
         
         LobbyScreenManager.Instance?.RemovePlayerFromLobby(friend.Id);
         RemovePlayerFromLoadList(friend.Id);
-        GlobalsManager.Players.TryGetValue(friend.Id, out var player);
-        player?.PlayerObject?.PlayerDeath();
-        
-        VGPlayerManager.Inst.players.Remove(player);
-        GlobalsManager.Players.Remove(friend.Id);
+
+        if (GlobalsManager.Players.TryGetValue(friend.Id, out var player))
+        {
+            player.PlayerObject?.PlayerDeath();
+            VGPlayerManager.Inst.players.Remove(player);
+            GlobalsManager.Players.Remove(friend.Id);
+        }
     }
 
     private void OnLobbyMemberJoined(Lobby lobby, Friend friend)
@@ -69,24 +71,24 @@ public class SteamLobbyManager : MonoBehaviour
         AddPlayerToLoadList(friend.Id);
         
         LobbyScreenManager.Instance?.AddPlayerToLobby(friend.Id, friend.Name);
-          
-      
-        if (friend.Id.IsLocalPlayer())
-            return;
         
-        VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
-        NewData.PlayerID = amount; //by the way, this can cause problems
-        NewData.ControllerID = amount;
-        Plugin.Logger.LogInfo($"Member Joined : [{friend.Name}]");
+        if (friend.Id.IsLocalPlayer()) return; //does this ever run for yourself?
         
-        if (GlobalsManager.Players.TryAdd(friend.Id, NewData))
+        VGPlayerManager.VGPlayerData newData = new()
         {
+            PlayerID = _playerAmount,
+            ControllerID = _playerAmount
+        };
+        
+        if (GlobalsManager.Players.TryAdd(friend.Id, newData))
+        {
+            //do not add new players if on loading screen 
             if(GameManager.Inst && GameManager.Inst.CurGameState != GameManager.GameState.Loading)
                 VGPlayerManager.Inst.players.Add(GlobalsManager.Players[friend.Id]);
         }
 
         VGPlayerManager.Inst.RespawnPlayers();
-        amount++;
+        _playerAmount++;
     }
 
     private void OnLobbyEntered(Lobby lobby)
@@ -95,14 +97,10 @@ public class SteamLobbyManager : MonoBehaviour
         Plugin.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
         CurrentLobby = lobby;
         InLobby = true;
+        _playerAmount = 1;
         
-        if (lobby.Owner.Id.IsLocalPlayer())
-        {
-            amount = 1;
-            return;
-        }
-
-        amount = 1;
+        if (lobby.Owner.Id.IsLocalPlayer()) return;
+        
         //this could be moved to somewhere before even joining
         //but if it works, we keep
         ulong id = ulong.Parse(lobby.GetData("LevelId"));
@@ -117,8 +115,8 @@ public class SteamLobbyManager : MonoBehaviour
                 while (Enu.MoveNext())
                 {
                     VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
-                    NewData.PlayerID = amount; //by the way, this can cause problems
-                    NewData.ControllerID = amount;
+                    NewData.PlayerID = _playerAmount; //by the way, this can cause problems
+                    NewData.ControllerID = _playerAmount;
                  
                     if (GlobalsManager.Players.TryAdd(Enu.Current.Id, NewData))
                     {
@@ -126,7 +124,7 @@ public class SteamLobbyManager : MonoBehaviour
                       //      VGPlayerManager.Inst.players.Add(GlobalsManager.Players[Enu.Current.Id]);
                     }
 
-                    amount++;
+                    _playerAmount++;
                 }
                 Enu.Dispose();
                 
@@ -158,6 +156,9 @@ public class SteamLobbyManager : MonoBehaviour
         
         lobby.SetData("LevelId", SaveManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
       
+        //this actually might not need to exit
+        //since we go back to the menu of lobby failed
+        //but I never tested this so we keep just in case
         if (!LobbyScreenManager.Instance?.pauseMenu) return; //this is for the "Lobby failed to be created" message
         
         LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/buttons").gameObject.SetActive(true);

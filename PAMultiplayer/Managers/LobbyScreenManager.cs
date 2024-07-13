@@ -11,9 +11,8 @@ using Object = UnityEngine.Object;
 
 namespace PAMultiplayer.Managers
 {
-
     
-    //the reason there's both unpause functions here, its cuz the UI unpause calls PauseMenu.UnPause and pressing ESC calls GameManager.UnPause().
+    //the reason there's both unpause functions here, its cuz the UI unpause calls PauseMenu.UnPause() and pressing ESC calls GameManager.UnPause().
     [HarmonyPatch]
     public class PauseLobbyPatch
     {
@@ -83,6 +82,9 @@ namespace PAMultiplayer.Managers
         }
     }
 
+    /// <summary>
+    /// Manages the Lobby menu that pops up on level enter
+    /// </summary>
     public class LobbyScreenManager : MonoBehaviour
     {
         public static LobbyScreenManager Instance { get; private set; }
@@ -91,6 +93,7 @@ namespace PAMultiplayer.Managers
         public PauseMenu pauseMenu;
         Object _playerPrefab;
 
+        //spawns the lobby GameObject from the assetBundle
         void Awake()
         {
             Instance = this;
@@ -117,6 +120,10 @@ namespace PAMultiplayer.Managers
             pauseMenu = lobbyGo.GetComponent<PauseMenu>();
             _playersListGo = lobbyGo.transform.Find("Content/PlayerList");
          
+            //handles what should appear on the screen
+            //like the buttons for the host
+            //Waiting for host message for clients
+            //or Lobby Failed message
             if (GlobalsManager.IsHosting)
             {
                 var buttons = lobbyGo.transform.Find("Content/buttons");

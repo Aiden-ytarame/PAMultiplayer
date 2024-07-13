@@ -1,9 +1,7 @@
-﻿using System.Reflection;
-using BepInEx;
+﻿using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
-using PAMultiplayer.Patch;
 using Il2CppInterop.Runtime.Injection;
 using PAMultiplayer.Managers;
 
@@ -18,7 +16,7 @@ public class Plugin : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    const string Version = "0.4.0";
+    const string Version = "0.4.1";
 
     public override void Load()
     {

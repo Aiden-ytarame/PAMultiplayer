@@ -1,9 +1,12 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace PAMultiplayer.Managers
 {
-    //this class has to be remade or removed
+    /// <summary>
+    /// this class should be removed honestly
+    /// calls receive for the server/client callbacks
+    /// and cleans some stuff on level unload
+    /// </summary>
     public class NetworkManager : MonoBehaviour
     {
         void Update()

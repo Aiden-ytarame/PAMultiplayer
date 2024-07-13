@@ -6,6 +6,9 @@ using UnityEngine;
 namespace PAMultiplayer.Patch;
 
 
+/// <summary>
+/// takes care of checkpoint for server only
+/// </summary>
 [HarmonyPatch(typeof(GameManager))]
 public static class CheckpointHandler
 {
@@ -41,6 +44,9 @@ public static class CheckpointHandler
     }
 }
 
+/// <summary>
+/// takes care of rewinding to the correct checkpoint
+/// </summary>
 [HarmonyPatch(typeof(VGPlayerManager))]
 public static class RewindHandler
 {
@@ -54,6 +60,7 @@ public static class RewindHandler
         {
             _deathAction = new Action<Vector3>(x =>
             {
+                //if any player is alive don't rewind
                 foreach (var vgPlayerData in VGPlayerManager.Inst.players)
                 {
                    if(vgPlayerData.PlayerObject) //if player object exists
@@ -67,7 +74,7 @@ public static class RewindHandler
         {
             _deathAction = new Action<Vector3>(x =>
             {
-                
+                //clients do nothing on death, just wait for the server message.
             });
         }
     }

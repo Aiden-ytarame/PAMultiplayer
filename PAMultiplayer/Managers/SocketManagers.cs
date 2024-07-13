@@ -11,6 +11,12 @@ namespace PAMultiplayer.Managers;
 
 //ye im stealing the VG prefix used in some PA classes
 //I assume it means Vitamin Games
+
+
+/// <summary>
+/// Game Server
+/// Responsible for sending/receiving messages
+/// </summary>
 public class VGSocketManager : SocketManager
 {
     int _latestCheckpoint = 0;
@@ -194,6 +200,8 @@ public class VGSocketManager : SocketManager
         SendMessages(info);
     }
 
+    //yes due to a mistake the host doesn't connect to the server as client 
+    //so we handle his messages from here
     public void SendHostLoaded()
     {
         var packet = new IntNetPacket()
@@ -226,6 +234,10 @@ public class VGSocketManager : SocketManager
     }
 }
 
+/// <summary>
+/// Game Client
+/// Responsible for sending/receiving messages
+/// </summary>
 public class VGConnectionManager : ConnectionManager
 {
     
@@ -279,6 +291,8 @@ public class VGConnectionManager : ConnectionManager
     }
     #endregion
 
+    #region Send Messages
+    
     void SendPacket(IntNetPacket packet, SendType sendType = SendType.Reliable)
     {
         int length = Marshal.SizeOf(packet);
@@ -295,6 +309,7 @@ public class VGConnectionManager : ConnectionManager
         Connection.SendMessage(unmanagedData, length, sendType);
         Marshal.FreeHGlobal(unmanagedData);
     }
+    #endregion
     public void SendLoaded()
     {
         Plugin.Logger.LogError("Sending Loaded");

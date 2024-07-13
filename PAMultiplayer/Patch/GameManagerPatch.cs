@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using HarmonyLib;
@@ -40,21 +41,18 @@ public class GameManagerPatch
         foreach (var mesh in Resources.FindObjectsOfTypeAll<Mesh>())
         {
             if (mesh.name == "circle")
+            {
                 Player_Patch.CircleMesh = mesh;
+                break;
+            }
         }
         
         var netMan = new GameObject("Network");
         netMan.AddComponent<NetworkManager>();
 
+        //this is for waiting for the Objects to load before initialing the server/client
         int index = 0;
-        for (var i = 0; i < SceneLoader.Inst.manager.ExtraLoadingTasks.Count; i++)
-        {
-            if (SceneLoader.Inst.manager.ExtraLoadingTasks[i].Name == "Objects")
-            {
-                index = i;
-                break;
-            }
-        }
+        index = SceneLoader.Inst.manager.ExtraLoadingTasks.FindIndex(new Predicate<TaskData>(x => x.Name == "Objects").ToIL2CPP());
         
         //"loading client/Server" in the loading screen
         if (GlobalsManager.IsHosting)
@@ -64,6 +62,7 @@ public class GameManagerPatch
                 Name = "Loading Lobby",
                 Task = Task.Run(async () =>
                 {
+                    //waiting for objects to load
                     while (SceneLoader.Inst.manager.ExtraLoadingTasks[index].Task.Status != TaskStatus.RanToCompletion)
                     {
                         await Task.Delay(100);
@@ -81,6 +80,7 @@ public class GameManagerPatch
                         }
                     }, ct.Token);
 
+                    //if lobby isn't created in 10 seconds we close everything
                     if (waitClient != await Task.WhenAny(waitClient, Task.Delay(10000, ct.Token)))
                     {
                         ct.Cancel();
@@ -101,9 +101,8 @@ public class GameManagerPatch
                 Name = "Loading Client",
                 Task = Task.Run(async () =>
                 {
-                    //wait for objects to load before attempting to connect to server
-                    //if the level is too heavy sometimes the game outright freezes loading objects
-                    //while frozen the connection can timeout, so we wait for objects to load first
+                    //same as the first task
+                    
                     while (SceneLoader.Inst.manager.ExtraLoadingTasks[index].Task.Status != TaskStatus.RanToCompletion)
                     {
                         await Task.Delay(100);
@@ -140,6 +139,8 @@ public class GameManagerPatch
                 Name = "Awaiting Server Info",
                 Task = Task.Run(async () =>
                 {
+                    //same as the first task
+                    
                     while (SceneLoader.Inst.manager.ExtraLoadingTasks[index].Task.Status != TaskStatus.RanToCompletion)
                     {
                         await Task.Delay(100);
@@ -181,16 +182,18 @@ public class GameManagerPatch
         
         if (GlobalsManager.IsHosting)
         {
-            VGPlayerManager.Inst.players[0].PlayerID = 0;
+          //  VGPlayerManager.Inst.players[0].PlayerID = 0;
             GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayer, VGPlayerManager.Inst.players[0]);
             SteamManager.Inst.Server?.SendHostLoaded();
         }
         else if (!SteamManager.Inst.Client.Connected)
         {
+            //if failed to connect
             SceneLoader.Inst.LoadSceneGroup("Menu");
         }
         else
         {
+            //if connected successfully
             SteamManager.Inst.Client.SendLoaded();
        
             VGPlayerManager.Inst.players.Clear();

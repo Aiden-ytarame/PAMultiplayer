@@ -3,6 +3,9 @@ using Steamworks;
 
 namespace PAMultiplayer.Managers
 {
+    /// <summary>
+    /// Holds global variables like Local player steamId and Player list
+    /// </summary>
     public static class GlobalsManager
     {
         public static SteamId LocalPlayer;

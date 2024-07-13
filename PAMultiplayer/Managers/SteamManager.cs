@@ -6,6 +6,9 @@ using UnityEngine;
 
 namespace PAMultiplayer.Managers;
 
+/// <summary>
+/// manages accepting invites and initializing steam.
+/// </summary>
 public class SteamManager : MonoBehaviour
 {
     public static SteamManager Inst { get; private set; }
@@ -122,8 +125,9 @@ public class SteamManager : MonoBehaviour
 }
 
 
+//adds steam related stuff 
 [HarmonyPatch(typeof(SystemManager))]
-public class SystemManager_Patch
+public class SystemManagerPatch
 {
     [HarmonyPatch(nameof(SystemManager.Awake))]
     [HarmonyPostfix]
