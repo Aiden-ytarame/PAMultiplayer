@@ -65,10 +65,9 @@ namespace PAMultiplayer.Managers
             
             Task.Run(async () =>
             {
-                //for some reason if I run this logic 1 frame earlier it doesnt work on rewind, and I couldnt find a replacement function nor how to make it work
-                //I tried a bunch of spawn functions and player init, no luck
+                //hacky fix, absolutely trash but we ignore it
+                //btw this may crash at some point
                 await Task.Delay(1);
-                
                 foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
                 {
                     if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
@@ -78,8 +77,7 @@ namespace PAMultiplayer.Managers
                         {
                             text = currentLobbyMember.Name;
                         }
-
-                        var test = player.PlayerObject.SpeechBubble;
+                        
                         player.PlayerObject?.SpeechBubble?.DisplayText(text, 5);
                     }
                 }
