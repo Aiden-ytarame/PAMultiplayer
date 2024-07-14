@@ -15,7 +15,7 @@ public class SteamManager : MonoBehaviour
     public VGSocketManager Server;
     public VGConnectionManager Client;
 
-    private int _serverPort = 0;
+    public int _serverPort = 0;
     private void Awake()
     {
         if (Inst)
@@ -83,6 +83,8 @@ public class SteamManager : MonoBehaviour
     {
         Plugin.Logger.LogInfo($"Starting client. Connection to [{targetSteamId}]");
 
+        int port = int.Parse(SteamLobbyManager.Inst.CurrentLobby.GetData("PortId"));
+        Plugin.Logger.LogError(port);
         Client = SteamNetworkingSockets.ConnectRelay<VGConnectionManager>(targetSteamId);
     }
 

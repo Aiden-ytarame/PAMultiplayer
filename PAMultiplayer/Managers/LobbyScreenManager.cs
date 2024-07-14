@@ -58,13 +58,12 @@ namespace PAMultiplayer.Managers
 
         [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
         [HarmonyPostfix]
-        static async void PostGameUnpause()
+        static void PostGameUnpause()
         {
             if (!GlobalsManager.IsMultiplayer) return;
             
             //hacky fix, absolutely trash but we ignore it
             //btw this can cause a crash at some point
-            await Task.Delay(1);
 
             foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
             {

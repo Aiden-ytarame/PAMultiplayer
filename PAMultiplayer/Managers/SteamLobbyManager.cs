@@ -73,11 +73,28 @@ public class SteamLobbyManager : MonoBehaviour
         LobbyScreenManager.Instance?.AddPlayerToLobby(friend.Id, friend.Name);
         
         if (friend.Id.IsLocalPlayer()) return; //does this ever run for yourself?
-        
+
+        HashSet<int> usedIds = new();
+        int nextId = 0;
+        foreach (var player in VGPlayerManager.Inst.players)
+        {
+            usedIds.Add(player.PlayerID);
+        }
+
+        while (true)
+        {
+            if (usedIds.Contains(nextId))
+            {
+                nextId++;
+                continue;
+            }
+
+            break;
+        }
         VGPlayerManager.VGPlayerData newData = new()
         {
-            PlayerID = _playerAmount,
-            ControllerID = _playerAmount
+            PlayerID = nextId,
+            ControllerID = nextId
         };
         
         if (GlobalsManager.Players.TryAdd(friend.Id, newData))
@@ -129,6 +146,7 @@ public class SteamLobbyManager : MonoBehaviour
                 Enu.Dispose();
                 
                 SaveManager.Inst.CurrentArcadeLevel = level;
+                GlobalsManager.HasLoadedAllInfo = false;
                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
                 return;
             }
@@ -155,7 +173,7 @@ public class SteamLobbyManager : MonoBehaviour
         lobby.SetJoinable(true);
         
         lobby.SetData("LevelId", SaveManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
-      
+        lobby.SetData("PortId", SteamManager.Inst._serverPort.ToString());
         //this actually might not need to exit
         //since we go back to the menu of lobby failed
         //but I never tested this so we keep just in case
@@ -175,8 +193,7 @@ public class SteamLobbyManager : MonoBehaviour
 
     public void LeaveLobby()
     {
-        if(InLobby)
-            CurrentLobby.Leave();
+        CurrentLobby.Leave();
         InLobby = false;
     }
     

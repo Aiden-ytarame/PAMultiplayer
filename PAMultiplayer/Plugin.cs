@@ -1,9 +1,11 @@
-﻿using BepInEx;
+﻿using System.Linq;
+using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
 using Il2CppInterop.Runtime.Injection;
 using PAMultiplayer.Managers;
+using PAMultiplayer.Patch;
 
 namespace PAMultiplayer;
 
@@ -29,7 +31,12 @@ public class Plugin : BasePlugin
         harmony = new Harmony(Guid);
         harmony.PatchAll();
 
-        // Plugin startup logic
+        var loadGameMoveNext = typeof(GameManager).GetNestedTypes().FirstOrDefault(t => t.Name.Contains("LoadGame"))?
+            .GetMethod("MoveNext");
+        
+        var prefix = new HarmonyMethod(typeof(GameManagerPatch).GetMethod("OverrideLoadGame"));
+       
+        harmony.Patch(loadGameMoveNext, prefix);
         Log.LogInfo($"Plugin {Guid} is loaded!");
 
     }

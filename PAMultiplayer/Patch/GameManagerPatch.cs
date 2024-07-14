@@ -1,10 +1,13 @@
 using System;
+using System.Collections;
 using System.Threading;
 using System.Threading.Tasks;
+using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
 using UnityEngine;
+using VGFunctions;
 using TaskStatus = Il2CppSystem.Threading.Tasks.TaskStatus;
 
 namespace PAMultiplayer.Patch;
@@ -94,7 +97,6 @@ public class GameManagerPatch
                         SteamManager.Inst.EndServer();
                         Plugin.Logger.LogError("Failed To Connect Lobby");
                     }
-
                     ct.Dispose();
                 }).ToIl2Cpp()
             };
@@ -169,7 +171,8 @@ public class GameManagerPatch
                         SteamManager.Inst.EndClient();
                         Plugin.Logger.LogError("Failed To receive server info");
                     }
-
+                  
+                    
                     ct.Dispose();
                 }).ToIl2Cpp()
             };
@@ -177,16 +180,15 @@ public class GameManagerPatch
         }
     }
 
-
     [HarmonyPatch(nameof(GameManager.PlayGame))]
     [HarmonyPostfix]
-    public static void Postfix(ref GameManager __instance)
+    static void Postfix(ref GameManager __instance)
     {
         if (!GlobalsManager.IsMultiplayer || GameManager.Inst.IsEditor) return;
-
+        
         __instance.Pause(false);
         __instance.gameObject.AddComponent<LobbyScreenManager>();
-        
+       
         if (GlobalsManager.IsHosting)
         {
           //  VGPlayerManager.Inst.players[0].PlayerID = 0;
@@ -210,6 +212,43 @@ public class GameManagerPatch
             }
             VGPlayerManager.Inst.RespawnPlayers();
         }
+    }
+
+    //we add this to wait for loading screen to end
+    //the game doesn't do that by default
+    static IEnumerator CustomLoadGame(VGLevel _level)
+    {
+         GameManager gm = GameManager.Inst;
+
+         if (gm.IsEditor)
+         {
+             gm.CurGameState = GameManager.GameState.Loading;
+             gm.CurLoadingState.Reset();
+         }
+         
+         gm.LoadMetadata(_level);
+
+         yield return gm.StartCoroutine(gm.LoadAudio(_level));
+         
+         gm.LoadData(_level);
+         
+         yield return gm.StartCoroutine(gm.LoadBackgrounds(_level));
+         yield return gm.StartCoroutine(gm.LoadObjects(_level));
+         yield return gm.StartCoroutine(gm.LoadTweens());
+
+         gm.PauseDebounce = new Debounce();
+         
+         yield return new WaitUntil(new Func<bool>(() => !SceneLoader.Inst.isLoading));
+         
+         gm.PlayGame();
+    }
+    
+    //this is patched manually in Plugin.cs
+    public static bool OverrideLoadGame(ref bool __result)
+    {
+        GameManager.Inst.StartCoroutine(CustomLoadGame(SaveManager.Inst.CurrentArcadeLevel).WrapToIl2Cpp());
+        __result = false;
+        return false;
     }
 }
 
