@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
-using System.Threading.Tasks;
 using Cpp2IL.Core.Extensions;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
@@ -51,33 +50,31 @@ namespace PAMultiplayer.Managers
             {
                 VGPlayerManager.inst.RespawnPlayers();
                 Object.Destroy(LobbyScreenManager.Instance);
+                foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
+                {
+                    if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
+                    {
+                        string text = "YOU";
+                        if (currentLobbyMember.Id != GlobalsManager.LocalPlayer)
+                        {
+                            text = currentLobbyMember.Name;
+                        }
+
+                        player.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
+
+                    }
+                }
             }
             
             return true;
         }
 
+
         [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
         [HarmonyPostfix]
-        static void PostGameUnpause()
+        static void PostGameUnpause(GameManager __instance)
         {
             if (!GlobalsManager.IsMultiplayer) return;
-            
-            //hacky fix, absolutely trash but we ignore it
-            //btw this can cause a crash at some point
-
-            foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
-            {
-                if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
-                {
-                    string text = "YOU";
-                    if (currentLobbyMember.Id != GlobalsManager.LocalPlayer)
-                    {
-                        text = currentLobbyMember.Name;
-                    }
-
-                    player.PlayerObject?.SpeechBubble?.DisplayText(text, 5);
-                }
-            }
         }
     }
 

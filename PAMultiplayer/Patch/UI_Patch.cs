@@ -63,7 +63,8 @@ namespace PAMultiplayer.Patch
                 "You can always call other Nanos for help!",
                 "Git Gud",
                 "I'm in your walls.",
-                "Good Nano."
+                "Good Nano.",
+                "No tips for you >:)"
             };
             //thanks for making this public after I complained lol
             __instance.Tips = newVals.ToArray();

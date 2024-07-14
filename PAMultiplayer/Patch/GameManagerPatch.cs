@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
@@ -8,7 +9,6 @@ using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
 using UnityEngine;
 using VGFunctions;
-using Object = UnityEngine.Object;
 using TaskStatus = Il2CppSystem.Threading.Tasks.TaskStatus;
 
 namespace PAMultiplayer.Patch;
@@ -24,10 +24,18 @@ public class GameManagerPatch
         
         //this is a band-aid fix for the ghost nano
         var playerList = VGPlayerManager.Inst.players;
-        
-        if(playerList.Count > GlobalsManager.Players.Count)
-            playerList.RemoveAt(  playerList.Count - 1);
-        
+
+        if (playerList.Count > GlobalsManager.Players.Count)
+        {
+            foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+            {
+                if (!GlobalsManager.Players.ContainsValue(vgPlayerData))
+                {
+                    VGPlayerManager.Inst.players.Remove(vgPlayerData);
+                }
+            }
+        }
+
         //this is to prevent a weird bug where the game freezes post rewind
         //pidge has acknowledged this bug.
         __instance.UnPause();
@@ -90,7 +98,7 @@ public class GameManagerPatch
                     }, ct.Token);
 
                     //if lobby isn't created in 10 seconds we close everything
-                    if (waitClient != await Task.WhenAny(waitClient, Task.Delay(10000, ct.Token)))
+                    if (waitClient != await Task.WhenAny(waitClient, Task.Delay(5000, ct.Token)))
                     {
                         ct.Cancel();
                         SteamManager.Inst.EndServer();
@@ -164,7 +172,7 @@ public class GameManagerPatch
                         }
                     }, ct.Token);
 
-                    if (waitClient != await Task.WhenAny(waitClient, Task.Delay(5000, ct.Token)))
+                    if (waitClient != await Task.WhenAny(waitClient, Task.Delay(10000, ct.Token)))
                     {
                         ct.Cancel();
                         SteamManager.Inst.EndClient();
@@ -213,8 +221,10 @@ public class GameManagerPatch
         }
     }
 
-    //we add this to wait for loading screen to end
-    //the game doesn't do that by default
+    /// <summary>
+    /// we add this to wait for loading screen to end
+    /// the game doesn't do that by default
+    /// </summary>
     static IEnumerator CustomLoadGame(VGLevel _level)
     {
          GameManager gm = GameManager.Inst;
@@ -224,6 +234,7 @@ public class GameManagerPatch
              gm.CurGameState = GameManager.GameState.Loading;
              gm.CurLoadingState.Reset();
          }
+         
          
          gm.LoadMetadata(_level);
 
@@ -245,7 +256,11 @@ public class GameManagerPatch
     //this is patched manually in Plugin.cs
     public static bool OverrideLoadGame(ref bool __result)
     {
-        GameManager.Inst.StartCoroutine(CustomLoadGame(SaveManager.Inst.CurrentArcadeLevel).WrapToIl2Cpp());
+        VGLevel level = StoryLevelLoader.Inst.Level;
+        if (GameManager.Inst.IsArcade)
+            level = SaveManager.Inst.CurrentArcadeLevel;
+        
+        GameManager.Inst.StartCoroutine(CustomLoadGame(level).WrapToIl2Cpp());
         __result = false;
         return false;
     }

@@ -104,7 +104,8 @@ public class SteamManager : MonoBehaviour
     public void StartServer()
     {
         Plugin.Logger.LogInfo("Starting Server.");
-        Server = SteamNetworkingSockets.CreateRelaySocket<VGSocketManager>(_serverPort);
+        Server = SteamNetworkingSockets.CreateRelaySocket<VGSocketManager>();
+        
         //if the server port doesn't change it fails to create a socket
         //why? don't ask me man
         _serverPort++;
@@ -113,7 +114,7 @@ public class SteamManager : MonoBehaviour
     public void EndServer()
     {
         SteamLobbyManager.Inst.LeaveLobby();
-        Server.Close();
+        Server?.Close();
         
         if (GlobalsManager.IsReloadingLobby)
         {
