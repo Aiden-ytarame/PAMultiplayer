@@ -8,6 +8,7 @@ using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
 using UnityEngine;
 using VGFunctions;
+using Object = UnityEngine.Object;
 using TaskStatus = Il2CppSystem.Threading.Tasks.TaskStatus;
 
 namespace PAMultiplayer.Patch;
@@ -49,9 +50,7 @@ public class GameManagerPatch
                 break;
             }
         }
-        
-        var netMan = new GameObject("Network");
-        netMan.AddComponent<NetworkManager>();
+        __instance.gameObject.AddComponent<NetworkManager>();
 
         //this is for waiting for the Objects to load before initialing the server/client
         int index = 0;

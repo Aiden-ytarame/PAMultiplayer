@@ -16,13 +16,14 @@ namespace PAMultiplayer.Managers
             SteamManager.Inst.Server?.Receive();
             SteamManager.Inst.Client?.Receive();
         }
-
-        void OnDisable()
+        
+        private void OnDestroy()
         {
             GlobalsManager.HasStarted = false;
             SteamManager.Inst.EndServer();
             SteamManager.Inst.EndClient();
             GlobalsManager.Players.Clear();
         }
+        
     }
 }
