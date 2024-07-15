@@ -41,13 +41,6 @@ public class SteamLobbyManager : MonoBehaviour
         SteamMatchmaking.OnLobbyMemberDisconnected += OnLobbyMemberDisconnected;
         SteamMatchmaking.OnLobbyMemberLeave += OnLobbyMemberDisconnected;
     }
-
-    //useless?
-    private void OnApplicationQuit()
-    {
-        CurrentLobby.Leave();
-    }
-    
     
     private void OnLobbyMemberDisconnected(Lobby lobby, Friend friend)
     {

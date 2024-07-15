@@ -12,8 +12,8 @@ namespace PAMultiplayer.Managers;
 public class SteamManager : MonoBehaviour
 {
     public static SteamManager Inst { get; private set; }
-    public VGSocketManager Server;
-    public VGConnectionManager Client;
+    public PAMSocketManager Server;
+    public PAMConnectionManager Client;
 
     public int _serverPort = 0;
     private void Awake()
@@ -85,7 +85,7 @@ public class SteamManager : MonoBehaviour
 
         int port = int.Parse(SteamLobbyManager.Inst.CurrentLobby.GetData("PortId"));
         Plugin.Logger.LogError(port);
-        Client = SteamNetworkingSockets.ConnectRelay<VGConnectionManager>(targetSteamId);
+        Client = SteamNetworkingSockets.ConnectRelay<PAMConnectionManager>(targetSteamId);
     }
 
     public void EndClient()
@@ -104,7 +104,7 @@ public class SteamManager : MonoBehaviour
     public void StartServer()
     {
         Plugin.Logger.LogInfo("Starting Server.");
-        Server = SteamNetworkingSockets.CreateRelaySocket<VGSocketManager>();
+        Server = SteamNetworkingSockets.CreateRelaySocket<PAMSocketManager>();
         
         //if the server port doesn't change it fails to create a socket
         //why? don't ask me man

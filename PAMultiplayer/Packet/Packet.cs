@@ -10,7 +10,7 @@ public enum PacketType : short
     Position,
     Rotation,
     Start,
-    Spawn,
+    PlayerId,
     Checkpoint,
     Rewind
 }
@@ -26,13 +26,13 @@ public struct IntNetPacket
     public PacketDataType DataType = PacketDataType.Int;
     public PacketType PacketType;
     public SteamId SenderId;
-    public int data;
+    public int Data;
 
     public IntNetPacket()
     {
         PacketType = PacketType.Damage;
         SenderId = default;
-        data = default;
+        Data = default;
     }
 }
 
@@ -41,12 +41,12 @@ public struct VectorNetPacket
     public PacketDataType DataType = PacketDataType.Vector;
     public PacketType PacketType;
     public SteamId SenderId;
-    public Vector2 data;
+    public Vector2 Data;
 
     public VectorNetPacket()
     {
         PacketType = PacketType.Damage;
         SenderId = default;
-        data = default;
+        Data = default;
     }
 }

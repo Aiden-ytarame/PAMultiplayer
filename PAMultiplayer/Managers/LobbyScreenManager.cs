@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
+using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Cpp2IL.Core.Extensions;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
@@ -28,7 +30,26 @@ namespace PAMultiplayer.Managers
 
             return false;
         }
-   
+
+        static IEnumerator ShowNames()
+        {
+            yield return new WaitForUpdate();
+            
+            foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
+            {
+                if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
+                {
+                    string text = "YOU";
+                    if (currentLobbyMember.Id != GlobalsManager.LocalPlayer)
+                    {
+                        text = currentLobbyMember.Name;
+                    }
+
+                    player.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
+
+                }
+            }
+        }
         [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
         [HarmonyPrefix]
         static bool PreGameUnpause()
@@ -47,21 +68,8 @@ namespace PAMultiplayer.Managers
             if (LobbyScreenManager.Instance)
             {
                 VGPlayerManager.inst.RespawnPlayers();
+                GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
                 Object.Destroy(LobbyScreenManager.Instance);
-                foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
-                {
-                    if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
-                    {
-                        string text = "YOU";
-                        if (currentLobbyMember.Id != GlobalsManager.LocalPlayer)
-                        {
-                            text = currentLobbyMember.Name;
-                        }
-
-                        player.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
-
-                    }
-                }
             }
             
             return true;

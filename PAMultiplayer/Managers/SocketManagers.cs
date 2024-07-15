@@ -9,15 +9,12 @@ using UnityEngine;
 
 namespace PAMultiplayer.Managers;
 
-//ye im stealing the VG prefix used in some PA classes
-//I assume it means Vitamin Games
-
 
 /// <summary>
 /// Game Server
 /// Responsible for sending/receiving messages
 /// </summary>
-public class VGSocketManager : SocketManager
+public class PAMSocketManager : SocketManager
 {
     int _latestCheckpoint = 0;
 
@@ -45,7 +42,7 @@ public class VGSocketManager : SocketManager
     public override void OnMessage(Connection connection, NetIdentity identity, IntPtr data, int size, long messageNum,
         long recvTime, int channel)
     {
-        PacketHandler GetHandler(PacketType type)
+        IPacketHandler GetHandler(PacketType type)
         {
             switch (type)
             {
@@ -62,7 +59,7 @@ public class VGSocketManager : SocketManager
                     return null;
             }
 
-            if (PacketHandler.PacketHandlers.TryGetValue(type, out var handler))
+            if (IPacketHandler.PacketHandlers.TryGetValue(type, out var handler))
             {
                 return handler;
             }
@@ -78,12 +75,12 @@ public class VGSocketManager : SocketManager
             var packet = Marshal.PtrToStructure<IntNetPacket>(data);
             if(packet.PacketType == PacketType.Loaded)
                 Plugin.Logger.LogError("Loaded Recieved");
-            GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.data);
+            GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.Data);
         }
         else
         {
             var packet = Marshal.PtrToStructure<VectorNetPacket>(data);
-            GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.data);
+            GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.Data);
         }
     }
 
@@ -147,22 +144,22 @@ public class VGSocketManager : SocketManager
     public void SendCheckpointHit(int index)
     {
         _latestCheckpoint = index;
-        var packet = new IntNetPacket() { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Checkpoint, data = index };
+        var packet = new IntNetPacket() { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Checkpoint, Data = index };
         SendMessages(packet);
-        if (PacketHandler.PacketHandlers.TryGetValue(PacketType.Checkpoint, out var handler))
+        if (IPacketHandler.PacketHandlers.TryGetValue(PacketType.Checkpoint, out var handler))
         {
-            handler.ProcessPacket(packet.SenderId, packet.data);
+            handler.ProcessPacket(packet.SenderId, packet.Data);
         }
     }
 
     public void SendRewindToCheckpoint()
     {
         var packet = new IntNetPacket()
-            { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Rewind, data = _latestCheckpoint };
+            { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Rewind, Data = _latestCheckpoint };
         SendMessages(packet);
-        if (PacketHandler.PacketHandlers.TryGetValue(PacketType.Rewind, out var handler))
+        if (IPacketHandler.PacketHandlers.TryGetValue(PacketType.Rewind, out var handler))
         {
-            handler.ProcessPacket(packet.SenderId, packet.data);
+            handler.ProcessPacket(packet.SenderId, packet.Data);
         }
         
     }
@@ -178,9 +175,9 @@ public class VGSocketManager : SocketManager
             IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
             var packet = new VectorNetPacket()
             {
-                PacketType = PacketType.Spawn,
+                PacketType = PacketType.PlayerId,
                 SenderId = vgPlayerData.Key,
-                data = new Vector2(vgPlayerData.Value.PlayerID, GlobalsManager.Players.Count)
+                Data = new Vector2(vgPlayerData.Value.PlayerID, GlobalsManager.Players.Count)
             };
 
             Marshal.StructureToPtr(packet, unmanagedPointer, false);
@@ -193,9 +190,9 @@ public class VGSocketManager : SocketManager
 
         var info = new VectorNetPacket()
         {
-            PacketType = PacketType.Spawn,
+            PacketType = PacketType.PlayerId,
             SenderId = steamId,
-            data = new Vector2(id, 1)
+            Data = new Vector2(id, 1)
         };
         SendMessages(info);
     }
@@ -218,7 +215,7 @@ public class VGSocketManager : SocketManager
         {
             PacketType = PacketType.Damage,
             SenderId = GlobalsManager.LocalPlayer,
-            data = GlobalsManager.Players[GlobalsManager.LocalPlayer].PlayerObject.Health
+            Data = GlobalsManager.Players[GlobalsManager.LocalPlayer].PlayerObject.Health
         };
         SendHostPacket(packet);
     }
@@ -228,7 +225,7 @@ public class VGSocketManager : SocketManager
         {
             PacketType = PacketType.Position,
             SenderId = GlobalsManager.LocalPlayer,
-            data = pos
+            Data = pos
         };
         SendHostPacket(packet, SendType.Unreliable);
     }
@@ -238,7 +235,7 @@ public class VGSocketManager : SocketManager
 /// Game Client
 /// Responsible for sending/receiving messages
 /// </summary>
-public class VGConnectionManager : ConnectionManager
+public class PAMConnectionManager : ConnectionManager
 {
     
     #region ConnectionManager Overrides
@@ -270,17 +267,17 @@ public class VGConnectionManager : ConnectionManager
             if (Marshal.ReadInt16(data) == 0)
             {
                 var packet = Marshal.PtrToStructure<IntNetPacket>(data);
-                if(PacketHandler.PacketHandlers.TryGetValue(packet.PacketType, out var handler))
+                if(IPacketHandler.PacketHandlers.TryGetValue(packet.PacketType, out var handler))
                 {
-                    handler.ProcessPacket(packet.SenderId, packet.data);
+                    handler.ProcessPacket(packet.SenderId, packet.Data);
                 }
             }
             else
             {
                 var packet = Marshal.PtrToStructure<VectorNetPacket>(data);
-                if(PacketHandler.PacketHandlers.TryGetValue(packet.PacketType, out var handler))
+                if(IPacketHandler.PacketHandlers.TryGetValue(packet.PacketType, out var handler))
                 {
-                    handler.ProcessPacket(packet.SenderId, packet.data);
+                    handler.ProcessPacket(packet.SenderId, packet.Data);
                 }
             }
         }
@@ -328,7 +325,7 @@ public class VGConnectionManager : ConnectionManager
         {
             PacketType = PacketType.Damage,
             SenderId = GlobalsManager.LocalPlayer,
-            data = GlobalsManager.Players[GlobalsManager.LocalPlayer].PlayerObject.Health
+            Data = GlobalsManager.Players[GlobalsManager.LocalPlayer].PlayerObject.Health
         };
         SendPacket(packet);
     }
@@ -339,7 +336,7 @@ public class VGConnectionManager : ConnectionManager
         {
             PacketType = PacketType.Position,
             SenderId = GlobalsManager.LocalPlayer,
-            data = pos
+            Data = pos
         };
         SendPacket(packet, SendType.Unreliable);
     }

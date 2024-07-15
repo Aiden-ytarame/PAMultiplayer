@@ -5,24 +5,24 @@ using UnityEngine;
 
 namespace PAMultiplayer.Packet;
 
-public abstract class PacketHandler
+public interface IPacketHandler
 {
-    public static Dictionary<PacketType, PacketHandler> PacketHandlers = new()
+    public static readonly Dictionary<PacketType, IPacketHandler> PacketHandlers = new()
     {
         { PacketType.Position, new PositionPacket() },
         { PacketType.Damage, new DamagePacket() }, 
         { PacketType.Start, new StartPacket() },
         { PacketType.Loaded, new LoadedPacket() },
-        { PacketType.Spawn , new SpawnPacket()},
+        { PacketType.PlayerId , new SpawnPacket()},
         { PacketType.Checkpoint , new CheckpointPacket()},
         { PacketType.Rewind , new RewindPacket()}
     };
     public abstract void ProcessPacket(SteamId senderId, object data);
 }
 
-public class PositionPacket : PacketHandler
+public class PositionPacket : IPacketHandler
 {
-    public override void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, object data)
     {
         if (senderId.IsLocalPlayer()) return;
         var pos = (Vector2)data;
@@ -51,9 +51,9 @@ public class PositionPacket : PacketHandler
     }
 }
 
-public class DamagePacket : PacketHandler
+public class DamagePacket : IPacketHandler
 {
-    public override void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, object data)
     {
         Plugin.Inst.Log.LogWarning($"Damaging player { senderId}");
 
@@ -67,17 +67,17 @@ public class DamagePacket : PacketHandler
     }
 }
 
-public class StartPacket : PacketHandler
+public class StartPacket : IPacketHandler
 {
-    public override void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, object data)
     {
         LobbyScreenManager.Instance?.StartLevel();
     }
 }
 
-public class LoadedPacket : PacketHandler
+public class LoadedPacket : IPacketHandler
 {
-    public override void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, object data)
     {
         Plugin.Logger.LogInfo($"Received Loaded Confirmation from [{senderId}]");
         
@@ -89,11 +89,11 @@ public class LoadedPacket : PacketHandler
     }
 }
 
-public class SpawnPacket : PacketHandler
+public class SpawnPacket : IPacketHandler
 {
     private static int _amountOfInfo;
 
-    public override void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, object data)
     {
         Vector2 info = (Vector2)data;
 
@@ -118,9 +118,9 @@ public class SpawnPacket : PacketHandler
     }
 }
 
-public class CheckpointPacket : PacketHandler
+public class CheckpointPacket : IPacketHandler
 {
-    public override void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, object data)
     {
         Plugin.Logger.LogInfo($"Checkpoint [{(int)data}] Received");
         GameManager.Inst.playingCheckpointAnimation = true;
@@ -130,18 +130,17 @@ public class CheckpointPacket : PacketHandler
     }
 }
 
-public class RewindPacket : PacketHandler
+public class RewindPacket : IPacketHandler
 {
-    public override void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, object data)
     {
         Plugin.Logger.LogInfo($"Rewind to Checkpoint [{(int)data}] Received");
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
         {
             if (vgPlayerData.PlayerObject && !vgPlayerData.PlayerObject.isDead)
             {
-                vgPlayerData.PlayerObject.Health = 1;
-                vgPlayerData.PlayerObject.PlayerHit();
-                //forcekill() fucked up the game.
+                //vgPlayerData.PlayerObject.Health = 1;
+                vgPlayerData.PlayerObject.PlayerDeath();
             }
         };
         GameManager.Inst.RewindToCheckpoint((int)data);
