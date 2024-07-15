@@ -259,7 +259,8 @@ public class VGConnectionManager : ConnectionManager
     {
         base.OnDisconnected(info);
         Plugin.Logger.LogInfo($"Client: Disconnected Steam user {info.Identity.SteamId}.");
-        SceneLoader.Inst.LoadSceneGroup("Menu");
+        if(SceneLoader.Inst.manager.ActiveSceneGroup.GroupName == "Arcade_Level")
+            SceneLoader.Inst.LoadSceneGroup("Menu");
     }
     
     public override void OnMessage(IntPtr data, int size, long messageNum, long recvTime, int channel)

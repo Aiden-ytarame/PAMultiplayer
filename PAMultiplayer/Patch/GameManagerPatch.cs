@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
@@ -16,12 +15,20 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch(typeof(GameManager))]
 public class GameManagerPatch
 {
+    [HarmonyPatch(typeof(VGPlayerManager), nameof(VGPlayerManager.InitPlayers))]
+    [HarmonyPrefix]
+    static bool PreInit()
+    {
+        if (!GlobalsManager.IsMultiplayer) return true;
+
+        return false;
+    }
     [HarmonyPatch(nameof(GameManager.SpawnPlayers))]
     [HarmonyPrefix]
     static void PreSpawn(ref GameManager __instance)
     {
         if (!GlobalsManager.IsMultiplayer) return;
-        
+        return;
         //this is a band-aid fix for the ghost nano
         var playerList = VGPlayerManager.Inst.players;
 
@@ -31,6 +38,7 @@ public class GameManagerPatch
             {
                 if (!GlobalsManager.Players.ContainsValue(vgPlayerData))
                 {
+                    Plugin.Logger.LogError($"Match");
                     VGPlayerManager.Inst.players.Remove(vgPlayerData);
                 }
             }
@@ -38,7 +46,7 @@ public class GameManagerPatch
 
         //this is to prevent a weird bug where the game freezes post rewind
         //pidge has acknowledged this bug.
-        __instance.UnPause();
+        __instance?.UnPause();
     }
  
     [HarmonyPatch(nameof(GameManager.Start))]
@@ -198,13 +206,15 @@ public class GameManagerPatch
        
         if (GlobalsManager.IsHosting)
         {
-          //  VGPlayerManager.Inst.players[0].PlayerID = 0;
+            SteamLobbyManager.Inst.CurrentLobby.SetJoinable(true);
+            SteamLobbyManager.Inst.CurrentLobby.SetPublic();
+           
+            VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){PlayerID = 0, ControllerID = 0});
             GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayer, VGPlayerManager.Inst.players[0]);
             SteamManager.Inst.Server?.SendHostLoaded();
         }
         else if (!SteamManager.Inst.Client.Connected)
         {
-            //if failed to connect
             SceneLoader.Inst.LoadSceneGroup("Menu");
         }
         else

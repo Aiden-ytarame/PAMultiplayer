@@ -112,7 +112,7 @@ public class SpawnPacket : PacketHandler
         }
         if (_amountOfInfo >= amount)
         {
-            amount = 0;
+            _amountOfInfo = 0;
             GlobalsManager.HasLoadedAllInfo = true;
         }
     }

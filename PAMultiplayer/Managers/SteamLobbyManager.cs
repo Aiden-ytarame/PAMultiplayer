@@ -169,11 +169,7 @@ public class SteamLobbyManager : MonoBehaviour
         }
         Plugin.Logger.LogInfo($"Lobby Created!");
         
-        lobby.SetPublic();
-        lobby.SetJoinable(true);
-        
         lobby.SetData("LevelId", SaveManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
-        lobby.SetData("PortId", SteamManager.Inst._serverPort.ToString());
         //this actually might not need to exit
         //since we go back to the menu of lobby failed
         //but I never tested this so we keep just in case
@@ -181,8 +177,6 @@ public class SteamLobbyManager : MonoBehaviour
         
         LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/buttons").gameObject.SetActive(true);
         LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/LobbyFailed").gameObject.SetActive(false);
-        
-        
     }
 
     public void HideLobby()

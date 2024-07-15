@@ -21,13 +21,12 @@ namespace PAMultiplayer.Managers
         {
             if (!GlobalsManager.IsMultiplayer) return true;
 
-            if (!GlobalsManager.HasStarted
-                && !GlobalsManager.IsHosting)
+            if (GlobalsManager.HasStarted || (GlobalsManager.IsHosting && SteamLobbyManager.Inst.IsEveryoneLoaded))
             {
-                return false;
+                return true;
             }
 
-            return true;
+            return false;
         }
    
         [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
@@ -36,8 +35,7 @@ namespace PAMultiplayer.Managers
         {
             if (!GlobalsManager.IsMultiplayer) return true;
             
-            if (!GlobalsManager.HasStarted
-                && !GlobalsManager.IsHosting)
+            if (!GlobalsManager.HasStarted && (!GlobalsManager.IsHosting || !SteamLobbyManager.Inst.IsEveryoneLoaded))
             {
                 return false;
             }
