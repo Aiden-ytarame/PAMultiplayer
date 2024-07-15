@@ -15,6 +15,7 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch(typeof(GameManager))]
 public class GameManagerPatch
 {
+    //we handle the spawns to prevent ghost nanos(extra players)
     [HarmonyPatch(typeof(VGPlayerManager), nameof(VGPlayerManager.InitPlayers))]
     [HarmonyPrefix]
     static bool PreInit()
@@ -23,32 +24,8 @@ public class GameManagerPatch
 
         return false;
     }
-    [HarmonyPatch(nameof(GameManager.SpawnPlayers))]
-    [HarmonyPrefix]
-    static void PreSpawn(ref GameManager __instance)
-    {
-        if (!GlobalsManager.IsMultiplayer) return;
-        return;
-        //this is a band-aid fix for the ghost nano
-        var playerList = VGPlayerManager.Inst.players;
-
-        if (playerList.Count > GlobalsManager.Players.Count)
-        {
-            foreach (var vgPlayerData in VGPlayerManager.Inst.players)
-            {
-                if (!GlobalsManager.Players.ContainsValue(vgPlayerData))
-                {
-                    Plugin.Logger.LogError($"Match");
-                    VGPlayerManager.Inst.players.Remove(vgPlayerData);
-                }
-            }
-        }
-
-        //this is to prevent a weird bug where the game freezes post rewind
-        //pidge has acknowledged this bug.
-        __instance?.UnPause();
-    }
  
+    //sets the loading screen awaits
     [HarmonyPatch(nameof(GameManager.Start))]
     [HarmonyPostfix]
     static void PostStart(ref GameManager __instance)
@@ -209,25 +186,27 @@ public class GameManagerPatch
             SteamLobbyManager.Inst.CurrentLobby.SetJoinable(true);
             SteamLobbyManager.Inst.CurrentLobby.SetPublic();
            
+            //player 0 is never added, so we add it here
             VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){PlayerID = 0, ControllerID = 0});
+            
             GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayer, VGPlayerManager.Inst.players[0]);
             SteamManager.Inst.Server?.SendHostLoaded();
         }
-        else if (!SteamManager.Inst.Client.Connected)
-        {
-            SceneLoader.Inst.LoadSceneGroup("Menu");
-        }
-        else
+        else if (SteamManager.Inst.Client.Connected)
         {
             //if connected successfully
             SteamManager.Inst.Client.SendLoaded();
-       
-            VGPlayerManager.Inst.players.Clear();
+            
             foreach (var vgPlayerData in GlobalsManager.Players)
             {
                 VGPlayerManager.Inst.players.Add(vgPlayerData.Value);
             }
             VGPlayerManager.Inst.RespawnPlayers();
+        }
+        else
+        {
+            //if failed to connect to server
+            SceneLoader.Inst.LoadSceneGroup("Menu");
         }
     }
 

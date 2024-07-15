@@ -31,6 +31,7 @@ namespace PAMultiplayer.Patch
             //this could be moved out of here so it doesn't run for every player.
             if (!GlobalsManager.IsMultiplayer || !__instance.IsLocalPlayer()) return;
 
+            return;
             if (__instance.Player_Rigidbody)
             {
                 var V2 = __instance.Player_Rigidbody.transform.position;

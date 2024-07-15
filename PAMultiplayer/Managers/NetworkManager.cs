@@ -20,7 +20,6 @@ namespace PAMultiplayer.Managers
      
         private void FixedUpdate()
         {
-            return;
             if (GlobalsManager.Players.TryGetValue(GlobalsManager.LocalPlayer, out var playerData))
             {
                 if (playerData.PlayerObject)
