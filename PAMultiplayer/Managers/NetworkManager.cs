@@ -39,6 +39,7 @@ namespace PAMultiplayer.Managers
             SteamManager.Inst.EndServer();
             SteamManager.Inst.EndClient();
             GlobalsManager.Players.Clear();
+            VGPlayerManager.Inst.players.Clear();
         }
         
     }

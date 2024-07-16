@@ -15,13 +15,14 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch(typeof(GameManager))]
 public class GameManagerPatch
 {
-    //we handle the spawns to prevent ghost nanos(extra players)
+    //we handle the spawns ourselves
     [HarmonyPatch(typeof(VGPlayerManager), nameof(VGPlayerManager.InitPlayers))]
     [HarmonyPrefix]
     static bool PreInit()
     {
         if (!GlobalsManager.IsMultiplayer) return true;
 
+        VGPlayerManager.Inst.players.Clear();
         return false;
     }
  
@@ -201,7 +202,7 @@ public class GameManagerPatch
             {
                 VGPlayerManager.Inst.players.Add(vgPlayerData.Value);
             }
-            VGPlayerManager.Inst.RespawnPlayers();
+            //VGPlayerManager.Inst.RespawnPlayers();
         }
         else
         {
@@ -245,11 +246,10 @@ public class GameManagerPatch
     //this is patched manually in Plugin.cs
     public static bool OverrideLoadGame(ref bool __result)
     {
-        VGLevel level = StoryLevelLoader.Inst.Level;
-        if (GameManager.Inst.IsArcade)
-            level = SaveManager.Inst.CurrentArcadeLevel;
+        if (!GameManager.Inst.IsArcade)
+            return true;
         
-        GameManager.Inst.StartCoroutine(CustomLoadGame(level).WrapToIl2Cpp());
+        GameManager.Inst.StartCoroutine(CustomLoadGame(SaveManager.Inst.CurrentArcadeLevel).WrapToIl2Cpp());
         __result = false;
         return false;
     }
