@@ -16,13 +16,12 @@ namespace PAMultiplayer.Patch;
 public class GameManagerPatch
 {
     //we handle the spawns ourselves
+    //this sometimes causes the ghost nano to spawn
     [HarmonyPatch(typeof(VGPlayerManager), nameof(VGPlayerManager.InitPlayers))]
     [HarmonyPrefix]
     static bool PreInit()
     {
         if (!GlobalsManager.IsMultiplayer) return true;
-
-        VGPlayerManager.Inst.players.Clear();
         return false;
     }
  
@@ -175,13 +174,14 @@ public class GameManagerPatch
 
     [HarmonyPatch(nameof(GameManager.PlayGame))]
     [HarmonyPostfix]
-    static void Postfix(ref GameManager __instance)
+    static void PostPlay(ref GameManager __instance)
     {
         if (!GlobalsManager.IsMultiplayer || GameManager.Inst.IsEditor) return;
         
         __instance.Pause(false);
         __instance.gameObject.AddComponent<LobbyScreenManager>();
-       
+        VGPlayerManager.Inst.players.Clear();
+        
         if (GlobalsManager.IsHosting)
         {
             SteamLobbyManager.Inst.CurrentLobby.SetJoinable(true);
