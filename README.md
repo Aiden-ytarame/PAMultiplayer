@@ -3,7 +3,7 @@
 **Work In Progress**
 
 A multiplayer mod for Project arrhythmia Alpha.
-
+Supports up to 8 players!
 Uses BepInEx.
 
 ## **Known Issues**
@@ -11,10 +11,6 @@ Uses BepInEx.
 There's problems with closing the server and disconnecting a player.
 
 The code looks bad
-
-## **Plans**
- 
-* Sync random seed(help I cant figure how).
   
 
 ## **Instalation**
