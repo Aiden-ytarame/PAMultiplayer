@@ -37,12 +37,13 @@ public class GameManagerPatch
         __instance.gameObject.AddComponent<NetworkManager>();
 
         //this is for waiting for the Objects to load before initialing the server/client
-        int index = 0;
-        for (var i = 0; i < SceneLoader.Inst.manager.ExtraLoadingTasks.Count; i++)
+
+        TaskData objectTask = new();
+       foreach (var taskData in SceneLoader.Inst.manager.ExtraLoadingTasks)
         {
-            if (SceneLoader.Inst.manager.ExtraLoadingTasks[i].Name == "Objects")
+            if (taskData.Name == "Objects")
             {
-                index = i;
+                objectTask = taskData;
                 break;
             }
         }
@@ -56,7 +57,7 @@ public class GameManagerPatch
                 Task = Task.Run(async () =>
                 {
                     //waiting for objects to load
-                    while (SceneLoader.Inst.manager.ExtraLoadingTasks[index].Task.Status != TaskStatus.RanToCompletion)
+                    while (objectTask.Task.Status != TaskStatus.RanToCompletion)
                     {
                         await Task.Delay(100);
                     }
@@ -95,7 +96,7 @@ public class GameManagerPatch
                 {
                     //same as the first task
                     
-                    while (SceneLoader.Inst.manager.ExtraLoadingTasks[index].Task.Status != TaskStatus.RanToCompletion)
+                    while (objectTask.Task.Status != TaskStatus.RanToCompletion)
                     {
                         await Task.Delay(100);
                     }
@@ -133,7 +134,7 @@ public class GameManagerPatch
                 {
                     //same as the first task
                     
-                    while (SceneLoader.Inst.manager.ExtraLoadingTasks[index].Task.Status != TaskStatus.RanToCompletion)
+                    while (objectTask.Task.Status != TaskStatus.RanToCompletion)
                     {
                         await Task.Delay(100);
                     }
