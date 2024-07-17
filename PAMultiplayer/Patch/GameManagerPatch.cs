@@ -56,11 +56,6 @@ public class GameManagerPatch
                 Task = Task.Run(async () =>
                 {
                     //waiting for objects to load
-                    while (SceneLoader.Inst.manager.ExtraLoadingTasks[index].Task.Status != TaskStatus.RanToCompletion)
-                    {
-                        await Task.Delay(100);
-                    }
-                    
                     SteamLobbyManager.Inst.CreateLobby();
                     
                     var ct = new CancellationTokenSource();
@@ -221,12 +216,25 @@ public class GameManagerPatch
          
          if (GlobalsManager.IsHosting)
          {
-             int newSeed = (int)Random.value;
+             //we wait for lobby to create to send the random seed
+             int index = 0;
+             for (var i = 0; i < SceneLoader.Inst.manager.ExtraLoadingTasks.Count; i++)
+             {
+                 if (SceneLoader.Inst.manager.ExtraLoadingTasks[i].Name == "Loading Lobby")
+                 {
+                     index = i;
+                     break;
+                 }
+             }
+             yield return new WaitUntil(new Func<bool>(() => SceneLoader.Inst.manager.ExtraLoadingTasks[index].Task.Status == TaskStatus.RanToCompletion));
+
+             int newSeed = Random.seed;
              SteamLobbyManager.Inst.CurrentLobby.SetData("seed", newSeed.ToString());
              SetSeed(newSeed);
          }
          else
          {
+             Plugin.Logger.LogError($"SEED2 : {SteamLobbyManager.Inst.CurrentLobby.GetData("seed")}");
              int newSeed = int.Parse(SteamLobbyManager.Inst.CurrentLobby.GetData("seed"));
              SetSeed(newSeed);
          }

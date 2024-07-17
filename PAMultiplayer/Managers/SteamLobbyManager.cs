@@ -114,6 +114,7 @@ public class SteamLobbyManager : MonoBehaviour
         //this could be moved to somewhere before even joining
         //but if it works, we keep
         ulong id = ulong.Parse(lobby.GetData("LevelId"));
+        Plugin.Logger.LogError($"SEED : {lobby.GetData("seed")}");
         foreach (var level in ArcadeLevelDataManager.Inst.ArcadeLevels)
         {
             if (level.SteamInfo.ItemID.Value == id)
