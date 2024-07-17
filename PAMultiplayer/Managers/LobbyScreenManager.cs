@@ -33,8 +33,9 @@ namespace PAMultiplayer.Managers
 
         static IEnumerator ShowNames()
         {
+            //stupid hack lmao
             yield return new WaitForUpdate();
-            
+            yield return new WaitForUpdate();
             foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
             {
                 if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
@@ -44,9 +45,8 @@ namespace PAMultiplayer.Managers
                     {
                         text = currentLobbyMember.Name;
                     }
-
+                    
                     player.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
-
                 }
             }
         }
@@ -73,14 +73,6 @@ namespace PAMultiplayer.Managers
             }
             
             return true;
-        }
-
-
-        [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
-        [HarmonyPostfix]
-        static void PostGameUnpause(GameManager __instance)
-        {
-            if (!GlobalsManager.IsMultiplayer) return;
         }
     }
 

@@ -15,7 +15,6 @@ public class SteamManager : MonoBehaviour
     public PAMSocketManager Server;
     public PAMConnectionManager Client;
 
-    public int _serverPort = 0;
     private void Awake()
     {
         if (Inst)
@@ -70,6 +69,7 @@ public class SteamManager : MonoBehaviour
         GlobalsManager.IsMultiplayer = true;
         Plugin.Logger.LogInfo($"Joining friend's lobby owned by [{steamId}]");
         Plugin.Logger.LogError($"Lobby Id [{lobby.Id.ToString()}]");
+        
         lobby.Join();
     }
     
@@ -82,9 +82,6 @@ public class SteamManager : MonoBehaviour
     public void StartClient(SteamId targetSteamId)
     {
         Plugin.Logger.LogInfo($"Starting client. Connection to [{targetSteamId}]");
-
-        int port = int.Parse(SteamLobbyManager.Inst.CurrentLobby.GetData("PortId"));
-        Plugin.Logger.LogError(port);
         Client = SteamNetworkingSockets.ConnectRelay<PAMConnectionManager>(targetSteamId);
     }
 
@@ -108,7 +105,6 @@ public class SteamManager : MonoBehaviour
         
         //if the server port doesn't change it fails to create a socket
         //why? don't ask me man
-        _serverPort++;
     }
 
     public void EndServer()

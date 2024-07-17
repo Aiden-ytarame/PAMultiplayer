@@ -3,6 +3,7 @@ using HarmonyLib;
 using Il2CppInterop.Runtime;
 using PAMultiplayer.Managers;
 using UnityEngine;
+
 namespace PAMultiplayer.Patch;
 
 
@@ -79,6 +80,7 @@ public static class RewindHandler
         }
     }
 }
+
 
 internal static class PredicateExtension
 {

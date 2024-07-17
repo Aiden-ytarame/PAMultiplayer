@@ -8,6 +8,7 @@ using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
 using UnityEngine;
 using VGFunctions;
+using Random = UnityEngine.Random;
 using TaskStatus = Il2CppSystem.Threading.Tasks.TaskStatus;
 
 namespace PAMultiplayer.Patch;
@@ -15,16 +16,6 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch(typeof(GameManager))]
 public class GameManagerPatch
 {
-    //we handle the spawns ourselves
-    //this sometimes causes the ghost nano to spawn
-    [HarmonyPatch(typeof(VGPlayerManager), nameof(VGPlayerManager.InitPlayers))]
-    [HarmonyPrefix]
-    static bool PreInit()
-    {
-        if (!GlobalsManager.IsMultiplayer) return true;
-        return false;
-    }
- 
     //sets the loading screen awaits
     [HarmonyPatch(nameof(GameManager.Start))]
     [HarmonyPostfix]
@@ -202,7 +193,7 @@ public class GameManagerPatch
             {
                 VGPlayerManager.Inst.players.Add(vgPlayerData.Value);
             }
-            //VGPlayerManager.Inst.RespawnPlayers();
+            VGPlayerManager.Inst.RespawnPlayers();
         }
         else
         {
@@ -225,14 +216,25 @@ public class GameManagerPatch
              gm.CurLoadingState.Reset();
          }
          
-         
          gm.LoadMetadata(_level);
-
          yield return gm.StartCoroutine(gm.LoadAudio(_level));
+         
+         if (GlobalsManager.IsHosting)
+         {
+             int newSeed = (int)Random.value;
+             SteamLobbyManager.Inst.CurrentLobby.SetData("seed", newSeed.ToString());
+             SetSeed(newSeed);
+         }
+         else
+         {
+             int newSeed = int.Parse(SteamLobbyManager.Inst.CurrentLobby.GetData("seed"));
+             SetSeed(newSeed);
+         }
          
          gm.LoadData(_level);
          
          yield return gm.StartCoroutine(gm.LoadBackgrounds(_level));
+        
          yield return gm.StartCoroutine(gm.LoadObjects(_level));
          yield return gm.StartCoroutine(gm.LoadTweens());
 
@@ -242,11 +244,17 @@ public class GameManagerPatch
          
          gm.PlayGame();
     }
-    
+
+    static void SetSeed(int _seed)
+    {
+        Random.InitState(_seed);
+        ObjectManager.inst.seed = _seed;
+        ObjectManager.inst.oldState = Random.state;
+    }
     //this is patched manually in Plugin.cs
     public static bool OverrideLoadGame(ref bool __result)
     {
-        if (!GameManager.Inst.IsArcade)
+        if (!GameManager.Inst.IsArcade || !GlobalsManager.IsMultiplayer)
             return true;
         
         GameManager.Inst.StartCoroutine(CustomLoadGame(SaveManager.Inst.CurrentArcadeLevel).WrapToIl2Cpp());
