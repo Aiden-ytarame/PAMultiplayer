@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Il2CppSystems.SceneManagement;
+using PAMultiplayer.Patch;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -15,6 +16,8 @@ public class SteamLobbyManager : MonoBehaviour
     public bool InLobby { get; private set; }
     public static SteamLobbyManager Inst;
     private readonly Dictionary<SteamId, bool> _loadedPlayers = new();
+
+    public int RandSeed = 0;
     
     //used to prevent 2 players having the same id
     //I should scrap this and make and instead find an open id.
@@ -164,6 +167,7 @@ public class SteamLobbyManager : MonoBehaviour
         Plugin.Logger.LogInfo($"Lobby Created!");
         
         lobby.SetData("LevelId", SaveManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
+        lobby.SetData("seed", RandSeed.ToString());
         //this actually might not need to exit
         //since we go back to the menu of lobby failed
         //but I never tested this so we keep just in case
