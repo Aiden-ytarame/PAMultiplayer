@@ -3,7 +3,9 @@
 **Work In Progress**
 
 A multiplayer mod for Project arrhythmia Alpha.
+
 Supports up to 8 players!
+
 Uses BepInEx.
 
 ## **Known Issues**
