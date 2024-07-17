@@ -17,5 +17,7 @@ namespace PAMultiplayer.Managers
         public static bool IsMultiplayer = false;
         public static bool IsReloadingLobby = false;
         public static bool HasStarted = false;
+        public static ulong LevelId;
+        public static bool IsDownloading = false;
     }
 }

@@ -112,46 +112,36 @@ public class SteamLobbyManager : MonoBehaviour
         InLobby = true;
         _playerAmount = 0;
         
+        foreach (var lobbyMember in lobby.Members)
+        {
+            VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
+            NewData.PlayerID = _playerAmount; //by the way, this can cause problems
+            NewData.ControllerID = _playerAmount;
+
+            GlobalsManager.Players.TryAdd(lobbyMember.Id, NewData);
+
+            _playerAmount++;
+        }
+        
         if (lobby.Owner.Id.IsLocalPlayer()) return;
         
-        //this could be moved to somewhere before even joining
-        //but if it works, we keep
-        ulong id = ulong.Parse(lobby.GetData("LevelId"));
+        GlobalsManager.HasLoadedAllInfo = false;
+        GlobalsManager.LevelId = ulong.Parse(lobby.GetData("LevelId"));
         Plugin.Logger.LogError($"SEED : {lobby.GetData("seed")}");
+        
         foreach (var level in ArcadeLevelDataManager.Inst.ArcadeLevels)
         {
-            if (level.SteamInfo.ItemID.Value == id)
+            if (level.SteamInfo.ItemID.Value == GlobalsManager.LevelId)
             {
-                GlobalsManager.HasLoadedAllInfo = false;
-
-                
-                var Enu = lobby.Members.GetEnumerator();
-                while (Enu.MoveNext())
-                {
-                    VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
-                    NewData.PlayerID = _playerAmount; //by the way, this can cause problems
-                    NewData.ControllerID = _playerAmount;
-                 
-                    if (GlobalsManager.Players.TryAdd(Enu.Current.Id, NewData))
-                    {
-                      //  if(GameManager.Inst && GameManager.Inst.CurGameState != GameManager.GameState.Loading)
-                      //      VGPlayerManager.Inst.players.Add(GlobalsManager.Players[Enu.Current.Id]);
-                    }
-
-                    _playerAmount++;
-                }
-                Enu.Dispose();
-                
                 SaveManager.Inst.CurrentArcadeLevel = level;
-                GlobalsManager.HasLoadedAllInfo = false;
                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
                 return;
             }
         }
-        Plugin.Logger.LogError($"You did not have the lobby's level downloaded!");
-        lobby.Leave();
-        InLobby = false;
 
+        GlobalsManager.IsDownloading = true;
+        Plugin.Logger.LogError($"You did not have the lobby's level downloaded!");
+        SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
     }
 
 

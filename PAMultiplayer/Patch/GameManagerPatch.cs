@@ -6,6 +6,9 @@ using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
+using Steamworks;
+using Steamworks.Data;
+using Steamworks.Ugc;
 using UnityEngine;
 using VGFunctions;
 using Random = UnityEngine.Random;
@@ -210,14 +213,39 @@ public class GameManagerPatch
     static IEnumerator CustomLoadGame(VGLevel _level)
     {
          GameManager gm = GameManager.Inst;
-
-         if (gm.IsEditor)
+      
+         if (GlobalsManager.IsDownloading)
          {
-             gm.CurGameState = GameManager.GameState.Loading;
-             gm.CurLoadingState.Reset();
+             yield return new WaitUntil(new Func<bool>(() => !ArcadeManager.Inst.isLoading));
+             VGLevel level;
+             if (level = ArcadeLevelDataManager.Inst.GetSteamLevel(GlobalsManager.LevelId))
+             {
+                 _level = level;
+             }
+             else
+             {
+                 var item = DownloadLevel();
+                
+                 yield return new WaitUntil(new Func<bool>(() => !GlobalsManager.IsDownloading));
+                 
+                 var result = item.Result;
+                 
+                 VGLevel vgLevel = new VGLevel();
+                 
+                 vgLevel.InitArcadeData(result.Directory);
+                 InitSteamInfo(ref vgLevel, result.Id, result.Directory, result);
+                 ArcadeLevelDataManager.Inst.ArcadeLevels.Add(vgLevel);
+                 
+                 //yield return gm.StartCoroutine(SteamWorkshopFacepunch.inst.LoadAlbumArt(result.Id, result.Directory));
+                 yield return gm.StartCoroutine(SteamWorkshopFacepunch.inst.LoadMusic(result.Id, result.Directory));
+
+                 _level = vgLevel;
+             }
          }
          
          gm.LoadMetadata(_level);
+        
+         
          yield return gm.StartCoroutine(gm.LoadAudio(_level));
          
          if (GlobalsManager.IsHosting)
@@ -232,6 +260,7 @@ public class GameManagerPatch
          }
          
          gm.LoadData(_level);
+       
          
          yield return gm.StartCoroutine(gm.LoadBackgrounds(_level));
         
@@ -245,12 +274,67 @@ public class GameManagerPatch
          gm.PlayGame();
     }
 
+    static void InitSteamInfo(ref VGLevel _level, PublishedFileId _id, string _folder, Item _item)
+    {
+        if (string.IsNullOrEmpty(_folder)) return;
+   
+        VGLevel.LevelDataBase data = new()
+        {
+            LevelID = _id.ToString(),
+            LocalFolder = _folder
+        };
+
+        _level.LevelData = data;
+        _level.BaseLevelData = data;
+        _level.SteamInfo = new VGLevel.SteamData(){ ItemID = _id};
+        
+    }
+
+    static async Task<Item> DownloadLevel()
+    {
+        var newTask2 = new TaskData
+        {
+            Name = "Downloading Level",
+            Task = Task.Run(async () =>
+            {
+                while (GlobalsManager.IsDownloading)
+                {
+                    await Task.Delay(100);
+                }
+            }).ToIl2Cpp()
+        };
+        SceneLoader.Inst.manager.AddToLoadingTasks(newTask2);
+        
+        var item = await SteamUGC.QueryFileAsync(GlobalsManager.LevelId);
+
+        if (!item.HasValue)
+        {
+            SceneLoader.Inst.LoadSceneGroup("Menu");
+            return new Item();
+        }
+
+        var level = item.Value;
+        
+        if(level.ConsumerApp != 440310 || level.CreatorApp != 440310) 
+        {
+            SceneLoader.Inst.LoadSceneGroup("Menu");
+            return new Item();
+        }
+            
+        await level.Subscribe();
+        await level.DownloadAsync();
+        GlobalsManager.IsDownloading = false;
+
+        return level;
+    }
+
     static void SetSeed(int _seed)
     {
         Random.InitState(_seed);
         ObjectManager.inst.seed = _seed;
         ObjectManager.inst.oldState = Random.state;
     }
+    
     //this is patched manually in Plugin.cs
     public static bool OverrideLoadGame(ref bool __result)
     {
@@ -261,6 +345,8 @@ public class GameManagerPatch
         __result = false;
         return false;
     }
+    
+    
 }
 
 public static class TaskExtension
