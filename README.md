@@ -8,7 +8,7 @@ Supports up to 8 players!
 
 Downloads the lobby's level if you dont have it :)
 
-Press P to show players name in game if youre lost
+Press P to show players names in game if youre lost.
 
 Uses BepInEx.
 
