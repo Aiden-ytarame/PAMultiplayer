@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
@@ -31,11 +32,11 @@ namespace PAMultiplayer.Managers
             return false;
         }
 
-        static IEnumerator ShowNames()
+        public static IEnumerator ShowNames()
         {
             //stupid hack lmao
             yield return new WaitForUpdate();
-            yield return new WaitForUpdate();
+            
             foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
             {
                 if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
@@ -46,7 +47,15 @@ namespace PAMultiplayer.Managers
                         text = currentLobbyMember.Name;
                     }
                     
-                    player.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
+                    //bandaind fix for error here
+                    try
+                    {
+                        player.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
+                    }
+                    catch (Exception e)
+                    {
+                        
+                    }
                 }
             }
         }
@@ -67,6 +76,10 @@ namespace PAMultiplayer.Managers
 
             if (LobbyScreenManager.Instance)
             {
+                Plugin.Logger.LogError(GlobalsManager.Players.Count);
+                Plugin.Logger.LogError(SteamLobbyManager.Inst.CurrentLobby.MemberCount);
+                Plugin.Logger.LogError(VGPlayerManager.Inst.players.Count);
+                
                 VGPlayerManager.inst.RespawnPlayers();
                 GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
                 Object.Destroy(LobbyScreenManager.Instance);
@@ -176,6 +189,18 @@ namespace PAMultiplayer.Managers
         {
             var playerEntry = Instantiate(_playerPrefab, _playersListGo.transform).Cast<GameObject>().transform;
             playerEntry.name = $"PAM_Player {player}";
+            
+            if (player == 76561199551343591)//vyrmax 
+                playerName = $"<color=#3e2dba>{playerName}";
+            
+            if (player == 76561198895041739)//maxine
+                playerName = $"<color=#7300ff>{playerName}";
+            
+            if (player == 76561198040724652)//Pidge
+                playerName = $"<color=#ff0000>{playerName}";
+            
+            if (player == 76561199141999343)//aiden 
+                playerName = $"<color=#00ffd0>{playerName}";
             
             playerEntry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
             _playerList.Add(player, playerEntry);

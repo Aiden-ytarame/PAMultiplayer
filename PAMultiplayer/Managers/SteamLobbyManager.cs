@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Il2CppSystems.SceneManagement;
-using PAMultiplayer.Patch;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -63,12 +62,10 @@ public class SteamLobbyManager : MonoBehaviour
     private void OnLobbyMemberJoined(Lobby lobby, Friend friend)
     {
         Plugin.Logger.LogInfo($"Member Joined : [{friend.Name}]");
-        
+
         AddPlayerToLoadList(friend.Id);
-        
+
         LobbyScreenManager.Instance?.AddPlayerToLobby(friend.Id, friend.Name);
-        
-        if (friend.Id.IsLocalPlayer()) return; //does this ever run for yourself?
 
         HashSet<int> usedIds = new();
         int nextId = 0;
@@ -87,19 +84,21 @@ public class SteamLobbyManager : MonoBehaviour
 
             break;
         }
+
         VGPlayerManager.VGPlayerData newData = new()
         {
             PlayerID = nextId,
             ControllerID = nextId
         };
         
-        if (GlobalsManager.Players.TryAdd(friend.Id, newData))
+        GlobalsManager.Players.TryAdd(friend.Id, newData);
         {
             //do not add new players if on loading screen 
-            if(GameManager.Inst && GameManager.Inst.CurGameState != GameManager.GameState.Loading)
+            if (GameManager.Inst && GameManager.Inst.CurGameState != GameManager.GameState.Loading)
+            {
                 VGPlayerManager.Inst.players.Add(GlobalsManager.Players[friend.Id]);
+            }
         }
-
         VGPlayerManager.Inst.RespawnPlayers();
         _playerAmount++;
     }
@@ -112,18 +111,18 @@ public class SteamLobbyManager : MonoBehaviour
         InLobby = true;
         _playerAmount = 0;
         
+        if (lobby.Owner.Id.IsLocalPlayer()) return;
+        
         foreach (var lobbyMember in lobby.Members)
         {
             VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
             NewData.PlayerID = _playerAmount; //by the way, this can cause problems
             NewData.ControllerID = _playerAmount;
 
-            GlobalsManager.Players.TryAdd(lobbyMember.Id, NewData);
+            GlobalsManager.Players.Add(lobbyMember.Id, NewData);
 
             _playerAmount++;
         }
-        
-        if (lobby.Owner.Id.IsLocalPlayer()) return;
         
         GlobalsManager.HasLoadedAllInfo = false;
         GlobalsManager.LevelId = ulong.Parse(lobby.GetData("LevelId"));
@@ -140,7 +139,7 @@ public class SteamLobbyManager : MonoBehaviour
         }
 
         GlobalsManager.IsDownloading = true;
-        Plugin.Logger.LogError($"You did not have the lobby's level downloaded!");
+        Plugin.Logger.LogError($"You did not have the lobby's level downloaded!, Downloading Level...");
         SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
     }
 

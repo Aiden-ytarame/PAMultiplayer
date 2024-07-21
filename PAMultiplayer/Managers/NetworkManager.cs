@@ -1,4 +1,7 @@
-﻿using UnityEngine;
+﻿using BepInEx.Unity.IL2CPP.UnityEngine;
+using BepInEx.Unity.IL2CPP.Utils.Collections;
+using UnityEngine;
+using KeyCode = BepInEx.Unity.IL2CPP.UnityEngine.KeyCode;
 
 namespace PAMultiplayer.Managers
 {
@@ -13,6 +16,11 @@ namespace PAMultiplayer.Managers
         void Update()
         {
             if (!GlobalsManager.IsMultiplayer) return;
+
+            if (Input.GetKeyInt(KeyCode.P))
+            {
+                GameManager.Inst.StartCoroutine(PauseLobbyPatch.ShowNames().WrapToIl2Cpp());
+            }
             
             SteamManager.Inst.Server?.Receive();
             SteamManager.Inst.Client?.Receive();
@@ -36,6 +44,7 @@ namespace PAMultiplayer.Managers
         private void OnDestroy()
         {
             GlobalsManager.HasStarted = false;
+            GlobalsManager.LocalPlayerObjectId = 0;
             SteamManager.Inst.EndServer();
             SteamManager.Inst.EndClient();
             GlobalsManager.Players.Clear();

@@ -60,10 +60,13 @@ public class DamagePacket : IPacketHandler
         if ( senderId.IsLocalPlayer()) return;
 
         int health = (int)data;
-        VGPlayer player = GlobalsManager.Players[senderId].PlayerObject;
-        if (!player) return;
-        player.Health = health;
-        player.PlayerHit();
+        if(GlobalsManager.Players.TryGetValue(senderId, out var player))
+        {
+            if (!player.PlayerObject) return;
+            player.PlayerObject.Health = health;
+            player.PlayerObject.PlayerHit();
+        }
+      
     }
 }
 
@@ -109,6 +112,17 @@ public class SpawnPacket : IPacketHandler
                 GlobalsManager.LocalPlayerObjectId = id;
             
             player.PlayerID = id;
+        }
+        else
+        {
+            VGPlayerManager.VGPlayerData newData = new()
+            {
+                PlayerID = id,
+                ControllerID = id
+            };
+            GlobalsManager.Players.Add(senderId, newData);
+            VGPlayerManager.Inst.players.Add(newData);
+
         }
         if (_amountOfInfo >= amount)
         {

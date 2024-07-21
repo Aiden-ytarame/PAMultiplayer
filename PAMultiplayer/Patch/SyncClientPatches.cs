@@ -80,8 +80,6 @@ public static class RewindHandler
         }
     }
 }
-
-
 internal static class PredicateExtension
 {
     //this is here so I dont have to call ConvertDelegate manually every time. will likely re-use this in other mods

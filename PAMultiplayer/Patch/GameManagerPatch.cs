@@ -26,9 +26,9 @@ public class GameManagerPatch
     {
         if (__instance.IsEditor)
             return;
-      
-        var test = SceneLoader.Inst;
+        
         if (!GlobalsManager.IsMultiplayer) return;
+        
         foreach (var mesh in Resources.FindObjectsOfTypeAll<Mesh>())
         {
             if (mesh.name == "circle")
@@ -41,6 +41,10 @@ public class GameManagerPatch
 
         //this is for waiting for the Objects to load before initialing the server/client
 
+        return;
+        //loading screen was removed
+        
+        
         TaskData objectTask = new();
        foreach (var taskData in SceneLoader.Inst.manager.ExtraLoadingTasks)
         {
@@ -49,121 +53,6 @@ public class GameManagerPatch
                 objectTask = taskData;
                 break;
             }
-        }
-        
-        //"loading client/Server" in the loading screen
-        if (GlobalsManager.IsHosting)
-        {
-            var newTask = new TaskData
-            {
-                Name = "Loading Lobby",
-                Task = Task.Run(async () =>
-                {
-                    //waiting for objects to load
-                    while (objectTask.Task.Status != TaskStatus.RanToCompletion)
-                    {
-                        await Task.Delay(100);
-                    }
-                    
-                    SteamLobbyManager.Inst.CreateLobby();
-                    
-                    var ct = new CancellationTokenSource();
-                    var waitClient = Task.Run(async () =>
-                    {
-                        while (!SteamLobbyManager.Inst.InLobby)
-                        {
-                            ct.Token.ThrowIfCancellationRequested();
-                            await Task.Delay(100, ct.Token);
-                        }
-                    }, ct.Token);
-
-                    //if lobby isn't created in 10 seconds we close everything
-                    if (waitClient != await Task.WhenAny(waitClient, Task.Delay(5000, ct.Token)))
-                    {
-                        ct.Cancel();
-                        SteamManager.Inst.EndServer();
-                        Plugin.Logger.LogError("Failed To Connect Lobby");
-                    }
-                    ct.Dispose();
-                }).ToIl2Cpp()
-            };
-            SceneLoader.Inst.manager.AddToLoadingTasks(newTask);
-        }
-        else
-        {
-            
-            var newTask = new TaskData
-            {
-                Name = "Loading Client",
-                Task = Task.Run(async () =>
-                {
-                    //same as the first task
-                    
-                    while (objectTask.Task.Status != TaskStatus.RanToCompletion)
-                    {
-                        await Task.Delay(100);
-                    }
-                    
-                    SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                    
-                    var ct = new CancellationTokenSource();
-                    var waitClient = Task.Run(async () =>
-                    {
-                        while (!SteamManager.Inst.Client.Connected)
-                        {
-                            ct.Token.ThrowIfCancellationRequested();
-                            await Task.Delay(100, ct.Token);
-                        }
-                    }, ct.Token);
-
-                    if (waitClient != await Task.WhenAny(waitClient, Task.Delay(5000, ct.Token)))
-                    {
-                        ct.Cancel();
-                        SteamManager.Inst.EndClient();
-                        Plugin.Logger.LogError("Failed To Connect Client");
-                    }
-
-                    ct.Dispose();
-                }).ToIl2Cpp()
-            };
-            SceneLoader.Inst.manager.AddToLoadingTasks(newTask);
-            
-            
-            //task for awaiting host send player ids
-            var newTask2 = new TaskData
-            {
-                Name = "Awaiting Server Info",
-                Task = Task.Run(async () =>
-                {
-                    //same as the first task
-                    
-                    while (objectTask.Task.Status != TaskStatus.RanToCompletion)
-                    {
-                        await Task.Delay(100);
-                    }
-                    //SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                    var ct = new CancellationTokenSource();
-                    var waitClient = Task.Run(async () =>
-                    {
-                        while (!GlobalsManager.HasLoadedAllInfo)
-                        {
-                            ct.Token.ThrowIfCancellationRequested();
-                            await Task.Delay(100, ct.Token);
-                        }
-                    }, ct.Token);
-
-                    if (waitClient != await Task.WhenAny(waitClient, Task.Delay(10000, ct.Token)))
-                    {
-                        ct.Cancel();
-                        SteamManager.Inst.EndClient();
-                        Plugin.Logger.LogError("Failed To receive server info");
-                    }
-                  
-                    
-                    ct.Dispose();
-                }).ToIl2Cpp()
-            };
-            SceneLoader.Inst.manager.AddToLoadingTasks(newTask2);
         }
     }
 
@@ -175,17 +64,18 @@ public class GameManagerPatch
         
         __instance.Pause(false);
         __instance.gameObject.AddComponent<LobbyScreenManager>();
-        VGPlayerManager.Inst.players.Clear();
         
+        VGPlayerManager.Inst.players.Clear();
         if (GlobalsManager.IsHosting)
         {
             SteamLobbyManager.Inst.CurrentLobby.SetJoinable(true);
             SteamLobbyManager.Inst.CurrentLobby.SetPublic();
            
             //player 0 is never added, so we add it here
-            VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){PlayerID = 0, ControllerID = 0});
+            var newData = new VGPlayerManager.VGPlayerData() { PlayerID = 0, ControllerID = 0 };
+            VGPlayerManager.Inst.players.Add(newData);
+            GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayer, newData);
             
-            GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayer, VGPlayerManager.Inst.players[0]);
             SteamManager.Inst.Server?.SendHostLoaded();
         }
         else if (SteamManager.Inst.Client.Connected)
@@ -213,9 +103,9 @@ public class GameManagerPatch
     static IEnumerator CustomLoadGame(VGLevel _level)
     {
          GameManager gm = GameManager.Inst;
-      
+     
          if (GlobalsManager.IsDownloading)
-         {
+         {     
              yield return new WaitUntil(new Func<bool>(() => !ArcadeManager.Inst.isLoading));
              VGLevel level;
              if (level = ArcadeLevelDataManager.Inst.GetSteamLevel(GlobalsManager.LevelId))
@@ -225,7 +115,7 @@ public class GameManagerPatch
              else
              {
                  var item = DownloadLevel();
-                
+                 
                  yield return new WaitUntil(new Func<bool>(() => !GlobalsManager.IsDownloading));
                  
                  var result = item.Result;
@@ -236,13 +126,13 @@ public class GameManagerPatch
                  InitSteamInfo(ref vgLevel, result.Id, result.Directory, result);
                  ArcadeLevelDataManager.Inst.ArcadeLevels.Add(vgLevel);
                  
-                 //yield return gm.StartCoroutine(SteamWorkshopFacepunch.inst.LoadAlbumArt(result.Id, result.Directory));
+                 yield return gm.StartCoroutine(SteamWorkshopFacepunch.inst.LoadAlbumArt(result.Id, result.Directory));
                  yield return gm.StartCoroutine(SteamWorkshopFacepunch.inst.LoadMusic(result.Id, result.Directory));
 
                  _level = vgLevel;
+                 SaveManager.Inst.CurrentArcadeLevel = vgLevel;
              }
          }
-         
          gm.LoadMetadata(_level);
         
          
@@ -258,19 +148,31 @@ public class GameManagerPatch
              int newSeed = int.Parse(SteamLobbyManager.Inst.CurrentLobby.GetData("seed"));
              SetSeed(newSeed);
          }
-         
+   
          gm.LoadData(_level);
        
          
          yield return gm.StartCoroutine(gm.LoadBackgrounds(_level));
         
          yield return gm.StartCoroutine(gm.LoadObjects(_level));
+         
+         
+         if (GlobalsManager.IsHosting)
+         {
+             SteamLobbyManager.Inst.CreateLobby();
+             yield return new WaitUntil(new Func<bool>(() => SteamLobbyManager.Inst.InLobby));
+         }
+         else
+         {
+             SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
+             yield return new WaitUntil(new Func<bool>(() => SteamManager.Inst.Client.Connected));
+             yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
+         }
+         
+        
          yield return gm.StartCoroutine(gm.LoadTweens());
-
+         
          gm.PauseDebounce = new Debounce();
-         
-         yield return new WaitUntil(new Func<bool>(() => !SceneLoader.Inst.isLoading));
-         
          gm.PlayGame();
     }
 
@@ -292,6 +194,7 @@ public class GameManagerPatch
 
     static async Task<Item> DownloadLevel()
     {
+        /*
         var newTask2 = new TaskData
         {
             Name = "Downloading Level",
@@ -304,23 +207,25 @@ public class GameManagerPatch
             }).ToIl2Cpp()
         };
         SceneLoader.Inst.manager.AddToLoadingTasks(newTask2);
-        
+        */
         var item = await SteamUGC.QueryFileAsync(GlobalsManager.LevelId);
 
         if (!item.HasValue)
         {
+            Plugin.Logger.LogError("Level not found, is it deleted from the workshop?");
             SceneLoader.Inst.LoadSceneGroup("Menu");
             return new Item();
         }
 
         var level = item.Value;
         
+        
         if(level.ConsumerApp != 440310 || level.CreatorApp != 440310) 
         {
             SceneLoader.Inst.LoadSceneGroup("Menu");
             return new Item();
         }
-            
+        Plugin.Logger.LogInfo($"Downloading [{level.Title}] created by [{level.Owner.Name}]");
         await level.Subscribe();
         await level.DownloadAsync();
         GlobalsManager.IsDownloading = false;
