@@ -167,7 +167,6 @@ public class PAMSocketManager : SocketManager
     //this function sucks
     private void SendPlayerId(Connection connection, SteamId steamId, int id)
     {
-        bool hasValue = false;
         int length = sizeof(short) + sizeof(short) + sizeof(ulong) + sizeof(float) + sizeof(float);
 
         foreach (var vgPlayerData in GlobalsManager.Players)
@@ -181,12 +180,10 @@ public class PAMSocketManager : SocketManager
             };
 
             Marshal.StructureToPtr(packet, unmanagedPointer, false);
-            //   if (!hasValue)
-            //      hasValue = true;
             connection.SendMessage(unmanagedPointer, length);
+            
             Marshal.FreeHGlobal(unmanagedPointer);
         }
-
 
         var info = new VectorNetPacket()
         {
@@ -194,6 +191,7 @@ public class PAMSocketManager : SocketManager
             SenderId = steamId,
             Data = new Vector2(id, 1)
         };
+        
         SendMessages(info);
     }
 

@@ -47,14 +47,14 @@ namespace PAMultiplayer.Managers
                         text = currentLobbyMember.Name;
                     }
                     
-                    //bandaind fix for error here
+                    //band-aid fix for an error here
                     try
                     {
                         player.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
                     }
                     catch (Exception e)
                     {
-                        
+                        // ignored
                     }
                 }
             }

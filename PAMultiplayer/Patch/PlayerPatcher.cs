@@ -21,27 +21,6 @@ namespace PAMultiplayer.Patch
             return false; //only collide if is local player
         }
 
-        /// <summary>
-        /// sends position to other players
-        /// </summary>
-        [HarmonyPatch(nameof(VGPlayer.Update))]
-        [HarmonyPostfix]
-        static void PostUpdate(ref VGPlayer __instance)
-        {
-            //this could be moved out of here so it doesn't run for every player.
-            if (!GlobalsManager.IsMultiplayer || !__instance.IsLocalPlayer()) return;
-
-            return;
-            if (__instance.Player_Rigidbody)
-            {
-                var V2 = __instance.Player_Rigidbody.transform.position;
-                if (GlobalsManager.IsHosting)
-                    SteamManager.Inst.Server?.SendHostPosition(V2);
-                else
-                    SteamManager.Inst.Client?.SendPosition(V2);
-            }
-        }
-
         [HarmonyPatch(nameof(VGPlayer.PlayerHit))]
         [HarmonyPrefix]
         static void Hit_Pre(ref VGPlayer __instance)
