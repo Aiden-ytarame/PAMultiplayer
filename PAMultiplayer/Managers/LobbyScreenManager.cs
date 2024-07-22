@@ -95,9 +95,18 @@ namespace PAMultiplayer.Managers
     public class LobbyScreenManager : MonoBehaviour
     {
         public static LobbyScreenManager Instance { get; private set; }
-        readonly Dictionary<SteamId, Transform> _playerList = new();
-        Transform _playersListGo;
         public PauseMenu pauseMenu;
+        
+        readonly Dictionary<SteamId, Transform> _playerList = new();
+
+        private readonly Dictionary<ulong, string> _specialColors = new()
+        {
+            { 76561199551343591, "3e2dba" }, //Vyrmax
+            { 76561198895041739, "7300ff" }, //Maxine
+            { 76561198040724652, "ff0000" }, //Pidge
+            { 76561199141999343, "00ffd0" }  //Aiden
+        };
+        Transform _playersListGo;
         Object _playerPrefab;
 
         //spawns the lobby GameObject from the assetBundle
@@ -188,23 +197,14 @@ namespace PAMultiplayer.Managers
         public void AddPlayerToLobby(SteamId player, string playerName)
         {
             var playerEntry = Instantiate(_playerPrefab, _playersListGo.transform).Cast<GameObject>().transform;
-            playerEntry.name = $"PAM_Player {player}";
-            
-            if (player == 76561199551343591)//vyrmax 
-                playerName = $"<color=#3e2dba>{playerName}";
-            
-            if (player == 76561198895041739)//maxine
-                playerName = $"<color=#7300ff>{playerName}";
-            
-            if (player == 76561198040724652)//Pidge
-                playerName = $"<color=#ff0000>{playerName}";
-            
-            if (player == 76561199141999343)//aiden 
-                playerName = $"<color=#00ffd0>{playerName}";
+
+            if (_specialColors.TryGetValue(player, out var hex))
+            {
+                playerName = $"<color=#{hex}>{playerName}";
+            }
             
             playerEntry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
             _playerList.Add(player, playerEntry);
-
         }
 
         public void RemovePlayerFromLobby(SteamId player)
