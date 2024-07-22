@@ -6,6 +6,10 @@ A multiplayer mod for Project arrhythmia Alpha.
 
 Supports up to 8 players!
 
+Downloads the lobby's level if you dont have it :)
+
+Press P to show players names in game if youre lost.
+
 Uses BepInEx.
 
 ### Thanks! 
@@ -17,10 +21,9 @@ Vyrmax for helping me test for hours and hours a day :)
 
 ## **Known Issues**
 
-There's problems with closing the server and disconnecting a player.
-
 The code looks bad
-  
+
+No loading screen
 
 ## **Instalation**
 **(WIP)**
