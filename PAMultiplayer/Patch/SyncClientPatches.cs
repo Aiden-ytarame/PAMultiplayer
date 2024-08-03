@@ -55,6 +55,7 @@ public static class RewindHandler
     [HarmonyPrefix]
     static void ReplaceDeathAction(ref Il2CppSystem.Action<Vector3> _deathAction)
     {
+        
         if (!GlobalsManager.IsMultiplayer) return;
         
         if (GlobalsManager.IsHosting)
@@ -88,3 +89,4 @@ internal static class PredicateExtension
         return DelegateSupport.ConvertDelegate<Il2CppSystem.Predicate<T>>(predicate);
     }
 }
+

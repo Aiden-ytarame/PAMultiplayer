@@ -97,8 +97,10 @@ public class GameManagerPatch
     }
     
     /// <summary>
-    /// we add this to wait for loading screen to end
-    /// the game doesn't do that by default
+    /// download the levels if not downloaded
+    /// and wait for the loading screen to end (game doesnt do that by default)
+    /// note: the custom loading screen awaits were removed cuz they crashed the game
+    /// may add it back later
     /// </summary>
     static IEnumerator CustomLoadGame(VGLevel _level)
     {
@@ -129,8 +131,9 @@ public class GameManagerPatch
                  yield return gm.StartCoroutine(SteamWorkshopFacepunch.inst.LoadAlbumArt(result.Id, result.Directory));
                  yield return gm.StartCoroutine(SteamWorkshopFacepunch.inst.LoadMusic(result.Id, result.Directory));
 
-                 _level = vgLevel;
-                 SaveManager.Inst.CurrentArcadeLevel = vgLevel;
+                 _level = vgLevel; 
+                 
+                 ArcadeManager.Inst.CurrentArcadeLevel = vgLevel;
              }
          }
          gm.LoadMetadata(_level);
@@ -246,7 +249,7 @@ public class GameManagerPatch
         if (!GameManager.Inst.IsArcade || !GlobalsManager.IsMultiplayer)
             return true;
         
-        GameManager.Inst.StartCoroutine(CustomLoadGame(SaveManager.Inst.CurrentArcadeLevel).WrapToIl2Cpp());
+        GameManager.Inst.StartCoroutine(CustomLoadGame(ArcadeManager.Inst.CurrentArcadeLevel).WrapToIl2Cpp());
         __result = false;
         return false;
     }

@@ -132,7 +132,7 @@ public class SteamLobbyManager : MonoBehaviour
         {
             if (level.SteamInfo.ItemID.Value == GlobalsManager.LevelId)
             {
-                SaveManager.Inst.CurrentArcadeLevel = level;
+                ArcadeManager.Inst.CurrentArcadeLevel = level;
                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
                 return;
             }
@@ -150,12 +150,11 @@ public class SteamLobbyManager : MonoBehaviour
         {
             Plugin.Logger.LogError($"Failed to create lobby : Result [{result}]");
             lobby.Leave();
-            SceneLoader.Inst.LoadSceneGroup("Menu");
-            return;
+            InLobby = true;
         }
         Plugin.Logger.LogInfo($"Lobby Created!");
         
-        lobby.SetData("LevelId", SaveManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
+        lobby.SetData("LevelId", ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
         lobby.SetData("seed", RandSeed.ToString());
         //this actually might not need to exit
         //since we go back to the menu of lobby failed
