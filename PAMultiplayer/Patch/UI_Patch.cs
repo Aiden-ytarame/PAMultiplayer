@@ -22,11 +22,6 @@ namespace PAMultiplayer.Patch
         static void AddUIToSettings(ref ModifiersManager __instance)
         {
             //modifier prefab
-            var test = DebugController.inst.CommandList;
-            foreach (var o in test)
-            {
-                Plugin.Logger.LogError(o.ToString());
-            }
             Transform modifier = __instance.transform.GetChild(0).GetChild(0);
 
             Transform multiplayer = Object.Instantiate(modifier, __instance.transform);
