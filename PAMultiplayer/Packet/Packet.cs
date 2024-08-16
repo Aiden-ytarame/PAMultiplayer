@@ -12,7 +12,8 @@ public enum PacketType : short
     Start,
     PlayerId,
     Checkpoint,
-    Rewind
+    Rewind,
+    Boost
 }
 
 public enum PacketDataType : short

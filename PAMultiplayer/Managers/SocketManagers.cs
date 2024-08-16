@@ -9,6 +9,10 @@ using UnityEngine;
 
 namespace PAMultiplayer.Managers;
 
+//this whole file sucks
+//Ive got to do some major refactoring here
+
+
 
 /// <summary>
 /// Game Server
@@ -227,6 +231,17 @@ public class PAMSocketManager : SocketManager
         };
         SendHostPacket(packet, SendType.Unreliable);
     }
+
+    public void SendHostBoost()
+    {
+        var packet = new IntNetPacket()
+        {
+            PacketType = PacketType.Boost,
+            SenderId = GlobalsManager.LocalPlayer,
+            Data = 0
+        };
+        SendHostPacket(packet, SendType.Unreliable);
+    }
 }
 
 /// <summary>
@@ -337,6 +352,16 @@ public class PAMConnectionManager : ConnectionManager
             PacketType = PacketType.Position,
             SenderId = GlobalsManager.LocalPlayer,
             Data = pos
+        };
+        SendPacket(packet, SendType.Unreliable);
+    }
+    public void SendBoost()
+    {
+        var packet = new IntNetPacket()
+        {
+            PacketType = PacketType.Boost,
+            SenderId = GlobalsManager.LocalPlayer,
+            Data = 0
         };
         SendPacket(packet, SendType.Unreliable);
     }

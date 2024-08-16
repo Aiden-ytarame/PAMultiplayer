@@ -52,7 +52,7 @@ namespace PAMultiplayer.Managers
                     {
                         player.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         // ignored
                     }
@@ -97,14 +97,15 @@ namespace PAMultiplayer.Managers
         public static LobbyScreenManager Instance { get; private set; }
         public PauseMenu pauseMenu;
         
-        readonly Dictionary<SteamId, Transform> _playerList = new();
+        readonly Dictionary<ulong, Transform> _playerList = new();
 
         private readonly Dictionary<ulong, string> _specialColors = new()
         {
             { 76561199551343591, "3e2dba" }, //Vyrmax
             { 76561198895041739, "7300ff" }, //Maxine
             { 76561198040724652, "ff0000" }, //Pidge
-            { 76561199141999343, "00ffd0" }  //Aiden
+            { 76561199141999343, "00ffd0" },  //Aiden 00ffd0
+            { 76561199106356594, "34eb67" } // yikxle 34eb67
         };
         Transform _playersListGo;
         Object _playerPrefab;
@@ -122,8 +123,7 @@ namespace PAMultiplayer.Managers
             
             using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("PAMultiplayer.Assets.lobby menu"))
             {
-                var lobbyBundle = AssetBundle.LoadFromMemory(stream.ReadBytes());
-                
+                var lobbyBundle = AssetBundle.LoadFromMemory(stream!.ReadBytes());
                 var lobbyPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]);
                 _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]);
                 var lobbyObj = Instantiate(lobbyPrefab, playerGUI.transform);
@@ -143,11 +143,11 @@ namespace PAMultiplayer.Managers
             if (GlobalsManager.IsHosting)
             {
                 var buttons = lobbyGo.transform.Find("Content/buttons");
-                buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(new System.Action(() =>
+                buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
                 {
                     SceneLoader.Inst.LoadSceneGroup("Arcade");
                 }));
-                buttons.GetChild(2).GetComponent<MultiElementButton>().onClick.AddListener(new System.Action(() =>
+                buttons.GetChild(2).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
                 {
                     SceneLoader.Inst.LoadSceneGroup("Menu");
                 }));
@@ -156,7 +156,7 @@ namespace PAMultiplayer.Managers
                 {
                     lobbyGo.transform.Find("Content/buttons").gameObject.SetActive(false);
                     lobbyGo.transform.Find("Content/LobbyFailed").gameObject.SetActive(true);
-                    lobbyGo.transform.Find("Content/LobbyFailed").GetComponentInChildren<MultiElementButton>().onClick.AddListener(new System.Action(
+                    lobbyGo.transform.Find("Content/LobbyFailed").GetComponentInChildren<MultiElementButton>().onClick.AddListener(new Action(
                         () =>
                         {
                             Plugin.Logger.LogDebug("RETRY");
@@ -171,18 +171,18 @@ namespace PAMultiplayer.Managers
                 lobbyGo.transform.Find("Content/WaitingForHost").gameObject.SetActive(true);
             }
             
-            var Enu = SteamLobbyManager.Inst.CurrentLobby.Members.GetEnumerator();
-            while(Enu.MoveNext())
+            var enu = SteamLobbyManager.Inst.CurrentLobby.Members.GetEnumerator();
+            while(enu.MoveNext())
             {
-                AddPlayerToLobby(Enu.Current.Id, Enu.Current.Name);
+                AddPlayerToLobby(enu.Current.Id, enu.Current.Name);
                 
                 //this means that when you join a lobby
                 //every player that joined before you will get shown as Loaded, even if they're not. 
                 //it's easier than send if the player loaded or not to every new client.
-                SetPlayerLoaded(Enu.Current.Id);
+                SetPlayerLoaded(enu.Current.Id);
                
             }
-            Enu.Dispose();
+            enu.Dispose();
             
         }
 

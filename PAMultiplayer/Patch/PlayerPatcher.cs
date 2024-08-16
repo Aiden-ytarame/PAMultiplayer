@@ -45,10 +45,28 @@ namespace PAMultiplayer.Patch
         static bool Boost_Pre(ref VGPlayer __instance)
         {
             if (!GlobalsManager.IsMultiplayer) return true;
-
+            
             return __instance.IsLocalPlayer();
         }
         
+        [HarmonyPatch(nameof(VGPlayer.PlayParticles))]
+        [HarmonyPostfix]
+        static void BoostParticle_Post(ref VGPlayer __instance, VGPlayer.ParticleTypes _type)
+        {
+            if (!GlobalsManager.IsMultiplayer) return;
+            
+            if(_type != VGPlayer.ParticleTypes.Boost) return;
+
+            if (GlobalsManager.IsHosting)
+            {
+                SteamManager.Inst.Server.SendHostBoost();
+            }
+            else
+            {
+                SteamManager.Inst.Client.SendBoost();
+            }
+        }
+
         
         //for changing the player's shape.
         //could change it to a hexagon so its less cursed

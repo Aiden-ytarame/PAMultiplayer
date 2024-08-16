@@ -13,11 +13,12 @@ public interface IPacketHandler
         { PacketType.Damage, new DamagePacket() }, 
         { PacketType.Start, new StartPacket() },
         { PacketType.Loaded, new LoadedPacket() },
-        { PacketType.PlayerId , new SpawnPacket()},
-        { PacketType.Checkpoint , new CheckpointPacket()},
-        { PacketType.Rewind , new RewindPacket()}
+        { PacketType.PlayerId, new SpawnPacket()},
+        { PacketType.Checkpoint, new CheckpointPacket()},
+        { PacketType.Rewind, new RewindPacket()},
+        { PacketType.Boost, new BoostPacket()}
     };
-    public abstract void ProcessPacket(SteamId senderId, object data);
+    public void ProcessPacket(SteamId senderId, object data);
 }
 
 public class PositionPacket : IPacketHandler
@@ -158,5 +159,18 @@ public class RewindPacket : IPacketHandler
             }
         };
         GameManager.Inst.RewindToCheckpoint((int)data);
+    }
+}
+
+public class BoostPacket : IPacketHandler
+{
+    public void ProcessPacket(SteamId senderId, object data)
+    {
+        if(senderId.IsLocalPlayer()) return;
+        
+        if (GlobalsManager.Players.TryGetValue(senderId, out var player))
+        {
+            player.PlayerObject?.PlayParticles(VGPlayer.ParticleTypes.Boost);
+        }
     }
 }

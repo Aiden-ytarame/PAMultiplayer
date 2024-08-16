@@ -28,11 +28,15 @@ public class SteamManager : MonoBehaviour
         SteamMatchmaking.OnLobbyInvite += OnLobbyInvite;
         SteamFriends.OnGameLobbyJoinRequested += OnGameLobbyJoinRequested;
     }
+    
     private void Update()
     {
         InitSteamClient();
-        if(SteamClient.IsValid)
+        
+        if (SteamClient.IsValid)
+        {
             SteamClient.RunCallbacks();
+        }
     }
 
     private void OnApplicationQuit()
@@ -54,9 +58,8 @@ public class SteamManager : MonoBehaviour
             SteamNetworkingUtils.Timeout = 6000;
    
             GlobalsManager.LocalPlayer = SteamClient.SteamId;
-            
         }
-        catch(Exception e)
+        catch(Exception)
         {
             Plugin.Inst.Log.LogError("failed to initialize steam");
         }

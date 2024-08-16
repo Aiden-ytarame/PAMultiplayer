@@ -38,7 +38,7 @@ namespace PAMultiplayer.Patch
                 GlobalsManager.IsHosting = x;
                 GlobalsManager.IsMultiplayer = x;
             }));
-
+         
             //this is so the localization doesn't override the text
             multiplayer.GetComponent<GhostUIElement>().subGraphics = null;
             //sprite0 is the controller sprite
