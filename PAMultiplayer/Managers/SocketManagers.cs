@@ -59,6 +59,9 @@ public class PAMSocketManager : SocketManager
                 case PacketType.Position:
                     SendMessages(Connected, data, size, SendType.Unreliable);
                     break;
+                case PacketType.Boost:
+                    SendMessages(Connected, data, size, SendType.Unreliable);
+                    break;
                 default:
                     return null;
             }
@@ -77,8 +80,6 @@ public class PAMSocketManager : SocketManager
         if (Marshal.ReadInt16(data) == 0)
         {
             var packet = Marshal.PtrToStructure<IntNetPacket>(data);
-            if(packet.PacketType == PacketType.Loaded)
-                Plugin.Logger.LogError("Loaded Recieved");
             GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.Data);
         }
         else
