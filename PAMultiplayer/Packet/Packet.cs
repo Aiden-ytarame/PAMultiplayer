@@ -8,7 +8,6 @@ public enum PacketType : short
     Damage,
     Loaded,
     Position,
-    Rotation,
     Start,
     PlayerId,
     Checkpoint,

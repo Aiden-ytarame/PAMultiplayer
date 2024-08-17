@@ -55,7 +55,7 @@ namespace PAMultiplayer.Patch
         {
             if (!GlobalsManager.IsMultiplayer) return;
             
-            if(_type != VGPlayer.ParticleTypes.Boost) return;
+            if(_type != VGPlayer.ParticleTypes.Boost || !__instance.IsLocalPlayer()) return;
 
             if (GlobalsManager.IsHosting)
             {
