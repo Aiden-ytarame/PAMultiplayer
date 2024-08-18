@@ -6,6 +6,8 @@
 
 A multiplayer mod for Project arrhythmia Alpha.
 
+Logo by Cozm.
+
 Supports up to 8 players!
 
 Downloads the lobby's level if you dont have it.
