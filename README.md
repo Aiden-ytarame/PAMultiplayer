@@ -21,7 +21,7 @@ No loading screen.
 ## **Installation**
 **(WIP)**
 
-* Download the [BepInEx 6.0.0 il2cpp Win64 bleeding Edge build.](https://builds.bepinex.dev/projects/bepinex_be).
+* Download the [BepInEx 6.0.0 il2cpp Win64 bleeding Edge build](https://builds.bepinex.dev/projects/bepinex_be).
 * Follow the BepInEx installation guide available on their [Github](https://github.com/BepInEx/BepInEx).
 * Extract the PAM.zip file in the generated BepInEx->Plugins folder.
 
