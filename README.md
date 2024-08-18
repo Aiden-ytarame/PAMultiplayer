@@ -1,6 +1,6 @@
-# **Project Arrhythmia Multiplayer**
+![Logo](PamLogo500x500.png)
 
-**Work In Progress**
+# **Project Arrhythmia Multiplayer**
 
 A multiplayer mod for Project arrhythmia Alpha.
 
@@ -11,12 +11,6 @@ Downloads the lobby's level if you dont have it.
 Press P to show players names in game if youre lost.
 
 Uses BepInEx.
-
-## **Known Issues**
-
-The code looks bad.
-
-No loading screen.
 
 ## **Installation**
 **(WIP)**
@@ -49,6 +43,8 @@ No loading screen.
 
 ## Thanks!
 Pidge! for helping me and showing some of the source :)
+
+Cozm for the logo!
 
 Reimnop for some misc stuff(code that I "borrowed")
 
