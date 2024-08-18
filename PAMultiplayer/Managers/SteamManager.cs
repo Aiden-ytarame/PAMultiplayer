@@ -27,12 +27,12 @@ public class SteamManager : MonoBehaviour
         
         SteamMatchmaking.OnLobbyInvite += OnLobbyInvite;
         SteamFriends.OnGameLobbyJoinRequested += OnGameLobbyJoinRequested;
+        
+        InitSteamClient();
     }
     
     private void Update()
     {
-        InitSteamClient();
-        
         if (SteamClient.IsValid)
         {
             SteamClient.RunCallbacks();
@@ -51,13 +51,13 @@ public class SteamManager : MonoBehaviour
             
         try
         {
-            Plugin.Inst.Log.LogInfo("Steam Initialized");
             SteamClient.Init(440310, false);
             SteamNetworkingUtils.InitRelayNetworkAccess();
             SteamNetworkingUtils.ConnectionTimeout = 5000;
             SteamNetworkingUtils.Timeout = 6000;
    
             GlobalsManager.LocalPlayer = SteamClient.SteamId;
+            Plugin.Inst.Log.LogInfo("Steam Initialized");
         }
         catch(Exception)
         {

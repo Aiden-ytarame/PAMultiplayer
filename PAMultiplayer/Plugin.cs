@@ -1,5 +1,4 @@
-﻿
-using System.Linq;
+﻿using System.Linq;
 using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
@@ -38,7 +37,6 @@ public class Plugin : BasePlugin
        
         harmony.Patch(loadGameMoveNext, prefix);
         Log.LogInfo($"Plugin {Guid} is loaded!");
-
     }
     
 }

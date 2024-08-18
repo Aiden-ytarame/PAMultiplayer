@@ -104,8 +104,8 @@ namespace PAMultiplayer.Managers
             { 76561199551343591, "3e2dba" }, //Vyrmax
             { 76561198895041739, "f582ff" }, //Maxine
             { 76561198040724652, "f582ff" }, //Pidge
-            { 76561199141999343, "00ffd0" }, //Aiden 00ffd0
-            { 76561199106356594, "34eb67" }, //yikxle 34eb67 
+            { 76561199141999343, "6ce6bb" }, //Aiden 00ffd0 
+            { 76561199106356594, "34eb67" }, //yikxle
             { 76561199088465180, "7300ff" }  //Cube
         };
         Transform _playersListGo;
@@ -170,6 +170,12 @@ namespace PAMultiplayer.Managers
             {
                 lobbyGo.transform.Find("Content/buttons").gameObject.SetActive(false);
                 lobbyGo.transform.Find("Content/WaitingForHost").gameObject.SetActive(true);
+                lobbyGo.transform.Find("Content/WaitingForHost").GetComponentInChildren<MultiElementButton>().onClick
+                    .AddListener(new Action(
+                        () =>
+                        {
+                            SceneLoader.Inst.LoadSceneGroup("Menu");
+                        }));
             }
             
             var enu = SteamLobbyManager.Inst.CurrentLobby.Members.GetEnumerator();

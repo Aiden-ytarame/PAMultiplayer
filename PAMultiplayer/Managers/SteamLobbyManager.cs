@@ -150,10 +150,9 @@ public class SteamLobbyManager : MonoBehaviour
         {
             Plugin.Logger.LogError($"Failed to create lobby : Result [{result}]");
             lobby.Leave();
-            InLobby = true;
         }
         Plugin.Logger.LogInfo($"Lobby Created!");
-        
+        InLobby = true;
         lobby.SetData("LevelId", ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
         lobby.SetData("seed", RandSeed.ToString());
         //this actually might not need to exit

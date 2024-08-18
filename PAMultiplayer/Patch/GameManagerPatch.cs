@@ -1,9 +1,10 @@
-using System;
 using System.Collections;
 using System.Threading;
 using System.Threading.Tasks;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
+using Il2CppInterop.Runtime;
+using Il2CppSystem;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
 using Steamworks;
@@ -11,8 +12,8 @@ using Steamworks.Data;
 using Steamworks.Ugc;
 using UnityEngine;
 using VGFunctions;
+using Action = System.Action;
 using Random = UnityEngine.Random;
-using TaskStatus = Il2CppSystem.Threading.Tasks.TaskStatus;
 
 namespace PAMultiplayer.Patch;
 
@@ -41,18 +42,47 @@ public class GameManagerPatch
 
         //this is for waiting for the Objects to load before initialing the server/client
 
-        return;
-        //loading screen was removed
-        
-        
-        TaskData objectTask = new();
-       foreach (var taskData in SceneLoader.Inst.manager.ExtraLoadingTasks)
+        if (GlobalsManager.IsHosting)
         {
-            if (taskData.Name == "Objects")
+            var newTask = new TaskData
             {
-                objectTask = taskData;
-                break;
-            }
+                Name = "Creating Lobby",
+                Task = Task.Run(async () =>
+                {
+                    while (!SteamLobbyManager.Inst.InLobby)
+                    {
+                        await Task.Delay(100);
+                    }
+                }).ToIl2Cpp()
+            };
+            SceneLoader.Inst.manager.AddToLoadingTasks(newTask);
+        }
+        else
+        {
+            var newTask = new TaskData
+            {
+                Name = "Connecting to Server",
+                Task = Task.Run(async () =>
+                {
+                    while (SteamManager.Inst.Client == null || !SteamManager.Inst.Client.Connected)
+                    {
+                        await Task.Delay(100);
+                    }
+                }).ToIl2Cpp()
+            };
+            SceneLoader.Inst.manager.AddToLoadingTasks(newTask);
+            var newTask2 = new TaskData
+            {
+                Name = "Waiting for Server Info",
+                Task = Task.Run(async () =>
+                {
+                    while (!GlobalsManager.HasLoadedAllInfo)
+                    {
+                        await Task.Delay(100);
+                    }
+                }).ToIl2Cpp()
+            };
+            SceneLoader.Inst.manager.AddToLoadingTasks(newTask2);
         }
     }
 
@@ -108,7 +138,7 @@ public class GameManagerPatch
      
          if (GlobalsManager.IsDownloading)
          {     
-             yield return new WaitUntil(new Func<bool>(() => !ArcadeManager.Inst.isLoading));
+             yield return new WaitUntil(new System.Func<bool>(() => !ArcadeManager.Inst.isLoading));
              VGLevel level;
              if (level = ArcadeLevelDataManager.Inst.GetSteamLevel(GlobalsManager.LevelId))
              {
@@ -116,9 +146,24 @@ public class GameManagerPatch
              }
              else
              {
+                 //loading screen
+                 //IL2CPP.il2cpp_thread_attach(IL2CPP.il2cpp_domain_get());
+                 var newTask = new TaskData
+                 {
+                     Name = "Downloading Level",
+                     Task = Task.Run(async () =>
+                     {
+                         while (GlobalsManager.IsDownloading)
+                         {
+                             await Task.Delay(100);
+                         }
+                     }).ToIl2Cpp()
+                 };
+                 SceneLoader.Inst.manager.AddToLoadingTasks(newTask);
+                 
                  var item = DownloadLevel();
                  
-                 yield return new WaitUntil(new Func<bool>(() => !GlobalsManager.IsDownloading));
+                 yield return new WaitUntil(new System.Func<bool>(() => !GlobalsManager.IsDownloading));
                  
                  var result = item.Result;
                  
@@ -163,13 +208,13 @@ public class GameManagerPatch
          if (GlobalsManager.IsHosting)
          {
              SteamLobbyManager.Inst.CreateLobby();
-             yield return new WaitUntil(new Func<bool>(() => SteamLobbyManager.Inst.InLobby));
+             yield return new WaitUntil(new System.Func<bool>(() => SteamLobbyManager.Inst.InLobby));
          }
          else
          {
              SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-             yield return new WaitUntil(new Func<bool>(() => SteamManager.Inst.Client.Connected));
-             yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
+             yield return new WaitUntil(new System.Func<bool>(() => SteamManager.Inst.Client.Connected));
+             yield return new WaitUntil(new System.Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
          }
          
         
@@ -197,20 +242,6 @@ public class GameManagerPatch
 
     static async Task<Item> DownloadLevel()
     {
-        /*
-        var newTask2 = new TaskData
-        {
-            Name = "Downloading Level",
-            Task = Task.Run(async () =>
-            {
-                while (GlobalsManager.IsDownloading)
-                {
-                    await Task.Delay(100);
-                }
-            }).ToIl2Cpp()
-        };
-        SceneLoader.Inst.manager.AddToLoadingTasks(newTask2);
-        */
         var item = await SteamUGC.QueryFileAsync(GlobalsManager.LevelId);
 
         if (!item.HasValue)
@@ -250,6 +281,7 @@ public class GameManagerPatch
             return true;
         
         GameManager.Inst.StartCoroutine(CustomLoadGame(ArcadeManager.Inst.CurrentArcadeLevel).WrapToIl2Cpp());
+        
         __result = false;
         return false;
     }
@@ -261,6 +293,6 @@ public static class TaskExtension
 {
     public static Il2CppSystem.Threading.Tasks.Task ToIl2Cpp(this Task task)
     {
-        return Il2CppSystem.Threading.Tasks.Task.Run((Il2CppSystem.Action)(() => task.Wait()));
+        return Il2CppSystem.Threading.Tasks.Task.Run(new Action(task.Wait));
     }
 }
