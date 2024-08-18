@@ -1,3 +1,5 @@
+![Logo](PamLogo500x500.png)
+
 # **Project Arrhythmia Multiplayer**
 
 **Work In Progress**
