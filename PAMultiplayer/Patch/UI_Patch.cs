@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using HarmonyLib;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppSystems.SceneManagement;
 using UnityEngine;
 using TMPro;
@@ -15,7 +16,7 @@ namespace PAMultiplayer.Patch
     /// adds the Multiplayer modifier to the UI
     /// </summary>
     [HarmonyPatch(typeof(ModifiersManager))]
-    public class UI_Patch
+    public static class UI_Patch
     {
         [HarmonyPatch(nameof(ModifiersManager.Start))]
         [HarmonyPostfix]
@@ -65,10 +66,52 @@ namespace PAMultiplayer.Patch
                 "I'm in your walls.",
                 "Good Nano.",
                 "No tips for you >:)",
-                "Boykisser sent kisses!"
+                "Boykisser sent kisses!",
+                "The developer wants me to say something here.",
+                "I'm a furry. So what?",
+                "Ready to be carried by another Nano again?",
+                "You might be an Nano but you should hydrate anyways."
             };
-            //thanks for making this public after I complained lol
+            //thanks Pidge for making this public after I complained lol
             __instance.Tips = newVals.ToArray();
         }
+    }
+}
+
+[HarmonyPatch(typeof(PauseMenu))]
+public static class PauseMenuUiPatch
+{
+    [HarmonyPatch(nameof(PauseMenu.Start))]
+    [HarmonyPostfix]
+    static void PostStart(PauseMenu __instance)
+    {
+        if (__instance.name != "Pause Menu" || !GlobalsManager.IsMultiplayer || !GlobalsManager.IsHosting)
+        {
+            return;
+        }
+        
+        var buttonsParent = __instance.transform.Find("Content/buttons");
+        var buttonPrefab = buttonsParent.GetChild(0);
+        
+        var newButton = Object.Instantiate(buttonPrefab, buttonsParent);
+        newButton.GetComponentInChildren<TextMeshProUGUI>().text = "Resync players";
+
+        newButton.GetComponent<MultiElementButton>().m_OnClick.RemoveAllListeners();
+        newButton.GetComponent<MultiElementButton>().m_OnClick.AddListener(new Action(() =>
+        {
+            foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+            {
+                vgPlayerData.PlayerObject?.PlayerDeath();
+            }
+        }));
+        
+        //this is so dumb lmao
+        var newArr = new UIElement[6];
+        __instance.PauseButtons.CopyTo(newArr, 0);
+        newArr[5] = newButton.GetComponent<UI_Button>();
+        
+        __instance.PauseButtons = newArr;
+        
+        
     }
 }
