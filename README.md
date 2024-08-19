@@ -1,4 +1,4 @@
-![Logo](PamLogo500x500.png)
+![Logo](Logo400x400.png)
 
 # **Project Arrhythmia Multiplayer**
 
