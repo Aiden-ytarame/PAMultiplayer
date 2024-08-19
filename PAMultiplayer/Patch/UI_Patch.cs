@@ -101,7 +101,10 @@ public static class PauseMenuUiPatch
         {
             foreach (var vgPlayerData in VGPlayerManager.Inst.players)
             {
-                vgPlayerData.PlayerObject?.PlayerDeath();
+                if(!vgPlayerData.PlayerObject) continue;
+                
+                vgPlayerData.PlayerObject.Health = 1;
+                vgPlayerData.PlayerObject.PlayerHit();
             }
         }));
         

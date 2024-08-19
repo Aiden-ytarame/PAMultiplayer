@@ -67,6 +67,7 @@ namespace PAMultiplayer.Managers
             
             if (!GlobalsManager.HasStarted && (!GlobalsManager.IsHosting || !SteamLobbyManager.Inst.IsEveryoneLoaded))
             {
+                Plugin.Logger.LogError("Stopped Unpause!");
                 return false;
             }
             if (GlobalsManager.IsHosting)
