@@ -33,9 +33,15 @@ public class Plugin : BasePlugin
         var loadGameMoveNext = typeof(GameManager).GetNestedTypes().FirstOrDefault(t => t.Name.Contains("LoadGame"))?
             .GetMethod("MoveNext");
         
-        var prefix = new HarmonyMethod(typeof(GameManagerPatch).GetMethod("OverrideLoadGame"));
+        var ReverseMoveNext = typeof(GameManager).GetNestedTypes().FirstOrDefault(t => t.Name.Contains("ReverseToCheckpointLoop"))?
+            .GetMethod("MoveNext");
        
+        var prefix = new HarmonyMethod(typeof(GameManagerPatch).GetMethod("OverrideLoadGame"));
+        var reversePostfix = new HarmonyMethod(typeof(GameManagerPatch).GetMethod("PostRewind"));
+        
         harmony.Patch(loadGameMoveNext, prefix);
+        harmony.Patch(ReverseMoveNext, null, reversePostfix);
+        
         Log.LogInfo($"Plugin {Guid} is loaded!");
     }
     

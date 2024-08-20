@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Cpp2IL.Core.Extensions;
-using HarmonyLib;
 using Il2CppSystems.SceneManagement;
 using Steamworks;
 using TMPro;
@@ -13,83 +10,6 @@ using Object = UnityEngine.Object;
 
 namespace PAMultiplayer.Managers
 {
-    
-    //the reason there's both unpause functions here, its cuz the UI unpause calls PauseMenu.UnPause() and pressing ESC calls GameManager.UnPause().
-    [HarmonyPatch]
-    public class PauseLobbyPatch
-    {
-        [HarmonyPatch(typeof(PauseMenu), nameof(PauseMenu.UnPause))]
-        [HarmonyPrefix]
-        static bool PreMenuUnpause()
-        {
-            if (!GlobalsManager.IsMultiplayer) return true;
-
-            if (GlobalsManager.HasStarted || (GlobalsManager.IsHosting && SteamLobbyManager.Inst.IsEveryoneLoaded))
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        public static IEnumerator ShowNames()
-        {
-            //stupid hack lmao
-            yield return new WaitForUpdate();
-            
-            foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
-            {
-                if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
-                {
-                    string text = "YOU";
-                    if (currentLobbyMember.Id != GlobalsManager.LocalPlayer)
-                    {
-                        text = currentLobbyMember.Name;
-                    }
-                    
-                    //band-aid fix for an error here
-                    try
-                    {
-                        player.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
-                    }
-                    catch (Exception)
-                    {
-                        // ignored
-                    }
-                }
-            }
-        }
-        [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
-        [HarmonyPrefix]
-        static bool PreGameUnpause()
-        {
-            if (!GlobalsManager.IsMultiplayer) return true;
-            
-            if (!GlobalsManager.HasStarted && (!GlobalsManager.IsHosting || !SteamLobbyManager.Inst.IsEveryoneLoaded))
-            {
-                Plugin.Logger.LogError("Stopped Unpause!");
-                return false;
-            }
-            if (GlobalsManager.IsHosting)
-            {
-                SteamManager.Inst.Server.StartLevel();
-            }
-
-            if (LobbyScreenManager.Instance)
-            {
-                Plugin.Logger.LogError(GlobalsManager.Players.Count);
-                Plugin.Logger.LogError(SteamLobbyManager.Inst.CurrentLobby.MemberCount);
-                Plugin.Logger.LogError(VGPlayerManager.Inst.players.Count);
-                
-                VGPlayerManager.inst.RespawnPlayers();
-                GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
-                Object.Destroy(LobbyScreenManager.Instance);
-            }
-            
-            return true;
-        }
-    }
-
     /// <summary>
     /// Manages the Lobby menu that pops up on level enter
     /// </summary>

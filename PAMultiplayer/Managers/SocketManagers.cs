@@ -142,6 +142,7 @@ public class PAMSocketManager : SocketManager
     #endregion
     public void StartLevel()
     {
+        GlobalsManager.HasStarted = true;
         var packet = new IntNetPacket() { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Start };
         SendMessages(packet);
     }

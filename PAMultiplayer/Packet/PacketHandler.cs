@@ -9,10 +9,10 @@ public interface IPacketHandler
 {
     public static readonly Dictionary<PacketType, IPacketHandler> PacketHandlers = new()
     {
-        { PacketType.Position, new PositionPacket() },
-        { PacketType.Damage, new DamagePacket() }, 
-        { PacketType.Start, new StartPacket() },
-        { PacketType.Loaded, new LoadedPacket() },
+        { PacketType.Position, new PositionPacket()},
+        { PacketType.Damage, new DamagePacket()}, 
+        { PacketType.Start, new StartPacket()},
+        { PacketType.Loaded, new LoadedPacket()},
         { PacketType.PlayerId, new SpawnPacket()},
         { PacketType.Checkpoint, new CheckpointPacket()},
         { PacketType.Rewind, new RewindPacket()},
@@ -63,7 +63,7 @@ public class DamagePacket : IPacketHandler
         int health = (int)data;
         if(GlobalsManager.Players.TryGetValue(senderId, out var player))
         {
-            if (!player.PlayerObject) return;
+            if (!player.PlayerObject || player.PlayerObject.isDead) return;
             player.PlayerObject.Health = health;
             player.PlayerObject.PlayerHit();
         }
@@ -154,7 +154,7 @@ public class RewindPacket : IPacketHandler
         {
             if (vgPlayerData.PlayerObject && !vgPlayerData.PlayerObject.isDead)
             {
-                //vgPlayerData.PlayerObject.Health = 1;
+                vgPlayerData.PlayerObject.Health = 0;
                 vgPlayerData.PlayerObject.PlayerDeath();
             }
         };

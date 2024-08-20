@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppSystems.SceneManagement;
@@ -48,11 +50,97 @@ namespace PAMultiplayer.Patch
         }
     }
 
+    [HarmonyPatch(typeof(PauseMenu))]
+    public static class PauseMenuPatch
+    {
+        [HarmonyPatch(nameof(PauseMenu.RestartLevel))]
+        [HarmonyPrefix]
+        static bool PreRestartLevel()
+        {
+            return !GlobalsManager.IsMultiplayer;
+        }
+    }
+    
+      //the reason there's both unpause functions here, its cuz the UI unpause calls PauseMenu.UnPause() and pressing ESC calls GameManager.UnPause().
+    [HarmonyPatch]
+    public class PauseLobbyPatch
+    {
+        [HarmonyPatch(typeof(PauseMenu), nameof(PauseMenu.UnPause))]
+        [HarmonyPrefix]
+        static bool PreMenuUnpause()
+        {
+            if (!GlobalsManager.IsMultiplayer) return true;
+
+            if (GlobalsManager.HasStarted || (GlobalsManager.IsHosting && SteamLobbyManager.Inst.IsEveryoneLoaded))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public static IEnumerator ShowNames()
+        {
+            //stupid hack lmao
+            yield return new WaitForUpdate();
+            
+            foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
+            {
+                if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
+                {
+                    string text = "YOU";
+                    if (currentLobbyMember.Id != GlobalsManager.LocalPlayer)
+                    {
+                        text = currentLobbyMember.Name;
+                    }
+                    
+                    //band-aid fix for an error here
+                    try
+                    {
+                        player.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
+                    }
+                    catch (Exception)
+                    {
+                        // ignored
+                    }
+                }
+            }
+        }
+        [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
+        [HarmonyPrefix]
+        static bool PreGameUnpause(ref GameManager __instance)
+        {
+            if (!GlobalsManager.IsMultiplayer) return true;
+            
+            if (!GlobalsManager.HasStarted && (!GlobalsManager.IsHosting || !SteamLobbyManager.Inst.IsEveryoneLoaded))
+            {
+                return false;
+            }
+            if (GlobalsManager.IsHosting)
+            {
+                SteamManager.Inst.Server.StartLevel();
+            }
+
+            if (LobbyScreenManager.Instance)
+            {
+                Plugin.Logger.LogError(GlobalsManager.Players.Count);
+                Plugin.Logger.LogError(SteamLobbyManager.Inst.CurrentLobby.MemberCount);
+                Plugin.Logger.LogError(VGPlayerManager.Inst.players.Count);
+                
+                VGPlayerManager.inst.RespawnPlayers();
+                GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
+                Object.Destroy(LobbyScreenManager.Instance);
+            }
+            __instance.SetUIVolumeWeight(0.25f);
+            return true;
+        }
+    }
+
     /// <summary>
     /// just having fun with loading screen Tips
     /// </summary>
     [HarmonyPatch(typeof(SceneLoader))]
-    public static class Test
+    public static class LoadingTips
     {
         [HarmonyPatch(nameof(SceneLoader.Start))]
         [HarmonyPostfix]
@@ -75,46 +163,5 @@ namespace PAMultiplayer.Patch
             //thanks Pidge for making this public after I complained lol
             __instance.Tips = newVals.ToArray();
         }
-    }
-}
-
-[HarmonyPatch(typeof(PauseMenu))]
-public static class PauseMenuUiPatch
-{
-    [HarmonyPatch(nameof(PauseMenu.Start))]
-    [HarmonyPostfix]
-    static void PostStart(PauseMenu __instance)
-    {
-        if (__instance.name != "Pause Menu" || !GlobalsManager.IsMultiplayer || !GlobalsManager.IsHosting)
-        {
-            return;
-        }
-        
-        var buttonsParent = __instance.transform.Find("Content/buttons");
-        var buttonPrefab = buttonsParent.GetChild(0);
-        
-        var newButton = Object.Instantiate(buttonPrefab, buttonsParent);
-        newButton.GetComponentInChildren<TextMeshProUGUI>().text = "Resync players";
-
-        newButton.GetComponent<MultiElementButton>().m_OnClick.RemoveAllListeners();
-        newButton.GetComponent<MultiElementButton>().m_OnClick.AddListener(new Action(() =>
-        {
-            foreach (var vgPlayerData in VGPlayerManager.Inst.players)
-            {
-                if(!vgPlayerData.PlayerObject) continue;
-                
-                vgPlayerData.PlayerObject.Health = 1;
-                vgPlayerData.PlayerObject.PlayerHit();
-            }
-        }));
-        
-        //this is so dumb lmao
-        var newArr = new UIElement[6];
-        __instance.PauseButtons.CopyTo(newArr, 0);
-        newArr[5] = newButton.GetComponent<UI_Button>();
-        
-        __instance.PauseButtons = newArr;
-        
-        
     }
 }

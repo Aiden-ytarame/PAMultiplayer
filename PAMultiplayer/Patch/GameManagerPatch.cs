@@ -86,6 +86,42 @@ public class GameManagerPatch
         }
     }
 
+    private static bool paused;
+    [HarmonyPatch(nameof(GameManager.Pause))]
+    [HarmonyPrefix]
+    static bool PrePause(ref GameManager __instance, bool _showUI)
+    {
+        if(!GlobalsManager.IsMultiplayer) return true;
+
+        if (!GlobalsManager.HasStarted) return true;
+
+        if (paused)
+        {
+            __instance.PauseMenuScript.ClosePauseMenu();
+            __instance.SetUIVolumeWeight(0.25f);
+            __instance.UnPause();
+            return false;
+        }
+        if (_showUI)
+        {
+            __instance.PauseMenuScript.SetBGColor(__instance.LiveTheme.backgroundColor);
+            __instance.SetUIVolumeWeight(1);
+            __instance.PauseMenuScript.OpenPauseMenu();
+            __instance.Paused = false;
+            paused = true;
+        }
+
+        return false;
+    }
+    
+    [HarmonyPatch(nameof(GameManager.UnPause))]
+    [HarmonyPostfix]
+    static void PostUnPause()
+    {
+        if(!GlobalsManager.IsMultiplayer) return;
+
+        paused = false;
+    }
     [HarmonyPatch(nameof(GameManager.PlayGame))]
     [HarmonyPostfix]
     static void PostPlay(ref GameManager __instance)
@@ -224,6 +260,7 @@ public class GameManagerPatch
          gm.PlayGame();
     }
 
+    
     static void InitSteamInfo(ref VGLevel _level, PublishedFileId _id, string _folder, Item _item)
     {
         if (string.IsNullOrEmpty(_folder)) return;
@@ -286,7 +323,17 @@ public class GameManagerPatch
         return false;
     }
     
-    
+    //attempting to fix rewind bug
+    //patched manually in Plugin.cs
+    public static void PostRewind(ref GameManager __instance, bool __result)
+    {
+        //if rewind ended and playback time is not normal
+        if (!__result && AudioManager.Inst.AudioPlaybackSpeed < GameManager.Inst.GetSongSpeed)
+        {
+            Plugin.Logger.LogError($"Weird Audio Playback Speed : [{AudioManager.Inst.AudioPlaybackSpeed}], Defaulting to Song Speed.");
+            AudioManager.Inst.AudioPlaybackSpeed = GameManager.Inst.GetSongSpeed;
+        }
+    }
 }
 
 public static class TaskExtension
