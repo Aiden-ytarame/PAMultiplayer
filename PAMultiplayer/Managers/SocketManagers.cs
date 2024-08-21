@@ -271,6 +271,7 @@ public class PAMConnectionManager : ConnectionManager
     {
         base.OnDisconnected(info);
         Plugin.Logger.LogInfo($"Client: Disconnected Steam user {info.Identity.SteamId}.");
+    
         if(SceneLoader.Inst.manager.ActiveSceneGroup.GroupName == "Arcade_Level")
             SceneLoader.Inst.LoadSceneGroup("Menu");
         

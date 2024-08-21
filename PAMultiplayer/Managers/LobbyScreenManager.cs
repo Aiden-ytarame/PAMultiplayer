@@ -65,10 +65,14 @@ namespace PAMultiplayer.Managers
             if (GlobalsManager.IsHosting)
             {
                 var buttons = lobbyGo.transform.Find("Content/buttons");
+                
+                buttons.GetChild(0).GetComponent<MultiElementButton>().Select();
+                
                 buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
                 {
                     SceneLoader.Inst.LoadSceneGroup("Arcade");
                 }));
+                
                 buttons.GetChild(2).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
                 {
                     SceneLoader.Inst.LoadSceneGroup("Menu");
@@ -91,14 +95,18 @@ namespace PAMultiplayer.Managers
             {
                 lobbyGo.transform.Find("Content/buttons").gameObject.SetActive(false);
                 lobbyGo.transform.Find("Content/WaitingForHost").gameObject.SetActive(true);
-                lobbyGo.transform.Find("Content/WaitingForHost").GetComponentInChildren<MultiElementButton>().onClick
-                    .AddListener(new Action(
-                        () =>
-                        {
-                            SceneLoader.Inst.LoadSceneGroup("Menu");
-                        }));
+
+                var quitButton = lobbyGo.transform.Find("Content/WaitingForHost")
+                    .GetComponentInChildren<MultiElementButton>();
+
+                quitButton.Select();
+                quitButton.onClick.AddListener(new Action(
+                    () =>
+                    {
+                        SceneLoader.Inst.LoadSceneGroup("Menu");
+                    }));
             }
-            
+
             var enu = SteamLobbyManager.Inst.CurrentLobby.Members.GetEnumerator();
             while(enu.MoveNext())
             {

@@ -322,18 +322,6 @@ public class GameManagerPatch
         __result = false;
         return false;
     }
-    
-    //attempting to fix rewind bug
-    //patched manually in Plugin.cs
-    public static void PostRewind(ref GameManager __instance, bool __result)
-    {
-        //if rewind ended and playback time is not normal
-        if (!__result && AudioManager.Inst.AudioPlaybackSpeed < GameManager.Inst.GetSongSpeed)
-        {
-            Plugin.Logger.LogError($"Weird Audio Playback Speed : [{AudioManager.Inst.AudioPlaybackSpeed}], Defaulting to Song Speed.");
-            AudioManager.Inst.AudioPlaybackSpeed = GameManager.Inst.GetSongSpeed;
-        }
-    }
 }
 
 public static class TaskExtension

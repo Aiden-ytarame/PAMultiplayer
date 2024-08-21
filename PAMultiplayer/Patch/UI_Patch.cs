@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
+using IEVO.UI.uGUIDirectedNavigation;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppSystems.SceneManagement;
 using UnityEngine;
@@ -33,6 +34,7 @@ namespace PAMultiplayer.Patch
 
             var toggle = multiplayer.GetComponent<MultiElementToggle>();
             toggle.isOn = false;
+            toggle.interactable = true;
             toggle.onValueChanged = new Toggle.ToggleEvent();
             //Pidge removed these UI sounds in a recent update so ill removed them for now too
             //toggle.onValueChanged.AddListener(new System.Action<bool>(_ => {AudioManager.Inst.PlaySound("UI_Select", 1);})); 
@@ -47,6 +49,30 @@ namespace PAMultiplayer.Patch
             //sprite0 is the controller sprite
             multiplayer.GetComponentInChildren<TextMeshProUGUI>().text =
                 "<size=85%><voffset=3><sprite=0><voffset=0><size=100%> Multiplayer ";
+            
+            //setup controller navigation
+            var speedUp = __instance.transform.Find("r-2/Speed Up").GetComponent<MultiElementToggle>();
+            var references = __instance.transform.parent.Find("references");
+            var songLink = references.GetChild(0).GetComponent<MultiElementButton>();
+
+            speedUp.gameObject.GetComponent<DirectedNavigation>().ConfigDown.Type =
+                DirectedNavigationType.Value.Automatic;
+            __instance.transform.Find("r-2/Speed Down").GetComponent<DirectedNavigation>().ConfigDown.Type =
+                DirectedNavigationType.Value.Automatic;
+            
+            var nav = toggle.gameObject.GetComponent<DirectedNavigation>();
+            nav.ConfigDown.SelectableList.SelectableList = new Selectable[]{songLink};
+            nav.ConfigUp.SelectableList.SelectableList = new Selectable[]{speedUp};
+            nav.ConfigLeft.Type = DirectedNavigationType.Value.Disabled;
+            nav.ConfigRight.Type = DirectedNavigationType.Value.Disabled;
+            
+            var toggleList = new Selectable[]{toggle};
+            references.GetChild(0).GetComponent<DirectedNavigation>().ConfigUp.SelectableList.SelectableList = toggleList;
+            references.GetChild(1).GetComponent<DirectedNavigation>().ConfigUp.SelectableList.SelectableList = toggleList;
+            references.GetChild(2).GetComponent<DirectedNavigation>().ConfigUp.SelectableList.SelectableList = toggleList;
+
+
+
         }
     }
 
