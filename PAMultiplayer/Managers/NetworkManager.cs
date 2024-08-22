@@ -1,4 +1,5 @@
-﻿using BepInEx.Unity.IL2CPP.UnityEngine;
+﻿using System;
+using BepInEx.Unity.IL2CPP.UnityEngine;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using PAMultiplayer.Patch;
 using UnityEngine;
@@ -14,19 +15,29 @@ namespace PAMultiplayer.Managers
     /// </summary>
     public class NetworkManager : MonoBehaviour
     {
+        private bool _pressedNameKey;
         void Update()
         {
             if (!GlobalsManager.IsMultiplayer) return;
-
-            if (Input.GetKeyInt(KeyCode.P))
+            
+            if (Input.GetKeyInt(KeyCode.P) || Input.GetKeyInt(KeyCode.JoystickButton4)) //left shoulder (?)
             {
-                GameManager.Inst.StartCoroutine(PauseLobbyPatch.ShowNames().WrapToIl2Cpp());
+                //to make this an on button down action
+                if (!_pressedNameKey)
+                {
+                    _pressedNameKey = true;
+                    GameManager.Inst.StartCoroutine(PauseLobbyPatch.ShowNames().WrapToIl2Cpp());
+                }
+            }
+            else
+            {
+                _pressedNameKey = false;
             }
             
             SteamManager.Inst.Server?.Receive();
             SteamManager.Inst.Client?.Receive();
         }
-     
+
         private void FixedUpdate()
         {
             if (GlobalsManager.Players.TryGetValue(GlobalsManager.LocalPlayer, out var playerData))
