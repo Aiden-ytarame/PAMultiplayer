@@ -8,7 +8,7 @@ Supports up to 8 players!
 
 Downloads the lobby's level if you dont have it.
 
-Press P to show players names in game if youre lost.
+Press P on keyboard, L1/LB on controller to show player names in game if youre lost.
 
 Uses BepInEx.
 
@@ -20,7 +20,7 @@ Uses BepInEx.
 * Open the game, a terminal should show up. just wait for the game to open.
   
 > [!NOTE]\
-> After every game update, the first time you open the game will take a while to open it.
+> The first time you open the game after every game update, it'll take a while to open.
 
 * Close the game and download the PAM.zip from latest release of the Multiplayer mod.
 * In your game's folder there will be a new folder called "bepinex". Extract PAM.zip inside the generated **/bepinex/plugins/** folder.
