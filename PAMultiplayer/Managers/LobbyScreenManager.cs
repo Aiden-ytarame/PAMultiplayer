@@ -106,20 +106,16 @@ namespace PAMultiplayer.Managers
                         SceneLoader.Inst.LoadSceneGroup("Menu");
                     }));
             }
-
-            var enu = SteamLobbyManager.Inst.CurrentLobby.Members.GetEnumerator();
-            while(enu.MoveNext())
+            
+            foreach (var friend in SteamLobbyManager.Inst.CurrentLobby.Members)
             {
-                AddPlayerToLobby(enu.Current.Id, enu.Current.Name);
+                AddPlayerToLobby(friend.Id, friend.Name);
                 
                 //this means that when you join a lobby
                 //every player that joined before you will get shown as Loaded, even if they're not. 
                 //it's easier than send if the player loaded or not to every new client.
-                SetPlayerLoaded(enu.Current.Id);
-               
+                SetPlayerLoaded(friend.Id);
             }
-            enu.Dispose();
-            
         }
 
         private void OnDestroy()
@@ -132,6 +128,11 @@ namespace PAMultiplayer.Managers
 
         public void AddPlayerToLobby(SteamId player, string playerName)
         {
+            if (_playerList.ContainsKey(player))
+            {
+                return;
+            }
+            
             var playerEntry = Instantiate(_playerPrefab, _playersListGo.transform).Cast<GameObject>().transform;
 
             if (_specialColors.TryGetValue(player, out var hex))
@@ -145,15 +146,19 @@ namespace PAMultiplayer.Managers
 
         public void RemovePlayerFromLobby(SteamId player)
         {
-            Destroy(_playerList[player].gameObject);
-            _playerList.Remove(player);
+            if (_playerList.TryGetValue(player, out var value))
+            {
+                Destroy(value.gameObject);
+                _playerList.Remove(player);
+            }
         }
 
         public void SetPlayerLoaded(SteamId player)
         {
-            Transform entry = _playerList[player];
-            if(entry)
-                entry.GetChild(1).GetComponent<TextMeshProUGUI>().text = "▓";           
+            if (_playerList.TryGetValue(player, out var value))
+            {
+                value.GetChild(1).GetComponent<TextMeshProUGUI>().text = "▓";    
+            }
         }
 
         public void StartLevel()

@@ -53,7 +53,7 @@ public class SteamLobbyManager : MonoBehaviour
 
         if (GlobalsManager.Players.TryGetValue(friend.Id, out var player))
         {
-            player.PlayerObject?.PlayerDeath();
+            player.PlayerObject?.PlayerDeath(0);
             VGPlayerManager.Inst.players.Remove(player);
             GlobalsManager.Players.Remove(friend.Id);
         }
