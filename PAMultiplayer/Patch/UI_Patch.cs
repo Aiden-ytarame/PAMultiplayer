@@ -149,10 +149,6 @@ namespace PAMultiplayer.Patch
 
             if (LobbyScreenManager.Instance)
             {
-                Plugin.Logger.LogError(GlobalsManager.Players.Count);
-                Plugin.Logger.LogError(SteamLobbyManager.Inst.CurrentLobby.MemberCount);
-                Plugin.Logger.LogError(VGPlayerManager.Inst.players.Count);
-                
                 VGPlayerManager.inst.RespawnPlayers();
                 GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
                 Object.Destroy(LobbyScreenManager.Instance);

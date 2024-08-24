@@ -18,6 +18,7 @@ namespace PAMultiplayer.Patch
 
             if (__instance.IsLocalPlayer())
                 return true;
+            
             return false; //only collide if is local player
         }
 

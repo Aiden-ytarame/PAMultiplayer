@@ -273,10 +273,11 @@ public class PAMConnectionManager : ConnectionManager
         Plugin.Logger.LogInfo($"Client: Disconnected Steam user {info.Identity.SteamId}.");
         
         SteamLobbyManager.Inst.CurrentLobby.Leave();
-        
-        if(SceneLoader.Inst.manager.ActiveSceneGroup.GroupName == "Arcade_Level")
-            SceneLoader.Inst.LoadSceneGroup("Menu");
-        
+        if (SceneLoader.Inst.manager.ActiveSceneGroup.GroupName == "Arcade_Level")
+        {
+            SceneLoader.Inst.manager.ClearLoadingTasks();
+            SceneLoader.Inst.LoadSceneGroup("Arcade");
+        }
     }
     
     public override void OnMessage(IntPtr data, int size, long messageNum, long recvTime, int channel)

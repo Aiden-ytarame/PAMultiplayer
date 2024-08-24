@@ -129,6 +129,7 @@ public class GameManagerPatch
         if (!GlobalsManager.IsMultiplayer || GameManager.Inst.IsEditor) return;
         
         __instance.Pause(false);
+        __instance.Paused = true;
         __instance.gameObject.AddComponent<LobbyScreenManager>();
         
         VGPlayerManager.Inst.players.Clear();

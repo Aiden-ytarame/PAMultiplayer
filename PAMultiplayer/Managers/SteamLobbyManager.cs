@@ -48,6 +48,7 @@ public class SteamLobbyManager : MonoBehaviour
     {
         Plugin.Logger.LogInfo($"Member Left : [{friend.Name}]");
         
+        AudioManager.Inst?.PlaySound("glitch", 1);
         LobbyScreenManager.Instance?.RemovePlayerFromLobby(friend.Id);
         RemovePlayerFromLoadList(friend.Id);
 
@@ -62,7 +63,9 @@ public class SteamLobbyManager : MonoBehaviour
     private void OnLobbyMemberJoined(Lobby lobby, Friend friend)
     {
         Plugin.Logger.LogInfo($"Member Joined : [{friend.Name}]");
-
+        
+        AudioManager.Inst?.PlaySound("Subtract", 1);
+        
         AddPlayerToLoadList(friend.Id);
 
         LobbyScreenManager.Instance?.AddPlayerToLobby(friend.Id, friend.Name);

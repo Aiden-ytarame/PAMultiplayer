@@ -157,6 +157,7 @@ namespace PAMultiplayer.Managers
         {
             if (_playerList.TryGetValue(player, out var value))
             {
+                AudioManager.Inst?.PlaySound("Add", 1);
                 value.GetChild(1).GetComponent<TextMeshProUGUI>().text = "▓";    
             }
         }
