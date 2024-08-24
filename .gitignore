@@ -1,4 +1,4 @@
-PAMultiplayer/lib/*
+lib/
 Bin/
 obj/
 .vs/
