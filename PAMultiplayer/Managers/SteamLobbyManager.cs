@@ -113,9 +113,9 @@ public class SteamLobbyManager : MonoBehaviour
         CurrentLobby = lobby;
         InLobby = true;
         _playerAmount = 0;
-        
+
         if (lobby.Owner.Id.IsLocalPlayer()) return;
-        
+
         foreach (var lobbyMember in lobby.Members)
         {
             VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
@@ -126,11 +126,40 @@ public class SteamLobbyManager : MonoBehaviour
 
             _playerAmount++;
         }
-        
+
         GlobalsManager.HasLoadedAllInfo = false;
-        GlobalsManager.LevelId = ulong.Parse(lobby.GetData("LevelId"));
-        Plugin.Logger.LogError($"SEED : {lobby.GetData("seed")}");
+     
+        if (ulong.TryParse(lobby.GetData("LevelId"), out var levelId))
+        {
+            GlobalsManager.LevelId = levelId;
+        }
+        else
+        {
+            CurrentLobby.Leave();
+            Plugin.Logger.LogFatal("Invalid LevelId! something went very wrong.");
+            return;
+        }
         
+        if (int.TryParse(lobby.GetData("HealthMod"), out var healthMod))
+        {
+            DataManager.inst.UpdateSettingEnum("ArcadeHealthMod", healthMod);
+        }
+        else
+        {
+            Plugin.Logger.LogInfo("No Health Mod specified.");
+        }
+        
+        if (int.TryParse(lobby.GetData("SpeedMod"), out var speedMod))
+        {
+            DataManager.inst.UpdateSettingEnum("ArcadeSpeedMod", speedMod);
+        }
+        else
+        {
+            Plugin.Logger.LogInfo("No Speed Mod specified.");
+        }
+        
+        Plugin.Logger.LogInfo($"SEED : {lobby.GetData("seed")}");
+
         foreach (var level in ArcadeLevelDataManager.Inst.ArcadeLevels)
         {
             if (level.SteamInfo.ItemID.Value == GlobalsManager.LevelId)
@@ -158,8 +187,11 @@ public class SteamLobbyManager : MonoBehaviour
         InLobby = true;
         lobby.SetData("LevelId", ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
         lobby.SetData("seed", RandSeed.ToString());
-        //this actually might not need to exit
-        //since we go back to the menu of lobby failed
+        lobby.SetData("HealthMod", DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0).ToString());
+        lobby.SetData("SpeedMod", DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0).ToString());
+        
+        //this actually might not need to exist
+        //since we should go back to the menu on lobby failed
         //but I never tested this so we keep just in case
         if (!LobbyScreenManager.Instance?.pauseMenu) return; //this is for the "Lobby failed to be created" message
         

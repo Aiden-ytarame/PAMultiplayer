@@ -3,6 +3,7 @@ Bin/
 obj/
 .vs/
 .md
+*.bak
 .idea/
 Folder.DotSettings.user
 *.user

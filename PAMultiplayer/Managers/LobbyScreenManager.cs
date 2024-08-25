@@ -70,6 +70,7 @@ namespace PAMultiplayer.Managers
                 
                 buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
                 {
+                    
                     SceneLoader.Inst.LoadSceneGroup("Arcade");
                 }));
                 

@@ -150,6 +150,7 @@ namespace PAMultiplayer.Patch
             if (LobbyScreenManager.Instance)
             {
                 VGPlayerManager.inst.RespawnPlayers();
+                
                 GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
                 Object.Destroy(LobbyScreenManager.Instance);
             }
