@@ -8,6 +8,8 @@ Supports up to 8 players!
 
 Downloads the lobby's level if you dont have it.
 
+Syncs random seed and speed/health modifiers.
+
 Press P on keyboard, L1/LB on controller to show player names in game if youre lost.
 
 Uses BepInEx.
