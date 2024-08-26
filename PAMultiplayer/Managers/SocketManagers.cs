@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Packet;
+using PAMultiplayer.Patch;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -20,8 +21,6 @@ namespace PAMultiplayer.Managers;
 /// </summary>
 public class PAMSocketManager : SocketManager
 {
-    int _latestCheckpoint = 0;
-
     #region SocketManagerOverrides
 
     public override void OnConnecting(Connection connection, ConnectionInfo data)
@@ -149,7 +148,6 @@ public class PAMSocketManager : SocketManager
 
     public void SendCheckpointHit(int index)
     {
-        _latestCheckpoint = index;
         var packet = new IntNetPacket() { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Checkpoint, Data = index };
         SendMessages(packet);
         if (IPacketHandler.PacketHandlers.TryGetValue(PacketType.Checkpoint, out var handler))
@@ -160,8 +158,19 @@ public class PAMSocketManager : SocketManager
 
     public void SendRewindToCheckpoint()
     {
+        int index = 0;
+        
+        if (DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) <= 1)
+        {
+            var checkpoint = GameManager.Inst.GetClosestIndex(DataManager.inst.gameData.beatmapData.checkpoints,
+                GameManager.Inst.CurrentSongTimeSmoothed);
+        
+            index = DataManager.inst.gameData.beatmapData.checkpoints.FindIndex(
+                new Predicate<DataManager.GameData.BeatmapData.Checkpoint>(x => x == checkpoint).ToIL2CPP());
+        }
+        
         var packet = new IntNetPacket()
-            { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Rewind, Data = _latestCheckpoint };
+            { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Rewind, Data = index };
         SendMessages(packet);
         if (IPacketHandler.PacketHandlers.TryGetValue(PacketType.Rewind, out var handler))
         {
