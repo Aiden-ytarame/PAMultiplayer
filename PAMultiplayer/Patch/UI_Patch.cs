@@ -182,8 +182,6 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         static void GetterTips(ref SceneLoader __instance)
         {
-            QualitySettings.vSyncCount = 1;
-                
             List<string> newVals = new List<string>(__instance.Tips)
             {
                 "You should try the log Fallen Kingdom!",
