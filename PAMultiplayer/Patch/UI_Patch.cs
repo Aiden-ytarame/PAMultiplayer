@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using IEVO.UI.uGUIDirectedNavigation;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppSystems.SceneManagement;
 using UnityEngine;
 using TMPro;
@@ -25,6 +24,23 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         static void AddUIToSettings(ref ModifiersManager __instance)
         {
+            var hiddenButtons = __instance.transform.parent.Find("Buttons/Buttons Hidden").gameObject;
+                hiddenButtons.SetActive(true);
+                
+            var mpToggle = hiddenButtons.transform.GetChild(0).GetComponent<MultiElementToggle>();
+            mpToggle.isOn = false;
+            mpToggle.interactable = true;
+            mpToggle.onValueChanged = new Toggle.ToggleEvent();
+            mpToggle.onValueChanged.AddListener(new Action<bool>(_ =>
+            {
+                GlobalsManager.IsHosting = true;
+                GlobalsManager.IsMultiplayer = true;
+                SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+            }));
+
+            
+            //pidge added a button for us to use, but ill keep the modifier here just in case.
+            return;
             //modifier prefab
             Transform modifier = __instance.transform.GetChild(0).GetChild(0);
 
@@ -70,9 +86,6 @@ namespace PAMultiplayer.Patch
             references.GetChild(0).GetComponent<DirectedNavigation>().ConfigUp.SelectableList.SelectableList = toggleList;
             references.GetChild(1).GetComponent<DirectedNavigation>().ConfigUp.SelectableList.SelectableList = toggleList;
             references.GetChild(2).GetComponent<DirectedNavigation>().ConfigUp.SelectableList.SelectableList = toggleList;
-
-
-
         }
     }
 
@@ -149,8 +162,8 @@ namespace PAMultiplayer.Patch
 
             if (LobbyScreenManager.Instance)
             {
+                SteamLobbyManager.Inst.HideLobby();
                 VGPlayerManager.inst.RespawnPlayers();
-                
                 GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
                 Object.Destroy(LobbyScreenManager.Instance);
             }
@@ -169,6 +182,8 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         static void GetterTips(ref SceneLoader __instance)
         {
+            QualitySettings.vSyncCount = 1;
+                
             List<string> newVals = new List<string>(__instance.Tips)
             {
                 "You should try the log Fallen Kingdom!",
