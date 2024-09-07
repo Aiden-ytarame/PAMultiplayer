@@ -32,7 +32,15 @@ public class GameManagerPatch
             if (mesh.name == "circle")
             {
                 Player_Patch.CircleMesh = mesh;
-                break;
+            }
+
+            if (mesh.name == "hexagon")
+            {
+                Player_Patch.HexagonMesh = mesh;
+            }
+            if (mesh.name == "triangle")
+            {
+                Player_Patch.TriangleMesh = mesh;
             }
         }
         __instance.gameObject.AddComponent<NetworkManager>();

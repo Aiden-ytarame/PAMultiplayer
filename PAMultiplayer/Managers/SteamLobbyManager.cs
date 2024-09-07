@@ -24,7 +24,7 @@ public class SteamLobbyManager : MonoBehaviour
     public void CreateLobby()
     {
         SteamManager.Inst.StartServer();
-        SteamMatchmaking.CreateLobbyAsync(8);
+        SteamMatchmaking.CreateLobbyAsync(16);
     }
     private void Awake()
     {

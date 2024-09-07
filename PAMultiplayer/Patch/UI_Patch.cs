@@ -182,7 +182,7 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         static void GetterTips(ref SceneLoader __instance)
         {
-            List<string> newVals = new List<string>(__instance.Tips)
+            var customTips = new List<string>(__instance.Tips)
             {
                 "You should try the log Fallen Kingdom!",
                 "You can always call other Nanos for help!",
@@ -193,11 +193,13 @@ namespace PAMultiplayer.Patch
                 "Boykisser sent kisses!",
                 "The developer wants me to say something here.",
                 "I'm a furry. So what?",
+                "You might be an Nano but you should hydrate anyways.",
+                "Before time began there was The Cube...",
                 "Ready to be carried by another Nano again?",
-                "You might be an Nano but you should hydrate anyways."
+                "Squeezing your Nano through the internet wire...",
             };
             //thanks Pidge for making this public after I complained lol
-            __instance.Tips = newVals.ToArray();
+            __instance.Tips = customTips.ToArray();
         }
     }
 }

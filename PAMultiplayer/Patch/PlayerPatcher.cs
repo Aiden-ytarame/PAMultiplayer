@@ -72,7 +72,8 @@ namespace PAMultiplayer.Patch
         //for changing the player's shape.
         //could change it to a hexagon so its less cursed
         public static Mesh CircleMesh;
-        
+        public static Mesh HexagonMesh;
+        public static Mesh TriangleMesh;
         /// <summary>
         /// changes the nano's shape if there's more than 4 players
         /// </summary>
@@ -80,13 +81,40 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         static void PostSpawn(ref VGPlayer __instance)
         {
+            void SetPlayerMesh(VGPlayer player, Mesh mesh)
+            {
+                Transform playerWrapper = player.Player_Wrapper.transform;
+                playerWrapper.Find("core").GetComponent<MeshFilter>().mesh = mesh;
+                playerWrapper.Find("zen-marker").GetComponent<MeshFilter>().mesh = mesh; //is this needed?
+                playerWrapper.Find("boost").GetComponent<MeshFilter>().mesh = mesh;
+            }
+            
             if (!GlobalsManager.IsMultiplayer) return;
 
-            if (__instance.PlayerID < 4) return;
+            if (__instance.PlayerID < 4)
+            {
+                return;
+            }
 
-            __instance.Player_Wrapper.transform.Find("core").GetComponent<MeshFilter>().mesh = CircleMesh;
-            __instance.Player_Wrapper.transform.Find("zen-marker").GetComponent<MeshFilter>().mesh = CircleMesh; //is this needed?
-            __instance.Player_Wrapper.transform.Find("boost").GetComponent<MeshFilter>().mesh = CircleMesh;
+            if (__instance.PlayerID < 8)
+            {
+                SetPlayerMesh(__instance, CircleMesh);
+            }
+            else if (__instance.PlayerID < 12)
+            {
+                SetPlayerMesh(__instance, HexagonMesh);
+            }
+            else
+            {
+                SetPlayerMesh(__instance, TriangleMesh);
+                
+                Vector3 offsetRot = new Vector3(0, 0, -90);
+                Transform player = __instance.Player_Wrapper.transform;
+                
+                player.Find("core").Rotate(offsetRot);
+                player.Find("zen-marker").Rotate(offsetRot);
+                player.transform.Find("boost").Rotate(offsetRot);
+            }
         }
 
         /// <summary>
