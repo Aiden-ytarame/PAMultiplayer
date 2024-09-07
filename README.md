@@ -4,7 +4,7 @@
 
 A multiplayer mod for Project arrhythmia Alpha.
 
-Supports up to 8 players!
+Supports up to 16 players!
 
 Downloads the lobby's level if you dont have it.
 
