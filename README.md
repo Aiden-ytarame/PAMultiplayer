@@ -33,8 +33,7 @@ Uses BepInEx.
 ### Host
 
 * Select any arcade level
-* Enable the "Multiplayer" Modifier
-* Start the level
+* Start the level by pressing the Mutliplayer button
 * Invite friends through steam
 * Wait for players to join your lobby and load the level (the indicator beside their names tell you when they've loaded)
 * Click start log and have fun!
