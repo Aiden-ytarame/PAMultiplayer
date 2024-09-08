@@ -17,7 +17,7 @@ Uses BepInEx.
 ## **Installation**
 **(WIP)**
 
-* Download the latest [BepInEx 6.0.0 il2cpp for Win x64 games build]([https://builds.bepinex.dev/projects/bepinex_be](https://builds.bepinex.dev/projects/bepinex_be/704/BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.704%2B6b38cee.zip).
+* Download the latest [BepInEx 6.0.0 il2cpp for Win x64 games build](https://builds.bepinex.dev/projects/bepinex_be/704/BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.704%2B6b38cee.zip).
 * Extract the files from the BepInEx zip into your game's exe folder (this can be found by right clicking PA on your steam library and going "manage->browse local files").
 * Open the game, a terminal should show up. just wait for the game to open.
   
