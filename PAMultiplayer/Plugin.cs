@@ -26,6 +26,7 @@ public class Plugin : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<LobbyScreenManager>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamManager>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamLobbyManager>();
+        
         Inst = this;
         harmony = new Harmony(Guid);
         harmony.PatchAll();

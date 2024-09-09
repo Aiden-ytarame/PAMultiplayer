@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Il2CppSystems.SceneManagement;
+using Lachee.Discord;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -58,6 +59,8 @@ public class SteamLobbyManager : MonoBehaviour
             VGPlayerManager.Inst.players.Remove(player);
             GlobalsManager.Players.Remove(friend.Id);
         }
+        
+        UpdateDiscordPresence();
     }
 
     private void OnLobbyMemberJoined(Lobby lobby, Friend friend)
@@ -104,6 +107,8 @@ public class SteamLobbyManager : MonoBehaviour
         }
         VGPlayerManager.Inst.RespawnPlayers();
         _playerAmount++;
+        
+        UpdateDiscordPresence();
     }
 
     private void OnLobbyEntered(Lobby lobby)
@@ -185,7 +190,8 @@ public class SteamLobbyManager : MonoBehaviour
         }
         Plugin.Logger.LogInfo($"Lobby Created!");
         InLobby = true;
-        lobby.SetData("LevelId", ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value.ToString());
+        GlobalsManager.LevelId = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value;
+        lobby.SetData("LevelId", GlobalsManager.LevelId.ToString());
         lobby.SetData("seed", RandSeed.ToString());
         lobby.SetData("HealthMod", DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0).ToString());
         lobby.SetData("SpeedMod", DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0).ToString());
@@ -205,6 +211,12 @@ public class SteamLobbyManager : MonoBehaviour
         CurrentLobby.SetPrivate();
     }
 
+    void UpdateDiscordPresence()
+    {
+        var presence = DiscordManager._instance._currentPresence;
+        presence.party = new Party(CurrentLobby.Id.ToString(), CurrentLobby.MemberCount, CurrentLobby.MaxMembers);
+        DiscordManager._instance.SetPresence(presence);
+    }
     public void LeaveLobby()
     {
         CurrentLobby.Leave();

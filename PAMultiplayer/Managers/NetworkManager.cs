@@ -15,6 +15,7 @@ namespace PAMultiplayer.Managers
     public class NetworkManager : MonoBehaviour
     {
         private bool _pressedNameKey;
+        
         void Update()
         {
             if (!GlobalsManager.IsMultiplayer) return;

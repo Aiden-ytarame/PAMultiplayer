@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
+using Lachee.Discord;
 using PAMultiplayer.Managers;
 using Steamworks;
 using Steamworks.Data;
@@ -127,11 +128,52 @@ public class GameManagerPatch
 
         paused = false;
     }
+
+    [HarmonyPatch(nameof(GameManager.OnDestroy))]
+    [HarmonyPostfix]
+    static void PostOnDestroy()
+    {
+        if (!DiscordManager._instance.isInitialized) return;
+   
+        var presence = DiscordManager._instance._currentPresence;
+        presence.state = "Navigating Menus";
+        presence.details = "";
+        presence.smallAsset = new Asset() { image = "", tooltip = "" };
+        DiscordManager._instance.SetPresence(presence);
+        DiscordManager._instance.UpdateStartTime(0);
+    }
+    
     [HarmonyPatch(nameof(GameManager.PlayGame))]
     [HarmonyPostfix]
-    static void PostPlay(ref GameManager __instance)
+    static async void PostPlay(GameManager __instance)
     {
-        if (!GlobalsManager.IsMultiplayer || GameManager.Inst.IsEditor) return;
+      
+        if(GameManager.Inst.IsEditor)
+        {
+            var presence = DiscordManager._instance._currentPresence;
+            presence.state = $"Editing {GameManager.Inst.TrackName}";
+            DiscordManager._instance.SetPresence(presence);
+            DiscordManager._instance.UpdateStartTime();
+            return;
+        }
+        if (!GlobalsManager.IsMultiplayer)
+        {
+            if (!DiscordManager._instance.isInitialized) return;
+            var presence = DiscordManager._instance._currentPresence;
+            var item = await  SteamUGC.QueryFileAsync(ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID);
+            
+            if (item.HasValue && item.Value.Result == Result.OK)
+            {
+                presence.smallAsset = new Asset() { image = item.Value.PreviewImageUrl, tooltip = "level logo" };
+            }
+            
+            presence.state = "Playing SinglePlayer";
+            presence.details = $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}";
+            
+            DiscordManager._instance.SetPresence(presence);
+            DiscordManager._instance.UpdateStartTime();
+            return;
+        }
         
         __instance.Pause(false);
         __instance.Paused = true;
@@ -165,6 +207,22 @@ public class GameManagerPatch
         {
             //if failed to connect to server
             SceneLoader.Inst.LoadSceneGroup("Menu");
+        }
+
+        if (DiscordManager._instance.isInitialized)
+        {
+            var item = await SteamUGC.QueryFileAsync(GlobalsManager.LevelId);
+            var presence = DiscordManager._instance._currentPresence;
+            presence.state = "Playing Multiplayer!";
+            presence.details = $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}";
+            
+            if (item.HasValue && item.Value.Result == Result.OK)
+            {
+                presence.smallAsset = new Asset() { image = item.Value.PreviewImageUrl, tooltip = "level logo" };
+            }
+            
+            DiscordManager._instance.SetPresence(presence);
+            DiscordManager._instance.UpdateStartTime();
         }
     }
     

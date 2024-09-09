@@ -26,6 +26,14 @@
       <HintPath>lib\Assembly-CSharp.dll</HintPath>
     </Reference>
 			  
+    <Reference Include="com.lachee.discordrpc.runtime">
+      <HintPath>lib\com.lachee.discordrpc.runtime.dll</HintPath>
+    </Reference>
+			  
+    <Reference Include="DiscordRPC">
+      <HintPath>lib\DiscordRPC.dll</HintPath>
+    </Reference>
+			  
     <Reference Include="Facepunch.Steamworks.Win64">
       <HintPath>lib\Facepunch.Steamworks.Win64.dll</HintPath>
     </Reference>
