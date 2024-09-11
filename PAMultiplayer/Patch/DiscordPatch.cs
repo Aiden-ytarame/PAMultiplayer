@@ -1,15 +1,5 @@
-using System;
-using System.Diagnostics;
-using DiscordRPC.Logging;
 using HarmonyLib;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Lachee.Discord;
-using Microsoft.Extensions.Logging;
-using UnityEngine;
-using Debug = UnityEngine.Debug;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
-using LogLevel = DiscordRPC.Logging.LogLevel;
-using Object = Il2CppSystem.Object;
 
 namespace PAMultiplayer.Patch;
 
@@ -50,5 +40,4 @@ public static class DiscordManagerPatch
         __instance.applicationID = "1282511280833298483";
         __instance._currentPresence = presence;
     }
-    
 }

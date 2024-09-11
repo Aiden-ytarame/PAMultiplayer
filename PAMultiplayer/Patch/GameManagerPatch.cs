@@ -171,7 +171,7 @@ public class GameManagerPatch
             presence.details = $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}";
             
             DiscordManager._instance.SetPresence(presence);
-            DiscordManager._instance.UpdateStartTime();
+           
             return;
         }
         

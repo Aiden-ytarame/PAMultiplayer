@@ -60,7 +60,6 @@ public class SteamLobbyManager : MonoBehaviour
             GlobalsManager.Players.Remove(friend.Id);
         }
         
-        UpdateDiscordPresence();
     }
 
     private void OnLobbyMemberJoined(Lobby lobby, Friend friend)
@@ -107,8 +106,6 @@ public class SteamLobbyManager : MonoBehaviour
         }
         VGPlayerManager.Inst.RespawnPlayers();
         _playerAmount++;
-        
-        UpdateDiscordPresence();
     }
 
     private void OnLobbyEntered(Lobby lobby)
@@ -210,13 +207,7 @@ public class SteamLobbyManager : MonoBehaviour
         CurrentLobby.SetJoinable(false);
         CurrentLobby.SetPrivate();
     }
-
-    void UpdateDiscordPresence()
-    {
-        var presence = DiscordManager._instance._currentPresence;
-        presence.party = new Party(CurrentLobby.Id.ToString(), CurrentLobby.MemberCount, CurrentLobby.MaxMembers);
-        DiscordManager._instance.SetPresence(presence);
-    }
+    
     public void LeaveLobby()
     {
         CurrentLobby.Leave();
