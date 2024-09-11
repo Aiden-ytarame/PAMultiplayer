@@ -167,7 +167,7 @@ public class GameManagerPatch
                 presence.smallAsset = new Asset() { image = item.Value.PreviewImageUrl, tooltip = "level logo" };
             }
             
-            presence.state = "Playing SinglePlayer";
+            presence.state = "Playing Singleplayer";
             presence.details = $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}";
             
             DiscordManager._instance.SetPresence(presence);
