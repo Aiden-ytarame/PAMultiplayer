@@ -142,6 +142,20 @@ namespace PAMultiplayer.Patch
     }
 }
 
+[HarmonyPatch(typeof(DataManager.BeatmapTheme))]
+public static class BeatmapThemePatch
+{
+    /// <summary>
+    /// Normally every player after the 4th has the boost color of the 4th player, this is so instead it has the correct color.
+    /// </summary>
+    [HarmonyPatch(nameof(DataManager.BeatmapTheme.GetPlayerColor))]
+    [HarmonyPrefix]
+    static bool PreGetPlayerColor(DataManager.BeatmapTheme __instance, ref Color __result, int _val)
+    {
+        __result = __instance.playerColors[_val % 4];
+        return false;
+    }
+}
 static class PlayerIsLocalExtension
 {
     public static bool IsLocalPlayer(this VGPlayer player)
