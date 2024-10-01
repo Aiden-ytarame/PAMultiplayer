@@ -12,8 +12,7 @@ public interface IPacketHandler
         { PacketType.Position, new PositionPacket()},
         { PacketType.Damage, new DamagePacket()}, 
         { PacketType.Start, new StartPacket()},
-        { PacketType.Loaded, new LoadedPacket()},
-        { PacketType.PlayerId, new SpawnPacket()},
+        { PacketType.PlayerId, new PlayerIdPacket()},
         { PacketType.Checkpoint, new CheckpointPacket()},
         { PacketType.Rewind, new RewindPacket()},
         { PacketType.Boost, new BoostPacket()}
@@ -79,21 +78,7 @@ public class StartPacket : IPacketHandler
     }
 }
 
-public class LoadedPacket : IPacketHandler
-{
-    public void ProcessPacket(SteamId senderId, object data)
-    {
-        Plugin.Logger.LogInfo($"Received Loaded Confirmation from [{senderId}]");
-        
-        if (senderId.IsLocalPlayer()) return;
-
-        SteamLobbyManager.Inst.SetLoaded(senderId);
-        LobbyScreenManager.Instance.SetPlayerLoaded(senderId);
-        
-    }
-}
-
-public class SpawnPacket : IPacketHandler
+public class PlayerIdPacket : IPacketHandler
 {
     private static int _amountOfInfo;
 
@@ -102,7 +87,10 @@ public class SpawnPacket : IPacketHandler
         Vector2 info = (Vector2)data;
 
         int id = (int)info.x;
+        
+        //will likely remove this, this is useless
         int amount = (int)info.y;
+        
         GlobalsManager.HasLoadedAllInfo = false;
         _amountOfInfo++;
         Plugin.Logger.LogInfo($"Player Id from [{senderId}] Received");

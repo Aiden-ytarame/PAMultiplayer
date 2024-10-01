@@ -6,7 +6,6 @@ namespace PAMultiplayer.Packet;
 public enum PacketType : short
 {
     Damage,
-    Loaded,
     Position,
     Start,
     PlayerId,

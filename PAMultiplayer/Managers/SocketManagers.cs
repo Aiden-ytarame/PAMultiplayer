@@ -52,9 +52,6 @@ public class PAMSocketManager : SocketManager
                 case PacketType.Damage:
                     SendMessages(Connected, data, size);
                     break;
-                case PacketType.Loaded:
-                    SendMessages(Connected, data, size);
-                    break;
                 case PacketType.Position:
                     SendMessages(Connected, data, size, SendType.Unreliable);
                     break;
@@ -212,15 +209,6 @@ public class PAMSocketManager : SocketManager
 
     //yes due to a mistake the host doesn't connect to the server as client 
     //so we handle his messages from here
-    public void SendHostLoaded()
-    {
-        var packet = new IntNetPacket()
-        {
-            PacketType = PacketType.Loaded,
-            SenderId = GlobalsManager.LocalPlayer
-        };
-        SendHostPacket(packet);
-    }
 
     public void SendHostDamage()
     {
@@ -337,16 +325,6 @@ public class PAMConnectionManager : ConnectionManager
         Marshal.FreeHGlobal(unmanagedData);
     }
     #endregion
-    public void SendLoaded()
-    {
-        Plugin.Logger.LogError("Sending Loaded");
-        var packet = new IntNetPacket()
-        {
-            PacketType = PacketType.Loaded,
-            SenderId = GlobalsManager.LocalPlayer
-        };
-        SendPacket(packet);
-    }
 
     public void SendDamage()
     {

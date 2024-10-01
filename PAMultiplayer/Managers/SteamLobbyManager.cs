@@ -15,7 +15,7 @@ public class SteamLobbyManager : MonoBehaviour
     public Lobby CurrentLobby;
     public bool InLobby { get; private set; }
     public static SteamLobbyManager Inst;
-    private readonly Dictionary<SteamId, bool> _loadedPlayers = new();
+    private Dictionary<SteamId, bool> _loadedPlayers = new();
 
     public int RandSeed = 0;
     
@@ -43,8 +43,17 @@ public class SteamLobbyManager : MonoBehaviour
         
         SteamMatchmaking.OnLobbyMemberDisconnected += OnLobbyMemberDisconnected;
         SteamMatchmaking.OnLobbyMemberLeave += OnLobbyMemberDisconnected;
+        
+        SteamMatchmaking.OnLobbyMemberDataChanged += OnLobbyMemberDataChanged;
     }
-    
+
+    private void OnLobbyMemberDataChanged(Lobby lobby, Friend friend)
+    {
+        //data changed always means loaded
+        LobbyScreenManager.Instance?.SetPlayerLoaded(friend.Id);
+        SetLoaded(friend.Id);
+    }
+
     private void OnLobbyMemberDisconnected(Lobby lobby, Friend friend)
     {
         Plugin.Logger.LogInfo($"Member Left : [{friend.Name}]");
@@ -55,9 +64,9 @@ public class SteamLobbyManager : MonoBehaviour
 
         if (GlobalsManager.Players.TryGetValue(friend.Id, out var player))
         {
-            player.PlayerObject?.PlayerDeath(0);
             VGPlayerManager.Inst.players.Remove(player);
             GlobalsManager.Players.Remove(friend.Id);
+            player.PlayerObject?.PlayerDeath(0);
         }
         
     }
@@ -69,7 +78,7 @@ public class SteamLobbyManager : MonoBehaviour
         AudioManager.Inst?.PlaySound("Subtract", 1);
         
         AddPlayerToLoadList(friend.Id);
-
+        
         LobbyScreenManager.Instance?.AddPlayerToLobby(friend.Id, friend.Name);
 
         HashSet<int> usedIds = new();
@@ -115,7 +124,7 @@ public class SteamLobbyManager : MonoBehaviour
         CurrentLobby = lobby;
         InLobby = true;
         _playerAmount = 0;
-
+        
         if (lobby.Owner.Id.IsLocalPlayer()) return;
 
         foreach (var lobbyMember in lobby.Members)
@@ -186,6 +195,8 @@ public class SteamLobbyManager : MonoBehaviour
             lobby.Leave();
         }
         Plugin.Logger.LogInfo($"Lobby Created!");
+
+        _loadedPlayers = new();
         InLobby = true;
         GlobalsManager.LevelId = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value;
         lobby.SetData("LevelId", GlobalsManager.LevelId.ToString());
@@ -226,7 +237,8 @@ public class SteamLobbyManager : MonoBehaviour
 
     public void SetLoaded(SteamId playerSteamId)
     {
-        _loadedPlayers[playerSteamId] = true;
+        if(_loadedPlayers != null)
+            _loadedPlayers[playerSteamId] = true;
     }
     public bool IsEveryoneLoaded => !_loadedPlayers.ContainsValue(false);
 }

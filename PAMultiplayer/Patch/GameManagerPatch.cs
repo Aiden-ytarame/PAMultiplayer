@@ -190,13 +190,14 @@ public class GameManagerPatch
             VGPlayerManager.Inst.players.Add(newData);
             GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayer, newData);
             
-            SteamManager.Inst.Server?.SendHostLoaded();
+            SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
         }
         else if (SteamManager.Inst.Client.Connected)
         {
             //if connected successfully
-            SteamManager.Inst.Client.SendLoaded();
+            //SteamManager.Inst.Client.SendLoaded();
             
+            SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
             foreach (var vgPlayerData in GlobalsManager.Players)
             {
                 VGPlayerManager.Inst.players.Add(vgPlayerData.Value);

@@ -112,10 +112,10 @@ namespace PAMultiplayer.Managers
             {
                 AddPlayerToLobby(friend.Id, friend.Name);
                 
-                //this means that when you join a lobby
-                //every player that joined before you will get shown as Loaded, even if they're not. 
-                //it's easier than send if the player loaded or not to every new client.
-                SetPlayerLoaded(friend.Id);
+                if(!string.IsNullOrEmpty(SteamLobbyManager.Inst.CurrentLobby.GetMemberData(friend, "IsLoaded")))
+                {
+                    SetPlayerLoaded(friend.Id); 
+                }
             }
         }
 

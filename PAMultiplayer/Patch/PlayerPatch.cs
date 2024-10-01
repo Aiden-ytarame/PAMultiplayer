@@ -26,9 +26,8 @@ namespace PAMultiplayer.Patch
         [HarmonyPrefix]
         static void Hit_Pre(ref VGPlayer __instance)
         {
-
-            if (!GlobalsManager.IsMultiplayer || !__instance.IsLocalPlayer()) return;
-
+            if (!GlobalsManager.IsMultiplayer || !__instance.IsLocalPlayer() || GameManager.Inst.Paused) return;
+            
             if (GlobalsManager.IsHosting)
                 SteamManager.Inst.Server.SendHostDamage();
             else
