@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Il2CppSystems.SceneManagement;
 using Lachee.Discord;
@@ -59,7 +60,11 @@ public class SteamLobbyManager : MonoBehaviour
         Plugin.Logger.LogInfo($"Member Left : [{friend.Name}]");
         
         AudioManager.Inst?.PlaySound("glitch", 1);
-        LobbyScreenManager.Instance?.RemovePlayerFromLobby(friend.Id);
+        
+        if(LobbyScreenManager.Instance != null)
+            LobbyScreenManager.Instance.RemovePlayerFromLobby(friend.Id);
+        
+        
         RemovePlayerFromLoadList(friend.Id);
 
         if (GlobalsManager.Players.TryGetValue(friend.Id, out var player))
@@ -232,12 +237,12 @@ public class SteamLobbyManager : MonoBehaviour
 
     public void RemovePlayerFromLoadList(SteamId player)
     {
-        _loadedPlayers.Remove(player);
+        _loadedPlayers?.Remove(player);
     }
 
     public void SetLoaded(SteamId playerSteamId)
     {
-        if(_loadedPlayers != null)
+        if(_loadedPlayers.ContainsKey(playerSteamId))
             _loadedPlayers[playerSteamId] = true;
     }
     public bool IsEveryoneLoaded => !_loadedPlayers.ContainsValue(false);

@@ -19,7 +19,7 @@ public class Plugin : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "0.6.9";
+    public const string Version = "0.7.0";
 
     public override void Load()
     {

@@ -186,7 +186,6 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         static void GetterTips(ref SceneLoader __instance)
         {
-            
             var customTips = new List<string>(__instance.Tips)
             {
                 "You should try the log Fallen Kingdom!",
@@ -227,7 +226,7 @@ namespace PAMultiplayer.Patch
             UnityWebRequest request = UnityWebRequest.Get("https://api.github.com/repos/Aiden-ytarame/PAMultiplayer/releases");
         
             yield return request.SendWebRequest();
-
+            
             if (request.result != UnityWebRequest.Result.Success)
             {
                 Plugin.Logger.LogError("Failed to fetch Github Release, oof");
