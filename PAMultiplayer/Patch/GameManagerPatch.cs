@@ -138,7 +138,9 @@ public class GameManagerPatch
         var presence = DiscordManager._instance._currentPresence;
         presence.state = "Navigating Menus";
         presence.details = "";
-        presence.smallAsset = new Asset() { image = "", tooltip = "" };
+        
+        presence.largeAsset = new Asset() { image = "palogo", tooltip = "Game Logo"};
+        
         DiscordManager._instance.SetPresence(presence);
         DiscordManager._instance.UpdateStartTime(0);
     }
@@ -164,7 +166,7 @@ public class GameManagerPatch
             
             if (item.HasValue && item.Value.Result == Result.OK)
             {
-                presence.smallAsset = new Asset() { image = item.Value.PreviewImageUrl, tooltip = "level logo" };
+                presence.largeAsset = new Asset() { image = item.Value.PreviewImageUrl, tooltip = "level logo" };
             }
             
             presence.state = "Playing Singleplayer";
@@ -219,7 +221,7 @@ public class GameManagerPatch
             
             if (item.HasValue && item.Value.Result == Result.OK)
             {
-                presence.smallAsset = new Asset() { image = item.Value.PreviewImageUrl, tooltip = "level logo" };
+                presence.largeAsset = new Asset() { image = item.Value.PreviewImageUrl, tooltip = "level logo" };
             }
             
             DiscordManager._instance.SetPresence(presence);

@@ -33,11 +33,11 @@ public static class DiscordManagerPatch
             state = "Navigating Menus",
             details = ""
         };
-        
-        presence.largeAsset = new Asset() { image = "pamplogo2", tooltip = "Multiplayer Mod Logo"};
-        presence.smallAsset = new Asset() { image = "", tooltip = "" };
+        presence.largeAsset = new Asset() { image = "palogo", tooltip = "Game Logo"};
+        presence.smallAsset = new Asset() { image = "pamplogo2", tooltip = "Multiplayer Logo" };
         presence.buttons = DefaultButtons;
         __instance.applicationID = "1282511280833298483";
         __instance._currentPresence = presence;
+       
     }
 }
