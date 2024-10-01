@@ -8,6 +8,10 @@ using Il2CppSystems.SceneManagement;
 using UnityEngine;
 using TMPro;
 using PAMultiplayer.Managers;
+using SimpleJSON;
+using UnityEngine.Localization.PropertyVariants;
+using UnityEngine.Localization.PropertyVariants.TrackedProperties;
+using UnityEngine.Networking;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
@@ -182,6 +186,7 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         static void GetterTips(ref SceneLoader __instance)
         {
+            
             var customTips = new List<string>(__instance.Tips)
             {
                 "You should try the log Fallen Kingdom!",
@@ -200,6 +205,65 @@ namespace PAMultiplayer.Patch
             };
             //thanks Pidge for making this public after I complained lol
             __instance.Tips = customTips.ToArray();
+        }
+    }
+
+    /// <summary>
+    /// adds an "Update Mod" button in case a new version is available
+    /// </summary>
+   
+    [HarmonyPatch(typeof(SkipIntroMenu))]
+    public static class UpdateModButton
+    {
+        [HarmonyPatch(nameof(SkipIntroMenu.Start))]
+        [HarmonyPostfix]
+        static void PostStart(SkipIntroMenu __instance)
+        {
+            __instance.StartCoroutine(FetchGithubReleases().WrapToIl2Cpp());
+        }
+        
+        static IEnumerator FetchGithubReleases()
+        {
+            UnityWebRequest request = UnityWebRequest.Get("https://api.github.com/repos/Aiden-ytarame/PAMultiplayer/releases");
+        
+            yield return request.SendWebRequest();
+
+            if (request.result != UnityWebRequest.Result.Success)
+            {
+                Plugin.Logger.LogError("Failed to fetch Github Release, oof");
+                yield break;
+            }
+        
+            JSONNode jsonNode = JSON.Parse(request.downloadHandler.text);
+            var latestRelease = jsonNode.AsArray[0];
+            
+            bool isLatest = latestRelease["tag_name"].Value == "v"+Plugin.Version;
+
+            if (isLatest)
+            {
+                Plugin.Logger.LogInfo("Got Latest Version");
+                yield break;
+            }
+        
+            Plugin.Logger.LogWarning("New Mp Version Available!");
+
+            
+            GameObject buttons = GameObject.Find("Canvas/Window/Content/Main Menu/Buttons 3");
+            GameObject updateMod = Object.Instantiate(buttons.transform.Find("Changelog"), buttons.transform).gameObject;
+            updateMod.name = "Update MP";
+            
+            var button = updateMod.GetComponent<MultiElementButton>();
+            button.onClick = new Button.ButtonClickedEvent();
+            button.onClick.AddListener(new Action(() =>
+            {
+                Application.OpenURL("https://github.com/Aiden-ytarame/PAMultiplayer/releases/latest");
+            }));
+          
+            updateMod.GetComponentInChildren<GameObjectLocalizer>().TrackedObjects._items[0]
+                .GetTrackedProperty<LocalizedStringProperty>("m_text").LocalizedString
+                .SetReference("Localization", "ui.multiplayer.update");
+            
+            GameObject.Find("Canvas").GetComponent<UI_Book>().Pages[0].SubElements.Add(updateMod.GetComponent<UI_Button>());
         }
     }
 }

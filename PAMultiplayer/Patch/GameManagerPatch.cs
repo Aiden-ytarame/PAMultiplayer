@@ -147,7 +147,7 @@ public class GameManagerPatch
     [HarmonyPostfix]
     static async void PostPlay(GameManager __instance)
     {
-      
+        
         if(GameManager.Inst.IsEditor)
         {
             var presence = DiscordManager._instance._currentPresence;
@@ -235,10 +235,10 @@ public class GameManagerPatch
     static IEnumerator CustomLoadGame(VGLevel _level)
     {
          GameManager gm = GameManager.Inst;
-     
          if (GlobalsManager.IsDownloading)
-         {     
-             yield return new WaitUntil(new System.Func<bool>(() => !ArcadeManager.Inst.isLoading));
+         {
+             
+             yield return new WaitUntil(new System.Func<bool>(() => !SteamWorkshopFacepunch.inst.isLoadingLevels));
              VGLevel level;
              if (level = ArcadeLevelDataManager.Inst.GetSteamLevel(GlobalsManager.LevelId))
              {

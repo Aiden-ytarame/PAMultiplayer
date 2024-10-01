@@ -6,6 +6,7 @@ using HarmonyLib;
 using Il2CppInterop.Runtime.Injection;
 using PAMultiplayer.Managers;
 using PAMultiplayer.Patch;
+using UnityEngine.Localization.Settings;
 
 namespace PAMultiplayer;
 
@@ -18,7 +19,7 @@ public class Plugin : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    const string Version = "0.4.1";
+    public const string Version = "0.6.9";
 
     public override void Load()
     {
@@ -26,7 +27,16 @@ public class Plugin : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<LobbyScreenManager>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamManager>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamLobbyManager>();
+        Log.LogInfo("Applying table postprocessor");
+        ClassInjector.RegisterTypeInIl2Cpp<TablePostprocessor>(new RegisterTypeOptions
+        {
+            Interfaces = new Il2CppInterfaceCollection(new[] { typeof(ITablePostprocessor) })
+        });
+        var postprocessor = new TablePostprocessor();
+        var provider = new ITablePostprocessor(postprocessor.Pointer);
         
+        LocalizationSettings.StringDatabase.TablePostprocessor = provider;
+
         Inst = this;
         harmony = new Harmony(Guid);
         harmony.PatchAll();
