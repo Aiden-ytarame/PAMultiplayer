@@ -210,7 +210,7 @@ namespace PAMultiplayer.Patch
     /// <summary>
     /// adds an "Update Mod" button in case a new version is available
     /// </summary>
-   
+
     [HarmonyPatch(typeof(SkipIntroMenu))]
     public static class UpdateModButton
     {
@@ -220,32 +220,32 @@ namespace PAMultiplayer.Patch
         {
             __instance.StartCoroutine(FetchGithubReleases().WrapToIl2Cpp());
         }
-        
+
         static IEnumerator FetchGithubReleases()
         {
-            UnityWebRequest request = UnityWebRequest.Get("https://api.github.com/repos/Aiden-ytarame/PAMultiplayer/releases");
-        
+            UnityWebRequest request =
+                UnityWebRequest.Get("https://api.github.com/repos/Aiden-ytarame/PAMultiplayer/releases");
+
             yield return request.SendWebRequest();
-            
+
             if (request.result != UnityWebRequest.Result.Success)
             {
                 Plugin.Logger.LogError("Failed to fetch Github Release, oof");
                 yield break;
             }
-        
+
             JSONNode jsonNode = JSON.Parse(request.downloadHandler.text);
             var latestRelease = jsonNode.AsArray[0];
-            
-            bool isLatest = latestRelease["tag_name"].Value == "v"+Plugin.Version;
+
+            bool isLatest = latestRelease["tag_name"].Value == "v" + Plugin.Version;
 
             if (isLatest)
             {
                 Plugin.Logger.LogInfo("Got Latest Version");
                 yield break;
             }
-        
-            Plugin.Logger.LogWarning("New Mp Version Available!");
 
+            Plugin.Logger.LogWarning("New Mp Version Available!");
             
             Transform buttons = GameObject.Find("Canvas/Window/Content/Main Menu/Buttons 3").transform;
 
@@ -256,9 +256,10 @@ namespace PAMultiplayer.Patch
                 buttons.GetComponent<HorizontalLayoutGroup>().childControlWidth = true;
                 buttons.Find("Quit").gameObject.AddComponent<LayoutElement>().minWidth = 547.333f;
             }
-            
+
             GameObject updateMod = Object.Instantiate(buttons.Find("Changelog"), buttons).gameObject;
             updateMod.name = "Update MP";
+            updateMod.SetActive(true);
             
             var button = updateMod.GetComponent<MultiElementButton>();
             button.onClick = new Button.ButtonClickedEvent();
@@ -266,12 +267,30 @@ namespace PAMultiplayer.Patch
             {
                 Application.OpenURL("https://github.com/Aiden-ytarame/PAMultiplayer/releases/latest");
             }));
-          
+
             updateMod.GetComponentInChildren<GameObjectLocalizer>().TrackedObjects._items[0]
                 .GetTrackedProperty<LocalizedStringProperty>("m_text").LocalizedString
                 .SetReference("Localization", "ui.multiplayer.update");
-            
-            GameObject.Find("Canvas").GetComponent<UI_Book>().Pages[0].SubElements.Add(updateMod.GetComponent<UI_Button>());
+
+            GameObject.Find("Canvas").GetComponent<UI_Book>().Pages[0].SubElements
+                .Add(updateMod.GetComponent<UI_Button>());
+        }
+    }
+    /// <summary>
+    /// prevents the changelog button from destroying itself
+    /// </summary>
+    [HarmonyPatch(typeof(ShowChangeLog))]
+    public static class ChangelogsPatch
+    {
+        [HarmonyPatch(nameof(ShowChangeLog.Start))]
+        [HarmonyPrefix]
+        static bool PreStart(ShowChangeLog __instance)
+        {
+            if (!SettingsManager.Inst.ShowChangeLog() && __instance.name == "Changelog")
+            {
+                __instance.gameObject.SetActive(false);
+            }
+            return false;
         }
     }
 }
