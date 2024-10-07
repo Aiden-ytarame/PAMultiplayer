@@ -131,12 +131,16 @@ namespace PAMultiplayer.Patch
             {
                 if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
                 {
-                    string text = "YOU";
-                    if (currentLobbyMember.Id != GlobalsManager.LocalPlayer)
+                    string text = currentLobbyMember.Name;;
+                    if (currentLobbyMember.Id == GlobalsManager.LocalPlayer)
                     {
-                        text = currentLobbyMember.Name;
+                        text = "YOU";
+                        if (player.PlayerObject)
+                        {
+                            GameManager.Inst.StartCoroutine(ShowDecay(player.PlayerObject).WrapToIl2Cpp());
+                        }
                     }
-                    
+                   
                     //band-aid fix for an error here
                     try
                     {
@@ -148,6 +152,16 @@ namespace PAMultiplayer.Patch
                     }
                 }
             }
+        }
+
+        public static IEnumerator ShowDecay(VGPlayer player)
+        {
+            player.ChangeAnimationState(VGPlayer.ANIM_HURT);
+            
+            yield return new WaitForSeconds(3);
+            
+            if(player && player.isHurting == 0)
+                player.ChangeAnimationState(VGPlayer.ANIM_IDLE);
         }
         [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
         [HarmonyPrefix]
