@@ -22,17 +22,64 @@ namespace PAMultiplayer.Patch
             return false; //only collide if is local player
         }
 
+        ///we re-write the whole function just to check for the MpPlayerWarp setting...
         [HarmonyPatch(nameof(VGPlayer.PlayerHit))]
         [HarmonyPrefix]
-        static void Hit_Pre(ref VGPlayer __instance)
+        static bool Hit_Pre(ref VGPlayer __instance)
         {
-            if (!GlobalsManager.IsMultiplayer || !__instance.IsLocalPlayer() || GameManager.Inst.Paused) return;
-            
-            if (GlobalsManager.IsHosting)
-                SteamManager.Inst.Server.SendHostDamage();
-            else
-                SteamManager.Inst.Client.SendDamage();
+            if (!GlobalsManager.IsMultiplayer) return true;
 
+            if (GameManager.Inst.Paused)
+                return false;
+
+            if (GameManager.Inst.IsArcade && DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) == 1)
+                return false;
+             
+            //hit is valid
+            if (!__instance.IsLocalPlayer())
+            {
+                if (GlobalsManager.IsHosting)
+                    SteamManager.Inst.Server.SendHostDamage();
+                else
+                    SteamManager.Inst.Client.SendDamage();
+            }
+            
+            VGPlayer player = __instance;
+            
+            --player.Health;
+            player.StopCoroutine("RegisterCloseCall");
+            
+            if (player.DeathEvent != null && player.Health <= 0)
+                player.DeathEvent.Invoke(player.Player_Wrapper.position);
+            
+            else if (player.HitEvent != null)
+                player.HitEvent.Invoke(player.Health, player.Player_Wrapper.position);
+
+            if (player.Health > 0)
+            {
+                int warp = DataManager.inst.GetSettingInt("MpPlayerWarpSFX", 0);
+                if (warp == 0 || (warp == 1 && player.IsLocalPlayer()))
+                {
+                    AudioManager.Inst.ApplyLowPass(0.05f, 0.8f, 1.5f);
+                    AudioManager.Inst.ApplyLowPassResonance(0, 0.6f, 0.2f);
+                }
+
+                int hit = DataManager.inst.GetSettingInt("MpPlayerSFX", 0);
+                if (hit == 0 || (hit == 1 && player.IsLocalPlayer()))
+                {
+                    AudioManager.Inst.PlaySound("HurtPlayer", 0.6f);
+                }
+                
+                player.StartHurtDecay();
+                player.PlayerHitAnimation();
+            }
+            else
+            {
+                player.PlayerDeath();
+                player.PlayerDeathAnimation();
+            }
+
+            return false;
         }
 
         /// <summary>

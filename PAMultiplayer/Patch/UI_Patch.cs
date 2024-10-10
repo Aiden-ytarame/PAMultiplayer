@@ -232,6 +232,43 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         static void PostStart(SkipIntroMenu __instance)
         {
+            void instantiateSlider(GameObject prefab, Transform parent, string label, string dataId, Action<float> setter)
+            {
+                GameObject WarpSliderObj = Object.Instantiate(prefab, parent);
+            
+                UI_Slider slider = WarpSliderObj.GetComponent<UI_Slider>();
+                slider.DataID = dataId;
+                slider.DataIDType = UI_Slider.DataType.Runtime;
+                slider.Range = new Vector2(0, 2);
+                slider.Values = new[]{"All Players", "Local player Only", "None"};
+                slider.Value = DataManager.inst.GetSettingInt(dataId, 0);
+                slider.Label.text = label;
+
+                slider.OnValueChanged.AddListener(setter);
+            
+                slider.subGraphics[0] = null;
+                Object.Destroy(slider.Label.transform.GetComponent<GameObjectLocalizer>());
+            }
+            //DataManager.inst.interfaceSettings.Add("MpPlayerWarpSFX", JSONObject.Parse("[{name:All Players, values: 0},{name:Local Player Only, values: 1},{name:None, values: 2}]"));
+            
+            GameObject sliderPrefab = __instance.transform.Find("Window/Content/Settings/Right Panel/Content/Audio/Content/Menu Music").gameObject;
+            Transform audioParent = sliderPrefab.transform.parent;
+            
+            //destroy SFX toggles
+            Object.Destroy(audioParent.GetChild(audioParent.childCount-1).gameObject);
+            Object.Destroy(audioParent.GetChild(audioParent.childCount-2).gameObject);
+            
+            instantiateSlider(sliderPrefab, audioParent, "Player Hit SFX", "MpPlayerSFX", x =>
+            {
+                DataManager.inst.UpdateSettingInt("MpPlayerSFX", (int)x);
+                DataManager.inst.UpdateSettingBool("PlayerSFX", x != 2);
+            });
+            instantiateSlider(sliderPrefab, audioParent, "Player Hit Warp SFX", "MpPlayerWarpSFX", x =>
+            {
+                DataManager.inst.UpdateSettingInt("MpPlayerWarpSFX", (int)x);
+                DataManager.inst.UpdateSettingBool("PlayerWarpSFX", x != 2);
+            });
+            
             __instance.StartCoroutine(FetchGithubReleases().WrapToIl2Cpp());
         }
 

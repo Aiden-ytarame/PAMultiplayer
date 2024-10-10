@@ -71,6 +71,7 @@ public class SteamLobbyManager : MonoBehaviour
         {
             VGPlayerManager.Inst.players.Remove(player);
             GlobalsManager.Players.Remove(friend.Id);
+            player.PlayerObject?.ClearEvents();
             player.PlayerObject?.PlayerDeath(0);
         }
         

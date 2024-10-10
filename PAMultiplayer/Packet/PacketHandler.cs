@@ -143,6 +143,7 @@ public class RewindPacket : IPacketHandler
             if (vgPlayerData.PlayerObject && !vgPlayerData.PlayerObject.isDead)
             {
                 vgPlayerData.PlayerObject.Health = 0;
+                vgPlayerData.PlayerObject.ClearEvents();
                 vgPlayerData.PlayerObject.PlayerDeath();
             }
         };

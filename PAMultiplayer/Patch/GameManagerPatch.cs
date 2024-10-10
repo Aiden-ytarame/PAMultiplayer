@@ -11,7 +11,6 @@ using Steamworks.Ugc;
 using UnityEngine;
 using VGFunctions;
 using Action = System.Action;
-using Random = UnityEngine.Random;
 
 namespace PAMultiplayer.Patch;
 
@@ -151,7 +150,7 @@ public class GameManagerPatch
     {
         async void setupLevelPresence(string state)
         {
-            if (DiscordManager._instance.isInitialized)
+            if (DiscordManager._instance && DiscordManager._instance.isInitialized)
             {
                 var item = await SteamUGC.QueryFileAsync(ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID);
                 var presence = DiscordManager._instance._currentPresence;
@@ -166,6 +165,7 @@ public class GameManagerPatch
                 {
                     presence.largeAsset = new Asset() { image = "null_level", tooltip = "level logo" };
                 }
+                
                 DiscordManager._instance.SetPresence(presence);
                 DiscordManager._instance.UpdateStartTime();
             }
