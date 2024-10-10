@@ -249,7 +249,8 @@ namespace PAMultiplayer.Patch
                 slider.subGraphics[0] = null;
                 Object.Destroy(slider.Label.transform.GetComponent<GameObjectLocalizer>());
             }
-            //DataManager.inst.interfaceSettings.Add("MpPlayerWarpSFX", JSONObject.Parse("[{name:All Players, values: 0},{name:Local Player Only, values: 1},{name:None, values: 2}]"));
+            
+            __instance.StartCoroutine(FetchGithubReleases().WrapToIl2Cpp());
             
             GameObject sliderPrefab = __instance.transform.Find("Window/Content/Settings/Right Panel/Content/Audio/Content/Menu Music").gameObject;
             Transform audioParent = sliderPrefab.transform.parent;
@@ -269,7 +270,6 @@ namespace PAMultiplayer.Patch
                 DataManager.inst.UpdateSettingBool("PlayerWarpSFX", x != 2);
             });
             
-            __instance.StartCoroutine(FetchGithubReleases().WrapToIl2Cpp());
         }
 
         static IEnumerator FetchGithubReleases()
