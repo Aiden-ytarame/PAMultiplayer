@@ -182,7 +182,17 @@ public class GameManagerPatch
         {
             if (StoryManager.inst)
             {
-                //todo
+                if (DiscordManager._instance && DiscordManager._instance.isInitialized)
+                {
+                    var presence = DiscordManager._instance._currentPresence;
+                    presence.state = "Playing Story Mode!";
+                    presence.details = $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}";
+            
+                    presence.largeAsset = new Asset() { image = "palogo", tooltip = "level logo" };
+                 
+                    DiscordManager._instance.SetPresence(presence);
+                    DiscordManager._instance.UpdateStartTime();
+                }
                 return;
             }
             setupLevelPresence("Playing Singleplayer!");

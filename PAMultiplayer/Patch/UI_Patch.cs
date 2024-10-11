@@ -181,7 +181,18 @@ namespace PAMultiplayer.Patch
             if (LobbyScreenManager.Instance)
             {
                 SteamLobbyManager.Inst.HideLobby();
+                
+                foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+                {
+                    VGPlayer player = vgPlayerData.PlayerObject;
+                    if(!player) continue;
+                
+                    player.StopCoroutine(player.SpawnLoop());
+                    player.Spawn();
+                }
+                
                 VGPlayerManager.inst.RespawnPlayers();
+                
                 GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
                 Object.Destroy(LobbyScreenManager.Instance);
             }
