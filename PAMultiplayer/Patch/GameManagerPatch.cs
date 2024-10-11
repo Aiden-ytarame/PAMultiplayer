@@ -150,7 +150,7 @@ public class GameManagerPatch
     {
         async void setupLevelPresence(string state)
         {
-            if (DiscordManager._instance && DiscordManager._instance.isInitialized)
+            if (DiscordManager._instance && DiscordManager._instance.isInitialized && ArcadeManager.Inst.CurrentArcadeLevel)
             {
                 var item = await SteamUGC.QueryFileAsync(ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID);
                 var presence = DiscordManager._instance._currentPresence;
@@ -180,6 +180,11 @@ public class GameManagerPatch
         }
         if (!GlobalsManager.IsMultiplayer)
         {
+            if (StoryManager.inst)
+            {
+                //todo
+                return;
+            }
             setupLevelPresence("Playing Singleplayer!");
             return;
         }

@@ -36,7 +36,7 @@ namespace PAMultiplayer.Patch
                 return false;
              
             //hit is valid
-            if (!__instance.IsLocalPlayer())
+            if (__instance.IsLocalPlayer())
             {
                 if (GlobalsManager.IsHosting)
                     SteamManager.Inst.Server.SendHostDamage();
