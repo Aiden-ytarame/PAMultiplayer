@@ -1,16 +1,17 @@
+using System;
 using System.Collections;
 using System.Threading.Tasks;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
-using Lachee.Discord;
 using PAMultiplayer.Managers;
 using Steamworks;
 using Steamworks.Data;
 using Steamworks.Ugc;
 using UnityEngine;
 using VGFunctions;
-using Action = System.Action;
+using Random = UnityEngine.Random;
+
 
 namespace PAMultiplayer.Patch;
 
@@ -132,16 +133,9 @@ public class GameManagerPatch
     [HarmonyPostfix]
     static void PostOnDestroy()
     {
-        if (!DiscordManager._instance.isInitialized) return;
-   
-        var presence = DiscordManager._instance._currentPresence;
-        presence.state = "Navigating Menus";
-        presence.details = "";
+        if (!MultiplayerDiscordManager.IsInitialized) return;
         
-        presence.largeAsset = new Asset() { image = "palogo", tooltip = "Game Logo"};
-        
-        DiscordManager._instance.SetPresence(presence);
-        DiscordManager._instance.UpdateStartTime(0);
+        MultiplayerDiscordManager.Instance.SetMenuPresence();
     }
     
     [HarmonyPatch(nameof(GameManager.PlayGame))]
@@ -150,52 +144,35 @@ public class GameManagerPatch
     {
         async void setupLevelPresence(string state)
         {
-            if (DiscordManager._instance && DiscordManager._instance.isInitialized && ArcadeManager.Inst.CurrentArcadeLevel)
+            if (ArcadeManager.Inst.CurrentArcadeLevel)
             {
                 var item = await SteamUGC.QueryFileAsync(ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID);
-                var presence = DiscordManager._instance._currentPresence;
-                presence.state = state;
-                presence.details = $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}";
-            
+
+                string levelCover = "null_level";
                 if (item.HasValue && item.Value.Result == Result.OK)
                 {
-                    presence.largeAsset = new Asset() { image = item.Value.PreviewImageUrl, tooltip = "level logo" };
+                   levelCover= item.Value.PreviewImageUrl;
                 }
-                else
-                {
-                    presence.largeAsset = new Asset() { image = "null_level", tooltip = "level logo" };
-                }
-                
-                DiscordManager._instance.SetPresence(presence);
-                DiscordManager._instance.UpdateStartTime();
+              
+                MultiplayerDiscordManager.Instance.SetLevelPresence(state, $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}", levelCover);
             }
-        }
-        if(GameManager.Inst.IsEditor)
-        {
-            var presence = DiscordManager._instance._currentPresence;
-            presence.state = $"Editing {GameManager.Inst.TrackName}";
-            DiscordManager._instance.SetPresence(presence);
-            DiscordManager._instance.UpdateStartTime();
-            return;
         }
         if (!GlobalsManager.IsMultiplayer)
         {
-            if (StoryManager.inst)
-            {
-                if (DiscordManager._instance && DiscordManager._instance.isInitialized)
-                {
-                    var presence = DiscordManager._instance._currentPresence;
-                    presence.state = "Playing Story Mode!";
-                    presence.details = $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}";
+            if (!MultiplayerDiscordManager.IsInitialized) return;
             
-                    presence.largeAsset = new Asset() { image = "palogo", tooltip = "level logo" };
-                 
-                    DiscordManager._instance.SetPresence(presence);
-                    DiscordManager._instance.UpdateStartTime();
-                }
-                return;
+            if(GameManager.Inst.IsEditor)
+            {
+                MultiplayerDiscordManager.Instance.SetLevelPresence($"Editing {GameManager.Inst.TrackName}", "", "palogo");
             }
-            setupLevelPresence("Playing Singleplayer!");
+            else if(StoryManager.inst)
+            {
+                MultiplayerDiscordManager.Instance.SetLevelPresence("Playing Story Mode!", $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}", "palogo");
+            }
+            else
+            {
+                setupLevelPresence("Playing Singleplayer!");
+            }
             return;
         }
         
@@ -324,8 +301,8 @@ public class GameManagerPatch
          else
          {
              SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-             yield return new WaitUntil(new System.Func<bool>(() => SteamManager.Inst.Client.Connected));
-             yield return new WaitUntil(new System.Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
+             yield return new WaitUntil(new Func<bool>(() => SteamManager.Inst.Client.Connected));
+             yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
          }
          
         

@@ -61,9 +61,11 @@ public class SteamLobbyManager : MonoBehaviour
         
         AudioManager.Inst?.PlaySound("glitch", 1);
         
-        if(LobbyScreenManager.Instance != null)
+        if(LobbyScreenManager.Instance)
             LobbyScreenManager.Instance.RemovePlayerFromLobby(friend.Id);
         
+        if(MultiplayerDiscordManager.IsInitialized)
+            MultiplayerDiscordManager.Instance.UpdatePartySize(lobby.MemberCount);
         
         RemovePlayerFromLoadList(friend.Id);
 
@@ -85,7 +87,11 @@ public class SteamLobbyManager : MonoBehaviour
         
         AddPlayerToLoadList(friend.Id);
         
-        LobbyScreenManager.Instance?.AddPlayerToLobby(friend.Id, friend.Name);
+        if(LobbyScreenManager.Instance)
+            LobbyScreenManager.Instance.AddPlayerToLobby(friend.Id, friend.Name);
+        
+        if(MultiplayerDiscordManager.IsInitialized)
+            MultiplayerDiscordManager.Instance.UpdatePartySize(lobby.MemberCount);
 
         HashSet<int> usedIds = new();
         int nextId = 0;

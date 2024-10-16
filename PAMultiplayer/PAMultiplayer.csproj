@@ -18,6 +18,7 @@
   <ItemGroup>
 	   <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />
 	  <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+	  <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
   </ItemGroup>
 	
     <ItemGroup>
@@ -28,10 +29,6 @@
 			  
     <Reference Include="com.lachee.discordrpc.runtime">
       <HintPath>lib\com.lachee.discordrpc.runtime.dll</HintPath>
-    </Reference>
-			  
-    <Reference Include="DiscordRPC">
-      <HintPath>lib\DiscordRPC.dll</HintPath>
     </Reference>
 			  
     <Reference Include="Facepunch.Steamworks.Win64">

@@ -19,7 +19,7 @@ public class Plugin : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "0.7.3";
+    public const string Version = "0.7.4";
 
     public override void Load()
     {
@@ -27,6 +27,8 @@ public class Plugin : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<LobbyScreenManager>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamManager>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamLobbyManager>();
+        ClassInjector.RegisterTypeInIl2Cpp<MultiplayerDiscordManager>();
+        
         Log.LogInfo("Applying table postprocessor");
         ClassInjector.RegisterTypeInIl2Cpp<TablePostprocessor>(new RegisterTypeOptions
         {
