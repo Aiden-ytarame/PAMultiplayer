@@ -63,6 +63,7 @@ public class MultiplayerDiscordManager : MonoBehaviour
 		client.OnReady += onReady;
 
 		client.OnJoin += ClientOnOnJoin;
+		client.Subscribe(EventType.Join);
 		client.RegisterUriScheme("440310", Paths.ExecutablePath);
 
 		client.Initialize();
@@ -70,11 +71,13 @@ public class MultiplayerDiscordManager : MonoBehaviour
 
 	private void ClientOnOnJoin(object sender, JoinMessage joinSecret)
 	{
-		if (SteamClient.IsValid)
+		if (SteamClient.IsValid && !GlobalsManager.IsMultiplayer)
 		{
 			if (ulong.TryParse(joinSecret.Secret, out ulong id))
 			{
 				Plugin.Logger.LogInfo("Attempting to join lobby from discord invite.");
+				GlobalsManager.IsHosting = false;
+				GlobalsManager.IsMultiplayer = true;
 				SteamMatchmaking.JoinLobbyAsync(id);
 			}
 			else
@@ -110,7 +113,7 @@ public class MultiplayerDiscordManager : MonoBehaviour
 			string id = SteamLobbyManager.Inst.CurrentLobby.Id.ToString();
 			presence.Party = new Party()
 			{
-				ID = id,
+				ID = id + SteamLobbyManager.Inst.CurrentLobby.Owner.Id,
 				Max = 16,
 				Size = SteamLobbyManager.Inst.CurrentLobby.MemberCount,
 				Privacy = Party.PrivacySetting.Public
@@ -129,7 +132,8 @@ public class MultiplayerDiscordManager : MonoBehaviour
 	{
 		if (presence.Party != null)
 		{
-			presence = client.UpdatePartySize(size);
+			presence.Party.Size = size; 
+			client.SetPresence(presence);
 		}
 	}
 	
