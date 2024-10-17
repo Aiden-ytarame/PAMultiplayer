@@ -210,8 +210,11 @@ public class GameManagerPatch
             //if failed to connect to server
             SceneLoader.Inst.LoadSceneGroup("Menu");
         }
-        
-        setupLevelPresence("Playing Multiplayer!");
+
+        if (MultiplayerDiscordManager.IsInitialized)
+        {
+            setupLevelPresence("Playing Multiplayer!");
+        }
     }
     
     /// <summary>
