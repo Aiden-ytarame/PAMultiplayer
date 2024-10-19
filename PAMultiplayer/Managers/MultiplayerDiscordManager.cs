@@ -19,7 +19,7 @@ public class MultiplayerDiscordManager : MonoBehaviour
 	{
 		get
 		{
-			return Instance && Instance.client != null && Instance.client.IsInitialized;
+			return Instance && Instance.client != null && Instance.client.CurrentUser != null;
 		}
 	}
 
