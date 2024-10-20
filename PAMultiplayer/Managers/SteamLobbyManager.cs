@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Il2CppSystems.SceneManagement;
 using Lachee.Discord;
+using Newtonsoft.Json;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -47,11 +48,21 @@ public class SteamLobbyManager : MonoBehaviour
         SteamMatchmaking.OnLobbyMemberLeave += OnLobbyMemberDisconnected;
         
         SteamMatchmaking.OnLobbyMemberDataChanged += OnLobbyMemberDataChanged;
+        SteamMatchmaking.OnLobbyDataChanged += OnOnLobbyDataChanged;
+    }
+
+    private void OnOnLobbyDataChanged(Lobby lobby)
+    {
+        if (LobbyScreenManager.Instance)
+        {
+            LobbyScreenManager.Instance.UpdateQueue();
+        }
     }
 
     private void OnLobbyMemberDataChanged(Lobby lobby, Friend friend)
     {
         //data changed always means loaded
+        
         if (lobby.GetMemberData(friend, "IsLoaded") != "1") return;
 
         if (LobbyScreenManager.Instance)
@@ -228,6 +239,15 @@ public class SteamLobbyManager : MonoBehaviour
         GlobalsManager.LevelId = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value;
         lobby.SetData("LevelId", GlobalsManager.LevelId.ToString());
         lobby.SetData("seed", RandSeed.ToString());
+
+        List<string> levelNames = new();
+        foreach (var id in GlobalsManager.Queue)
+        {
+            VGLevel level = ArcadeLevelDataManager.Inst.GetSteamLevel(ulong.Parse(id));
+            levelNames.Add(level.TrackName);
+        }
+        lobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
+        
         lobby.SetData("HealthMod", DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0).ToString());
         lobby.SetData("SpeedMod", DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0).ToString());
         

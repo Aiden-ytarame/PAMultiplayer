@@ -165,11 +165,12 @@ public static class LevelEndScreenPatch
         {
             ulong id = ulong.Parse(GlobalsManager.Queue[0]);
             ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetSteamLevel(id);
-        
+            GlobalsManager.LevelId = id;
+            
+            
             if (GlobalsManager.IsMultiplayer)
             {
                 GlobalsManager.IsReloadingLobby = true;
-                GlobalsManager.LevelId = id;
                 SteamLobbyManager.Inst.UnloadAll();
             }
             

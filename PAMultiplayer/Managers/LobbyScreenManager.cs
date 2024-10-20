@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Cpp2IL.Core.Extensions;
 using Il2CppSystems.SceneManagement;
+using Newtonsoft.Json;
 using Steamworks;
 using TMPro;
 using UnityEngine;
@@ -29,8 +30,11 @@ namespace PAMultiplayer.Managers
             { 76561199106356594, "34eb67" }, //yikxle
             { 76561199088465180, "7300ff" }  //Cube
         };
-        Transform _playersListGo;
+        Transform _playersList;
         GameObject _playerPrefab;
+
+        private Transform _queueList;
+        GameObject _queueEntryPrefab;
 
         //spawns the lobby GameObject from the assetBundle
         void Awake()
@@ -45,15 +49,16 @@ namespace PAMultiplayer.Managers
             
                 lobbyGo =  Instantiate(lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]).Cast<GameObject>(),  playerGUI.transform);
                 _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]).Cast<GameObject>();
-         
+                _queueEntryPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[2]).Cast<GameObject>();
                 lobbyBundle.Unload(false);
             }
           
             lobbyGo.name = "PAM_Lobby";
 
             pauseMenu = lobbyGo.GetComponent<PauseMenu>();
-            _playersListGo = lobbyGo.transform.Find("Content/PlayerList");
-         
+            _playersList = lobbyGo.transform.Find("Content/PlayerList");
+            _queueList = lobbyGo.transform.Find("Queue/Content/QueueList");
+            
             //handles what should appear on the screen
             //like the buttons for the host
             //Waiting for host message for clients
@@ -112,13 +117,15 @@ namespace PAMultiplayer.Managers
                     SetPlayerLoaded(friend.Id); 
                 }
             }
+            
+            UpdateQueue();
         }
 
         private void OnDestroy()
         {
-            if (_playersListGo)
+            if (_playersList)
             {
-                Destroy(_playersListGo.parent.parent.gameObject);
+                Destroy(_playersList.parent.parent.gameObject);
             }
         }
 
@@ -129,7 +136,7 @@ namespace PAMultiplayer.Managers
                 return;
             }
             
-            var playerEntry = Instantiate(_playerPrefab, _playersListGo.transform).Cast<GameObject>().transform;
+            var playerEntry = Instantiate(_playerPrefab, _playersList).Cast<GameObject>().transform;
 
             if (_specialColors.TryGetValue(player, out var hex))
             {
@@ -163,6 +170,32 @@ namespace PAMultiplayer.Managers
             GlobalsManager.HasStarted = true;
             SteamLobbyManager.Inst.HideLobby();
             pauseMenu.UnPause();
+        }
+
+        public void UpdateQueue()
+        {
+            for (int i = 0; i < _queueList.childCount; i++)
+            {
+                Destroy(_queueList.GetChild(i).gameObject);
+            }
+            List<string> queue = JsonConvert.DeserializeObject<List<string>>(SteamLobbyManager.Inst.CurrentLobby.GetData("LevelQueue"));
+
+            if (queue.Count == 0)
+            {
+                _queueList.parent.parent.gameObject.SetActive(false);
+                return;
+            }
+            _queueList.parent.parent.gameObject.SetActive(true);
+            foreach (var queueEntry in queue)
+            {
+                string text = queueEntry;
+                if (queueEntry.Length > 21)
+                {
+                    text = queueEntry.Substring(0, 19) + "...";
+                }
+                var entry = Instantiate(_queueEntryPrefab, _queueList).Cast<GameObject>();
+                entry.GetComponentInChildren<TextMeshProUGUI>().text = text;
+            }
         }
     }
 }

@@ -9,6 +9,7 @@ using UnityEngine;
 using TMPro;
 using PAMultiplayer.Managers;
 using SimpleJSON;
+using Steamworks.Data;
 using UnityEngine.Localization.PropertyVariants;
 using UnityEngine.Localization.PropertyVariants.TrackedProperties;
 using UnityEngine.Networking;
@@ -39,9 +40,39 @@ namespace PAMultiplayer.Patch
             {
                 GlobalsManager.IsHosting = true;
                 GlobalsManager.IsMultiplayer = true;
+
+                if (GlobalsManager.Queue.Count > 0)
+                {
+                    PublishedFileId id = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID;
+                    if (!GlobalsManager.Queue.Contains(id.ToString()))
+                        GlobalsManager.Queue.Add(id.ToString());
+
+                    ArcadeManager.Inst.CurrentArcadeLevel =
+                        ArcadeLevelDataManager.Inst.GetSteamLevel(ulong.Parse(GlobalsManager.Queue[0]));
+                }
+
                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
             }));
 
+            MultiElementButton playgame = __instance.transform.parent.Find("Buttons/Primary/Play").GetComponent<MultiElementButton>();
+            
+            //playgame.onClick = new Button.ButtonClickedEvent();
+            playgame.onClick.AddListener(new Action(() =>
+            {
+                if (GlobalsManager.Queue.Count > 0)
+                {
+                    PublishedFileId id = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID;
+                    if (!GlobalsManager.Queue.Contains(id.ToString()))
+                        GlobalsManager.Queue.Add(id.ToString());
+
+                    ulong queueLevel = ulong.Parse(GlobalsManager.Queue[0]);
+                    GlobalsManager.LevelId = queueLevel;
+                    ArcadeManager.Inst.CurrentArcadeLevel =
+                        ArcadeLevelDataManager.Inst.GetSteamLevel(queueLevel);
+                    
+                    //SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+                }   
+            }));
         }
     }
 

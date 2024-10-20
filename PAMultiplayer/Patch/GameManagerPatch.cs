@@ -1,10 +1,13 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
+using Newtonsoft.Json;
 using PAMultiplayer.Managers;
+using SimpleJSON;
 using Steamworks;
 using Steamworks.Data;
 using Steamworks.Ugc;
@@ -157,6 +160,9 @@ public class GameManagerPatch
                 MultiplayerDiscordManager.Instance.SetLevelPresence(state, $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}", levelCover);
             }
         }
+        
+        GlobalsManager.Queue.Remove(GlobalsManager.LevelId.ToString());
+        
         if (!GlobalsManager.IsMultiplayer)
         {
             if (!MultiplayerDiscordManager.IsInitialized) return;
@@ -185,8 +191,7 @@ public class GameManagerPatch
         {
             SteamLobbyManager.Inst.CurrentLobby.SetJoinable(true);
             SteamLobbyManager.Inst.CurrentLobby.SetPublic();
-
-            GlobalsManager.Queue.Remove(GlobalsManager.LevelId.ToString());
+            
             if (GlobalsManager.Players.Count == 0)
             {
                 //player 0 is never added, so we add it here
@@ -296,6 +301,15 @@ public class GameManagerPatch
              {
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LevelId", GlobalsManager.LevelId.ToString());
                  SteamLobbyManager.Inst.CurrentLobby.SetData("seed", SteamLobbyManager.Inst.RandSeed.ToString());
+                 
+                 List<string> levelNames = new();
+                 foreach (var id in GlobalsManager.Queue)
+                 {
+                     VGLevel level = ArcadeLevelDataManager.Inst.GetSteamLevel(ulong.Parse(id));
+                     levelNames.Add(level.TrackName);
+                 }
+                 SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
+                 
                  SteamManager.Inst.Server.SendNextQueueLevel(GlobalsManager.LevelId, SteamLobbyManager.Inst.RandSeed);
              }
          }
