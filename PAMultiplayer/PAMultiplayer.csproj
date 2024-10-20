@@ -80,6 +80,10 @@
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </EmbeddedResource>
       <EmbeddedResource Remove="lib\costura64\**" />
+      <None Remove="Assets\queue assets" />
+      <EmbeddedResource Include="Assets\queue assets">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
     </ItemGroup>
 	
     <ItemGroup>

@@ -29,8 +29,8 @@ namespace PAMultiplayer.Patch
         static void AddUIToSettings(ref ModifiersManager __instance)
         {
             var hiddenButtons = __instance.transform.parent.Find("Buttons/Buttons Hidden").gameObject;
-                hiddenButtons.SetActive(true);
-                
+            hiddenButtons.SetActive(true);
+
             var mpToggle = hiddenButtons.transform.GetChild(0).GetComponent<MultiElementToggle>();
             mpToggle.isOn = false;
             mpToggle.interactable = true;
@@ -42,54 +42,6 @@ namespace PAMultiplayer.Patch
                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
             }));
 
-            
-            //pidge added a button for us to use, but ill keep the modifier here just in case.
-            return;
-            //modifier prefab
-            Transform modifier = __instance.transform.GetChild(0).GetChild(0);
-
-            Transform multiplayer = Object.Instantiate(modifier, __instance.transform);
-
-            Object.Destroy(multiplayer.GetComponent<ToggleGroup>()); //don't remember why this here, might remove it
-
-            var toggle = multiplayer.GetComponent<MultiElementToggle>();
-            toggle.isOn = false;
-            toggle.interactable = true;
-            toggle.onValueChanged = new Toggle.ToggleEvent();
-            //Pidge removed these UI sounds in a recent update so ill removed them for now too
-            //toggle.onValueChanged.AddListener(new System.Action<bool>(_ => {AudioManager.Inst.PlaySound("UI_Select", 1);})); 
-            toggle.onValueChanged.AddListener(new Action<bool>(x =>
-            {
-                GlobalsManager.IsHosting = x;
-                GlobalsManager.IsMultiplayer = x;
-            }));
-         
-            //this is so the localization doesn't override the text
-            multiplayer.GetComponent<GhostUIElement>().subGraphics = null;
-            //sprite0 is the controller sprite
-            multiplayer.GetComponentInChildren<TextMeshProUGUI>().text =
-                "<size=85%><voffset=3><sprite=0><voffset=0><size=100%> Multiplayer ";
-            
-            //setup controller navigation
-            var speedUp = __instance.transform.Find("r-2/Speed Up").GetComponent<MultiElementToggle>();
-            var references = __instance.transform.parent.Find("references");
-            var songLink = references.GetChild(0).GetComponent<MultiElementButton>();
-
-            speedUp.gameObject.GetComponent<DirectedNavigation>().ConfigDown.Type =
-                DirectedNavigationType.Value.Automatic;
-            __instance.transform.Find("r-2/Speed Down").GetComponent<DirectedNavigation>().ConfigDown.Type =
-                DirectedNavigationType.Value.Automatic;
-            
-            var nav = toggle.gameObject.GetComponent<DirectedNavigation>();
-            nav.ConfigDown.SelectableList.SelectableList = new Selectable[]{songLink};
-            nav.ConfigUp.SelectableList.SelectableList = new Selectable[]{speedUp};
-            nav.ConfigLeft.Type = DirectedNavigationType.Value.Disabled;
-            nav.ConfigRight.Type = DirectedNavigationType.Value.Disabled;
-            
-            var toggleList = new Selectable[]{toggle};
-            references.GetChild(0).GetComponent<DirectedNavigation>().ConfigUp.SelectableList.SelectableList = toggleList;
-            references.GetChild(1).GetComponent<DirectedNavigation>().ConfigUp.SelectableList.SelectableList = toggleList;
-            references.GetChild(2).GetComponent<DirectedNavigation>().ConfigUp.SelectableList.SelectableList = toggleList;
         }
     }
 
@@ -181,6 +133,7 @@ namespace PAMultiplayer.Patch
             if (LobbyScreenManager.Instance)
             {
                 SteamLobbyManager.Inst.HideLobby();
+                SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "0");
                 
                 foreach (var vgPlayerData in VGPlayerManager.Inst.players)
                 {
@@ -292,22 +245,22 @@ namespace PAMultiplayer.Patch
 
             if (request.result != UnityWebRequest.Result.Success)
             {
-                Plugin.Logger.LogError("Failed to fetch Github Release, oof");
+                PAM.Logger.LogError("Failed to fetch Github Release, oof");
                 yield break;
             }
 
             JSONNode jsonNode = JSON.Parse(request.downloadHandler.text);
             var latestRelease = jsonNode.AsArray[0];
 
-            bool isLatest = latestRelease["tag_name"].Value == "v" + Plugin.Version;
+            bool isLatest = latestRelease["tag_name"].Value == "v" + PAM.Version;
 
             if (isLatest)
             {
-                Plugin.Logger.LogInfo("Got Latest Version");
+                PAM.Logger.LogInfo("Got Latest Version");
                 yield break;
             }
 
-            Plugin.Logger.LogWarning("New Mp Version Available!");
+            PAM.Logger.LogWarning("New Mp Version Available!");
             
             Transform buttons = GameObject.Find("Canvas/Window/Content/Main Menu/Buttons 3").transform;
 

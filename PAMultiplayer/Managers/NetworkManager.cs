@@ -56,6 +56,9 @@ namespace PAMultiplayer.Managers
         private void OnDestroy()
         {
             GlobalsManager.HasStarted = false;
+            
+            if (GlobalsManager.IsReloadingLobby) return;
+            
             GlobalsManager.LocalPlayerObjectId = 0;
             SteamManager.Inst.EndServer();
             SteamManager.Inst.EndClient();

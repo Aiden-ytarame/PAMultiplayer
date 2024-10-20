@@ -11,6 +11,7 @@ namespace PAMultiplayer.Managers
         public static SteamId LocalPlayer;
         public static int LocalPlayerObjectId;
         public static readonly Dictionary<SteamId, VGPlayerManager.VGPlayerData> Players = new();
+        public static List<string> Queue = new();
         
         public static bool HasLoadedAllInfo;
         public static bool IsHosting = false;

@@ -57,11 +57,11 @@ public class SteamManager : MonoBehaviour
             SteamNetworkingUtils.Timeout = 6000;
    
             GlobalsManager.LocalPlayer = SteamClient.SteamId;
-            Plugin.Inst.Log.LogInfo("Steam Initialized");
+            PAM.Inst.Log.LogInfo("Steam Initialized");
         }
         catch(Exception)
         {
-            Plugin.Inst.Log.LogError("failed to initialize steam");
+            PAM.Inst.Log.LogError("failed to initialize steam");
         }
     }
 
@@ -70,21 +70,21 @@ public class SteamManager : MonoBehaviour
     {
         GlobalsManager.IsHosting = false;
         GlobalsManager.IsMultiplayer = true;
-        Plugin.Logger.LogInfo($"Joining friend's lobby owned by [{steamId}]");
-        Plugin.Logger.LogError($"Lobby Id [{lobby.Id.ToString()}]");
+        PAM.Logger.LogInfo($"Joining friend's lobby owned by [{steamId}]");
+        PAM.Logger.LogError($"Lobby Id [{lobby.Id.ToString()}]");
         
         lobby.Join();
     }
     
     private void OnLobbyInvite(Friend friend, Lobby lobby)
     {
-        Plugin.Logger.LogInfo($"Invite received from [{friend.Name}]");
+        PAM.Logger.LogInfo($"Invite received from [{friend.Name}]");
         //handle invite dialog
     }
 
     public void StartClient(SteamId targetSteamId)
     {
-        Plugin.Logger.LogInfo($"Starting client. Connection to [{targetSteamId}]");
+        PAM.Logger.LogInfo($"Starting client. Connection to [{targetSteamId}]");
         Client = SteamNetworkingSockets.ConnectRelay<PAMConnectionManager>(targetSteamId);
     }
 
@@ -92,18 +92,14 @@ public class SteamManager : MonoBehaviour
     {
         Client?.Close();
         SteamLobbyManager.Inst.LeaveLobby();
-        if (GlobalsManager.IsReloadingLobby)
-        {
-            GlobalsManager.IsReloadingLobby = false;
-            return;
-        }
-        
+       
+        GlobalsManager.IsReloadingLobby = false;
         GlobalsManager.IsMultiplayer = false;
         GlobalsManager.IsHosting = false;
     }
     public void StartServer()
     {
-        Plugin.Logger.LogInfo("Starting Server.");
+        PAM.Logger.LogInfo("Starting Server.");
         Server = SteamNetworkingSockets.CreateRelaySocket<PAMSocketManager>();
         
         //if the server port doesn't change it fails to create a socket
@@ -115,11 +111,7 @@ public class SteamManager : MonoBehaviour
         SteamLobbyManager.Inst.LeaveLobby();
         Server?.Close();
         
-        if (GlobalsManager.IsReloadingLobby)
-        {
-            GlobalsManager.IsReloadingLobby = false;
-            return;
-        }
+        GlobalsManager.IsReloadingLobby = false;
         GlobalsManager.IsMultiplayer = false;
         GlobalsManager.IsHosting = false;
     }
@@ -135,7 +127,7 @@ public class SystemManagerPatch
     [HarmonyPostfix]
     static void AddSteamManager(ref SystemManager __instance)
     {
-        Plugin.Logger.LogError("Adding Steam Stuff");
+        PAM.Logger.LogError("Adding Steam Stuff");
         __instance.gameObject.AddComponent<SteamManager>();
         __instance.gameObject.AddComponent<SteamLobbyManager>();
     }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
 using Steamworks;
 using UnityEngine;
@@ -15,7 +16,8 @@ public interface IPacketHandler
         { PacketType.PlayerId, new PlayerIdPacket()},
         { PacketType.Checkpoint, new CheckpointPacket()},
         { PacketType.Rewind, new RewindPacket()},
-        { PacketType.Boost, new BoostPacket()}
+        { PacketType.Boost, new BoostPacket()},
+        { PacketType.nextLevel, new NextLevelPacket()}
     };
     public void ProcessPacket(SteamId senderId, object data);
 }
@@ -25,6 +27,7 @@ public class PositionPacket : IPacketHandler
     public void ProcessPacket(SteamId senderId, object data)
     {
         if (senderId.IsLocalPlayer()) return;
+        
         var pos = (Vector2)data;
         if (GlobalsManager.Players.TryGetValue(senderId, out var playerData))
         {
@@ -34,11 +37,11 @@ public class PositionPacket : IPacketHandler
                 
                 if(!player) return;
                 
-                Rigidbody2D rb = player.Player_Rigidbody;
+                Transform rb = player.Player_Wrapper;
                // Vector2 DeltaPos = rb.position - PosEnu.Current.Value;
                 //StaticManager.Players[PosEnu.Current.Key].PlayerObject.Player_Wrapper.transform.Rotate(new Vector3(0, 0, Mathf.Atan2(DeltaPos.x, DeltaPos.y)), Space.World);
 
-                var rot = pos - rb.position;
+                var rot = pos - (Vector2)rb.position;
                 rb.position = pos;
                 if (rot.sqrMagnitude > 0.0001f)
                 {
@@ -55,7 +58,7 @@ public class DamagePacket : IPacketHandler
 {
     public void ProcessPacket(SteamId senderId, object data)
     {
-        Plugin.Inst.Log.LogWarning($"Damaging player { senderId}");
+        PAM.Inst.Log.LogWarning($"Damaging player { senderId}");
 
         if ( senderId.IsLocalPlayer()) return;
 
@@ -93,7 +96,7 @@ public class PlayerIdPacket : IPacketHandler
         
         GlobalsManager.HasLoadedAllInfo = false;
         _amountOfInfo++;
-        Plugin.Logger.LogInfo($"Player Id from [{senderId}] Received");
+        PAM.Logger.LogInfo($"Player Id from [{senderId}] Received");
 
         if (GlobalsManager.Players.TryGetValue(senderId, out var player))
         {
@@ -125,7 +128,7 @@ public class CheckpointPacket : IPacketHandler
 {
     public void ProcessPacket(SteamId senderId, object data)
     {
-        Plugin.Logger.LogInfo($"Checkpoint [{(int)data}] Received");
+        PAM.Logger.LogInfo($"Checkpoint [{(int)data}] Received");
         GameManager.Inst.playingCheckpointAnimation = true;
         VGPlayerManager.Inst.RespawnPlayers();
 
@@ -137,7 +140,7 @@ public class RewindPacket : IPacketHandler
 {
     public void ProcessPacket(SteamId senderId, object data)
     {
-        Plugin.Logger.LogInfo($"Rewind to Checkpoint [{(int)data}] Received");
+        PAM.Logger.LogInfo($"Rewind to Checkpoint [{(int)data}] Received");
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
         {
             if (vgPlayerData.PlayerObject && !vgPlayerData.PlayerObject.isDead)
@@ -161,5 +164,32 @@ public class BoostPacket : IPacketHandler
         {
             player.PlayerObject?.PlayParticles(VGPlayer.ParticleTypes.Boost);
         }
+    }
+}
+
+public class NextLevelPacket : IPacketHandler
+{
+    public void ProcessPacket(SteamId levelId, object data)
+    {
+        int seed = (int)data;
+        GlobalsManager.LevelId = levelId;
+        SteamLobbyManager.Inst.RandSeed = seed;
+        GlobalsManager.IsReloadingLobby = true;
+     
+        PAM.Logger.LogInfo($"SEED : {seed}");
+
+        foreach (var level in ArcadeLevelDataManager.Inst.ArcadeLevels)
+        {
+            if (level.SteamInfo.ItemID.Value == GlobalsManager.LevelId)
+            {
+                ArcadeManager.Inst.CurrentArcadeLevel = level;
+                SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+                return;
+            }
+        }
+
+        GlobalsManager.IsDownloading = true;
+        PAM.Logger.LogError($"You did not have the lobby's level downloaded!, Downloading Level...");
+        SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
     }
 }

@@ -185,12 +185,22 @@ public class GameManagerPatch
         {
             SteamLobbyManager.Inst.CurrentLobby.SetJoinable(true);
             SteamLobbyManager.Inst.CurrentLobby.SetPublic();
-           
-            //player 0 is never added, so we add it here
-            var newData = new VGPlayerManager.VGPlayerData() { PlayerID = 0, ControllerID = 0 };
-            VGPlayerManager.Inst.players.Add(newData);
-            GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayer, newData);
-            
+
+            GlobalsManager.Queue.Remove(GlobalsManager.LevelId.ToString());
+            if (GlobalsManager.Players.Count == 0)
+            {
+                //player 0 is never added, so we add it here
+                var newData = new VGPlayerManager.VGPlayerData() { PlayerID = 0, ControllerID = 0 };
+                VGPlayerManager.Inst.players.Add(newData);
+                GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayer, newData);
+            }
+            else
+            {
+                foreach (var vgPlayerData in GlobalsManager.Players)
+                {
+                    VGPlayerManager.Inst.players.Add(vgPlayerData.Value);
+                }
+            }
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
         }
         else if (SteamManager.Inst.Client.Connected)
@@ -281,36 +291,46 @@ public class GameManagerPatch
          {
              SteamLobbyManager.Inst.RandSeed = Random.seed;
              SetSeed(Random.seed);
+             
+             if(GlobalsManager.IsReloadingLobby)
+             {
+                 SteamLobbyManager.Inst.CurrentLobby.SetData("LevelId", GlobalsManager.LevelId.ToString());
+                 SteamLobbyManager.Inst.CurrentLobby.SetData("seed", SteamLobbyManager.Inst.RandSeed.ToString());
+                 SteamManager.Inst.Server.SendNextQueueLevel(GlobalsManager.LevelId, SteamLobbyManager.Inst.RandSeed);
+             }
          }
          else
          {
-             int newSeed = int.Parse(SteamLobbyManager.Inst.CurrentLobby.GetData("seed"));
-             SetSeed(newSeed);
+             SetSeed(SteamLobbyManager.Inst.RandSeed);
          }
-   
+         
+         
          gm.LoadData(_level);
        
          
          yield return gm.StartCoroutine(gm.LoadBackgrounds(_level));
         
          yield return gm.StartCoroutine(gm.LoadObjects(_level));
-         
-         
-         if (GlobalsManager.IsHosting)
+
+         if (!GlobalsManager.IsReloadingLobby)
          {
-             SteamLobbyManager.Inst.CreateLobby();
-             yield return new WaitUntil(new System.Func<bool>(() => SteamLobbyManager.Inst.InLobby));
-         }
-         else
-         {
-             SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-             yield return new WaitUntil(new Func<bool>(() => SteamManager.Inst.Client.Connected));
-             yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
+             if (GlobalsManager.IsHosting)
+             {
+                 SteamLobbyManager.Inst.CreateLobby();
+                 yield return new WaitUntil(new System.Func<bool>(() => SteamLobbyManager.Inst.InLobby));
+             }
+             else
+             {
+                 SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
+                 yield return new WaitUntil(new Func<bool>(() => SteamManager.Inst.Client.Connected));
+                 yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
+             }
+
          }
          
-        
          yield return gm.StartCoroutine(gm.LoadTweens());
          
+         GlobalsManager.IsReloadingLobby = false;
          gm.PauseDebounce = new Debounce();
          gm.PlayGame();
     }
@@ -338,7 +358,7 @@ public class GameManagerPatch
 
         if (!item.HasValue)
         {
-            Plugin.Logger.LogError("Level not found, is it deleted from the workshop?");
+            PAM.Logger.LogError("Level not found, is it deleted from the workshop?");
             SceneLoader.Inst.LoadSceneGroup("Menu");
             return new Item();
         }
@@ -351,7 +371,7 @@ public class GameManagerPatch
             SceneLoader.Inst.LoadSceneGroup("Menu");
             return new Item();
         }
-        Plugin.Logger.LogInfo($"Downloading [{level.Title}] created by [{level.Owner.Name}]");
+        PAM.Logger.LogInfo($"Downloading [{level.Title}] created by [{level.Owner.Name}]");
         await level.Subscribe();
         await level.DownloadAsync();
         GlobalsManager.IsDownloading = false;

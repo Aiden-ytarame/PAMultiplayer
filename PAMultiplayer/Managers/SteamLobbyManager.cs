@@ -5,6 +5,7 @@ using Lachee.Discord;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
+using Random = System.Random;
 
 namespace PAMultiplayer.Managers;
 
@@ -51,13 +52,18 @@ public class SteamLobbyManager : MonoBehaviour
     private void OnLobbyMemberDataChanged(Lobby lobby, Friend friend)
     {
         //data changed always means loaded
-        LobbyScreenManager.Instance?.SetPlayerLoaded(friend.Id);
+        if (lobby.GetMemberData(friend, "IsLoaded") != "1") return;
+
+        if (LobbyScreenManager.Instance)
+        {
+            LobbyScreenManager.Instance.SetPlayerLoaded(friend.Id);
+        }
         SetLoaded(friend.Id);
     }
 
     private void OnLobbyMemberDisconnected(Lobby lobby, Friend friend)
     {
-        Plugin.Logger.LogInfo($"Member Left : [{friend.Name}]");
+        PAM.Logger.LogInfo($"Member Left : [{friend.Name}]");
         
         AudioManager.Inst?.PlaySound("glitch", 1);
         
@@ -81,7 +87,7 @@ public class SteamLobbyManager : MonoBehaviour
 
     private void OnLobbyMemberJoined(Lobby lobby, Friend friend)
     {
-        Plugin.Logger.LogInfo($"Member Joined : [{friend.Name}]");
+        PAM.Logger.LogInfo($"Member Joined : [{friend.Name}]");
         
         AudioManager.Inst?.PlaySound("Subtract", 1);
         
@@ -131,8 +137,8 @@ public class SteamLobbyManager : MonoBehaviour
 
     private void OnLobbyEntered(Lobby lobby)
     {
-        Plugin.Logger.LogInfo($"Joined Lobby hosted by [{lobby.Owner.Name}]");
-        Plugin.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
+        PAM.Logger.LogInfo($"Joined Lobby hosted by [{lobby.Owner.Name}]");
+        PAM.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
         CurrentLobby = lobby;
         InLobby = true;
         _playerAmount = 0;
@@ -159,7 +165,7 @@ public class SteamLobbyManager : MonoBehaviour
         else
         {
             CurrentLobby.Leave();
-            Plugin.Logger.LogFatal("Invalid LevelId! something went very wrong.");
+            PAM.Logger.LogFatal("Invalid LevelId! something went very wrong.");
             return;
         }
         
@@ -169,7 +175,7 @@ public class SteamLobbyManager : MonoBehaviour
         }
         else
         {
-            Plugin.Logger.LogInfo("No Health Mod specified.");
+            PAM.Logger.LogInfo("No Health Mod specified.");
         }
         
         if (int.TryParse(lobby.GetData("SpeedMod"), out var speedMod))
@@ -178,10 +184,19 @@ public class SteamLobbyManager : MonoBehaviour
         }
         else
         {
-            Plugin.Logger.LogInfo("No Speed Mod specified.");
+            PAM.Logger.LogInfo("No Speed Mod specified.");
         }
         
-        Plugin.Logger.LogInfo($"SEED : {lobby.GetData("seed")}");
+        if(int.TryParse(lobby.GetData("seed"), out int seed))
+        {
+            RandSeed = seed;
+        }
+        else
+        {
+            RandSeed = UnityEngine.Random.seed;
+            PAM.Logger.LogFatal("Failed to parse random seed.");
+        }
+        PAM.Logger.LogInfo($"SEED : {RandSeed}");
 
         foreach (var level in ArcadeLevelDataManager.Inst.ArcadeLevels)
         {
@@ -194,7 +209,7 @@ public class SteamLobbyManager : MonoBehaviour
         }
 
         GlobalsManager.IsDownloading = true;
-        Plugin.Logger.LogError($"You did not have the lobby's level downloaded!, Downloading Level...");
+        PAM.Logger.LogError($"You did not have the lobby's level downloaded!, Downloading Level...");
         SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
     }
 
@@ -203,10 +218,10 @@ public class SteamLobbyManager : MonoBehaviour
     {
         if (result != Result.OK)
         {
-            Plugin.Logger.LogError($"Failed to create lobby : Result [{result}]");
+            PAM.Logger.LogError($"Failed to create lobby : Result [{result}]");
             lobby.Leave();
         }
-        Plugin.Logger.LogInfo($"Lobby Created!");
+        PAM.Logger.LogInfo($"Lobby Created!");
 
         _loadedPlayers = new();
         InLobby = true;
@@ -251,6 +266,14 @@ public class SteamLobbyManager : MonoBehaviour
     {
         if(_loadedPlayers.ContainsKey(playerSteamId))
             _loadedPlayers[playerSteamId] = true;
+    }
+
+    public void UnloadAll()
+    {
+        foreach (var keyValuePair in _loadedPlayers)
+        {
+            _loadedPlayers[keyValuePair.Key] = false;
+        }
     }
     public bool IsEveryoneLoaded => !_loadedPlayers.ContainsValue(false);
 }

@@ -30,7 +30,7 @@ namespace PAMultiplayer.Managers
             { 76561199088465180, "7300ff" }  //Cube
         };
         Transform _playersListGo;
-        Object _playerPrefab;
+        GameObject _playerPrefab;
 
         //spawns the lobby GameObject from the assetBundle
         void Awake()
@@ -38,23 +38,19 @@ namespace PAMultiplayer.Managers
             Instance = this;
             VGCursor.Inst.ShowCursor();
             GameObject playerGUI = GameObject.Find("Player GUI");
-            
-            //this is for when I bundle the assets into the dll.
-            
             GameObject lobbyGo;
-            
             using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("PAMultiplayer.Assets.lobby menu"))
             {
                 var lobbyBundle = AssetBundle.LoadFromMemory(stream!.ReadBytes());
-                var lobbyPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]);
-                _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]);
-                var lobbyObj = Instantiate(lobbyPrefab, playerGUI.transform);
-                lobbyObj.name = "PAM_Lobby";
-
-                lobbyGo = lobbyObj.Cast<GameObject>();
+            
+                lobbyGo =  Instantiate(lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]).Cast<GameObject>(),  playerGUI.transform);
+                _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]).Cast<GameObject>();
+         
                 lobbyBundle.Unload(false);
             }
-            
+          
+            lobbyGo.name = "PAM_Lobby";
+
             pauseMenu = lobbyGo.GetComponent<PauseMenu>();
             _playersListGo = lobbyGo.transform.Find("Content/PlayerList");
          
@@ -86,7 +82,7 @@ namespace PAMultiplayer.Managers
                     lobbyGo.transform.Find("Content/LobbyFailed").GetComponentInChildren<MultiElementButton>().onClick.AddListener(new Action(
                         () =>
                         {
-                            Plugin.Logger.LogDebug("RETRY");
+                            PAM.Logger.LogDebug("RETRY");
                             GlobalsManager.IsReloadingLobby = true;
                             SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
                         }));
@@ -111,8 +107,7 @@ namespace PAMultiplayer.Managers
             foreach (var friend in SteamLobbyManager.Inst.CurrentLobby.Members)
             {
                 AddPlayerToLobby(friend.Id, friend.Name);
-                
-                if(!string.IsNullOrEmpty(SteamLobbyManager.Inst.CurrentLobby.GetMemberData(friend, "IsLoaded")))
+                if(SteamLobbyManager.Inst.CurrentLobby.GetMemberData(friend, "IsLoaded") == "1")
                 {
                     SetPlayerLoaded(friend.Id); 
                 }

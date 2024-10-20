@@ -26,20 +26,20 @@ public class PAMSocketManager : SocketManager
     public override void OnConnecting(Connection connection, ConnectionInfo data)
     {
         connection.Accept();
-        Plugin.Inst.Log.LogInfo($"Server: {data.Identity.SteamId} is connecting");
+        PAM.Inst.Log.LogInfo($"Server: {data.Identity.SteamId} is connecting");
     }
 
     public override void OnConnected(Connection connection, ConnectionInfo data)
     {
         base.OnConnected(connection, data);
         SendPlayerId(connection, data.Identity.SteamId, GlobalsManager.Players[data.Identity.SteamId].PlayerID);
-        Plugin.Inst.Log.LogInfo($"Server: {data.Identity.SteamId} has joined the game");
+        PAM.Inst.Log.LogInfo($"Server: {data.Identity.SteamId} has joined the game");
     }
 
     public override void OnDisconnected(Connection connection, ConnectionInfo data)
     {
         base.OnDisconnected(connection, data);
-        Plugin.Inst.Log.LogInfo($"Server: {data.Identity} is out of here");
+        PAM.Inst.Log.LogInfo($"Server: {data.Identity} is out of here");
     }
 
     public override void OnMessage(Connection connection, NetIdentity identity, IntPtr data, int size, long messageNum,
@@ -207,6 +207,12 @@ public class PAMSocketManager : SocketManager
         SendMessages(info);
     }
 
+    public void SendNextQueueLevel(ulong id, int seed)
+    {
+        var packet = new IntNetPacket()
+            { SenderId = id, PacketType = PacketType.nextLevel, Data = seed};
+        SendMessages(packet);
+    }
     //yes due to a mistake the host doesn't connect to the server as client 
     //so we handle his messages from here
 
@@ -255,19 +261,19 @@ public class PAMConnectionManager : ConnectionManager
     public override void OnConnecting(ConnectionInfo info)
     {
         base.OnConnecting(info);
-        Plugin.Logger.LogInfo($"Client: Connecting with Steam user {info.Identity.SteamId}.");
+        PAM.Logger.LogInfo($"Client: Connecting with Steam user {info.Identity.SteamId}.");
     }
 
     public override void OnConnected(ConnectionInfo info)
     {
         base.OnConnected(info);
-        Plugin.Logger.LogInfo($"Client: Connected with Steam user {info.Identity.SteamId}.");
+        PAM.Logger.LogInfo($"Client: Connected with Steam user {info.Identity.SteamId}.");
     }
 
     public override void OnDisconnected(ConnectionInfo info)
     {
         base.OnDisconnected(info);
-        Plugin.Logger.LogInfo($"Client: Disconnected Steam user {info.Identity.SteamId}.");
+        PAM.Logger.LogInfo($"Client: Disconnected Steam user {info.Identity.SteamId}.");
         
         SteamLobbyManager.Inst.CurrentLobby.Leave();
         if (SceneLoader.Inst.manager.ActiveSceneGroup.GroupName == "Arcade_Level")
@@ -300,7 +306,7 @@ public class PAMConnectionManager : ConnectionManager
         }
         catch (Exception e)
         {
-            Plugin.Logger.LogError(e);
+            PAM.Logger.LogError(e);
             throw;
         }
     }

@@ -59,7 +59,7 @@ public class MultiplayerDiscordManager : MonoBehaviour
 			false);
 		
 		
-		client.OnError += (_, e) => Plugin.Logger.LogError($"An error occurred with Discord RPC Client: {e.Message} ({e.Code})");
+		client.OnError += (_, e) => PAM.Logger.LogError($"An error occurred with Discord RPC Client: {e.Message} ({e.Code})");
 		client.OnReady += onReady;
 
 		client.OnJoin += ClientOnOnJoin;
@@ -75,17 +75,17 @@ public class MultiplayerDiscordManager : MonoBehaviour
 		{
 			if (ulong.TryParse(joinSecret.Secret, out ulong id))
 			{
-				Plugin.Logger.LogInfo("Attempting to join lobby from discord invite.");
+				PAM.Logger.LogInfo("Attempting to join lobby from discord invite.");
 				GlobalsManager.IsHosting = false;
 				GlobalsManager.IsMultiplayer = true;
 				SteamMatchmaking.JoinLobbyAsync(id);
 			}
 			else
 			{
-				Plugin.Logger.LogError("Failed to parse secret.");
+				PAM.Logger.LogError("Failed to parse secret.");
 			}
 		}
-		Plugin.Logger.LogError("Failed to join lobby from discord, steam wasn't initialized.");
+		PAM.Logger.LogError("Failed to join lobby from discord, steam wasn't initialized.");
 	}
 
 	private void onReady(object _, ReadyMessage __)

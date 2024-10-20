@@ -11,13 +11,14 @@ public enum PacketType : short
     PlayerId,
     Checkpoint,
     Rewind,
-    Boost
+    Boost,
+    nextLevel
 }
 
 public enum PacketDataType : short
 {
     Int,
-    Vector
+    Vector,
 }
 
 public struct IntNetPacket 

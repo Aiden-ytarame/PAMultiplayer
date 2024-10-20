@@ -12,18 +12,22 @@ namespace PAMultiplayer;
 
 [BepInPlugin(Guid, Name, Version)]
 [BepInProcess("Project Arrhythmia.exe")]
-public class Plugin : BasePlugin
+public class PAM : BasePlugin
 {
-    public static Plugin Inst;
+    public static PAM Inst;
+    
     public static ManualLogSource Logger => Inst.Log;
+    
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "0.7.4.1";
+    public const string Version = "0.7.5";
 
     public override void Load()
     {
+        //inject types
         ClassInjector.RegisterTypeInIl2Cpp<NetworkManager>();
+        ClassInjector.RegisterTypeInIl2Cpp<QueueButton>();
         ClassInjector.RegisterTypeInIl2Cpp<LobbyScreenManager>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamManager>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamLobbyManager>();
@@ -38,7 +42,8 @@ public class Plugin : BasePlugin
         var provider = new ITablePostprocessor(postprocessor.Pointer);
         
         LocalizationSettings.StringDatabase.TablePostprocessor = provider;
-
+     
+        //patch all
         Inst = this;
         harmony = new Harmony(Guid);
         harmony.PatchAll();
@@ -52,5 +57,7 @@ public class Plugin : BasePlugin
         
         Log.LogInfo($"Plugin {Guid} is loaded!");
     }
+    
+    
     
 }
