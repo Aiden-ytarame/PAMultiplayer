@@ -265,6 +265,16 @@ namespace PAMultiplayer.Patch
                 DataManager.inst.UpdateSettingBool("PlayerWarpSFX", x != 2);
             });
             
+            GameObject togglePrefab = __instance.transform.Find("Window/Content/Settings/Right Panel/Content/Accessibility/Content/High Contrast").gameObject;
+            var toggle = Object.Instantiate(togglePrefab, togglePrefab.transform.parent).GetComponent<UI_Toggle>();
+            toggle.transform.SetSiblingIndex(3);
+            
+            toggle.Value = DataManager.inst.GetSettingBool("MpTransparentPlayer", false);
+            toggle.DataID = "MpTransparentPlayer";
+            toggle.ToggleLabel.text = "Transparent Nanos";
+            
+            toggle.subGraphics[0] = null;
+            Object.Destroy(toggle.ToggleLabel.transform.GetComponent<GameObjectLocalizer>());
         }
 
         static IEnumerator FetchGithubReleases()

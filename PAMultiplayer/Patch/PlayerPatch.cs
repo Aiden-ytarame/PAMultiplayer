@@ -163,6 +163,16 @@ namespace PAMultiplayer.Patch
             }
         }
 
+        [HarmonyPatch(nameof(VGPlayer.SetColor))]
+        [HarmonyPrefix]
+        static void PreSetColor(VGPlayer __instance, ref Color _col, ref Color _colTail)
+        {
+            if (!GlobalsManager.IsMultiplayer || !DataManager.inst.GetSettingBool("MpTransparentPlayer", false) || __instance.IsLocalPlayer()) return;
+            
+            _col.a = 0.35f;
+            _colTail.a = 0.35f;
+        }
+        
         /// <summary>
         /// this returns the player controller depending on your playerId
         /// the controller 0 is the one LocalPlayer controls

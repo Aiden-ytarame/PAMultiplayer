@@ -19,8 +19,9 @@ public static class SaveSettingsPatch
         
         var settings = new MultiplayerSettings()
         {
-            PlayerWarpSFX = DataManager.inst.GetSettingInt("MpPlayerWarpSFX", 0),
+            PlayerWarpSFX = DataManager.inst.GetSettingInt("MpPlayerWarpSFX", 1),
             PlayerHitSFX = DataManager.inst.GetSettingInt("MpPlayerSFX", 0),
+            TransparentPlayer = DataManager.inst.GetSettingBool("MpTransparentPlayer", false),
         };
         
         string json = JsonSerializer.Serialize(settings);
@@ -38,6 +39,7 @@ public static class SaveSettingsPatch
         
         DataManager.inst.UpdateSettingInt("MpPlayerWarpSFX", settings.PlayerWarpSFX);
         DataManager.inst.UpdateSettingInt("MpPlayerSFX", settings.PlayerHitSFX);
+        DataManager.inst.UpdateSettingBool("MpTransparentPlayer", settings.TransparentPlayer);
     }
 }
 
@@ -45,4 +47,5 @@ public class MultiplayerSettings
 {
     public int PlayerWarpSFX { get; set; }
     public int PlayerHitSFX { get; set; }
+    public bool TransparentPlayer { get; set; }
 }
