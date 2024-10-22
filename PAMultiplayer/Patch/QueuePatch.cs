@@ -140,7 +140,7 @@ public static class LevelEndScreenPatch
     [HarmonyPostfix]
     static void PostStart(LevelEndScreen __instance)
     {
-        if (StoryManager.inst) return;
+        if (!GameManager.Inst.IsArcade) return;
         
         Transform buttonsParent = __instance.transform.Find("Content/EndScreen/Buttons");
         

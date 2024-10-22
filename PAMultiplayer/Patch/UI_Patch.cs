@@ -293,7 +293,7 @@ namespace PAMultiplayer.Patch
             JSONNode jsonNode = JSON.Parse(request.downloadHandler.text);
             var latestRelease = jsonNode.AsArray[0];
 
-            bool isLatest = latestRelease["tag_name"].Value == "v" + PAM.Version;
+            bool isLatest = Version.Parse(latestRelease["tag_name"].Value.Substring(1)).CompareTo(Version.Parse(PAM.Version)) <= 0;
 
             if (isLatest)
             {

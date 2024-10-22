@@ -171,7 +171,7 @@ public class GameManagerPatch
             {
                 MultiplayerDiscordManager.Instance.SetLevelPresence($"Editing {GameManager.Inst.TrackName}", "", "palogo");
             }
-            else if(StoryManager.inst)
+            else if(!__instance.IsArcade)
             {
                 MultiplayerDiscordManager.Instance.SetLevelPresence("Playing Story Mode!", $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}", "palogo");
             }
@@ -211,8 +211,7 @@ public class GameManagerPatch
         else if (SteamManager.Inst.Client.Connected)
         {
             //if connected successfully
-            //SteamManager.Inst.Client.SendLoaded();
-            
+           
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
             foreach (var vgPlayerData in GlobalsManager.Players)
             {

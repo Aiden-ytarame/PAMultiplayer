@@ -130,13 +130,14 @@ namespace PAMultiplayer.Patch
             void SetPlayerMesh(VGPlayer player, Mesh mesh)
             {
                 Transform playerWrapper = player.Player_Wrapper.transform;
+                
                 playerWrapper.Find("core").GetComponent<MeshFilter>().mesh = mesh;
                 playerWrapper.Find("zen-marker").GetComponent<MeshFilter>().mesh = mesh; //is this needed?
                 playerWrapper.Find("boost").GetComponent<MeshFilter>().mesh = mesh;
             }
             
             if (!GlobalsManager.IsMultiplayer) return;
-
+            
             if (__instance.PlayerID < 4)
             {
                 return;
@@ -169,8 +170,8 @@ namespace PAMultiplayer.Patch
         {
             if (!GlobalsManager.IsMultiplayer || !DataManager.inst.GetSettingBool("MpTransparentPlayer", false) || __instance.IsLocalPlayer()) return;
             
-            _col.a = 0.35f;
-            _colTail.a = 0.35f;
+            _col.a = 0.2f;
+            _colTail.a = 0.2f;
         }
         
         /// <summary>
