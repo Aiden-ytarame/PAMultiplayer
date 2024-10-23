@@ -137,7 +137,15 @@ namespace PAMultiplayer.Patch
             }
             
             if (!GlobalsManager.IsMultiplayer) return;
-            
+
+            if (DataManager.inst.GetSettingBool("MpTransparentPlayer", false) && !__instance.IsLocalPlayer())
+            {
+                foreach (var trail in __instance.Player_Trail.trail)
+                {
+                    trail.GetComponentInChildren<TrailRenderer>().enabled = false;
+                }
+            }
+         
             if (__instance.PlayerID < 4)
             {
                 return;
@@ -170,8 +178,8 @@ namespace PAMultiplayer.Patch
         {
             if (!GlobalsManager.IsMultiplayer || !DataManager.inst.GetSettingBool("MpTransparentPlayer", false) || __instance.IsLocalPlayer()) return;
             
-            _col.a = 0.2f;
-            _colTail.a = 0.2f;
+            _col.a = 0.25f;
+            _colTail.a = 0.25f;
         }
         
         /// <summary>

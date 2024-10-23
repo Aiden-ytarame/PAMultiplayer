@@ -20,7 +20,7 @@ namespace PAMultiplayer.Managers
         {
             if (!GlobalsManager.IsMultiplayer) return;
             
-            if (Input.GetKeyInt(KeyCode.P) || Input.GetKeyInt(KeyCode.JoystickButton4)) //left shoulder (?)
+            if (Input.GetKeyInt(KeyCode.Tab) || Input.GetKeyInt(KeyCode.JoystickButton4)) //left shoulder (?)
             {
                 //to make this an on button down action
                 if (!_pressedNameKey)

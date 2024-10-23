@@ -25,17 +25,17 @@ public static class CheckpointHandler
         var activated = __instance.checkpointsActivated;
         if (__instance.checkpointsActivated.Length > 0 && DataManager.inst.gameData.beatmapData.checkpoints.Count > 0)
         {
-            int countIndex = -1;
-            int tmpIndex = DataManager.inst.gameData.beatmapData.checkpoints.FindIndex(new Predicate<DataManager.GameData.BeatmapData.Checkpoint>(x =>
+            int tmpIndex = -1;
+            
+            for (var i = 0; i < DataManager.inst.gameData.beatmapData.checkpoints.Count; i++)
             {
-                countIndex++;
-
-                if (x.time <= songTime && !activated[countIndex])
-                    return true;
-                
-                return false;
-            }).ToIL2CPP());
-
+                if (DataManager.inst.gameData.beatmapData.checkpoints[i].time <= songTime && !activated[i])
+                {
+                    tmpIndex = i;
+                    break;
+                }
+            }
+            
             if (tmpIndex != -1)
             {
                 SteamManager.Inst.Server.SendCheckpointHit(tmpIndex);
