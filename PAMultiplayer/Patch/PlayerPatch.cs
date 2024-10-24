@@ -32,11 +32,13 @@ namespace PAMultiplayer.Patch
             if (GameManager.Inst.Paused)
                 return false;
 
-            if (GameManager.Inst.IsArcade && DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) == 1)
+            if (DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) == 1)
                 return false;
-             
+
+            bool isLocal = __instance.IsLocalPlayer();
+            
             //hit is valid
-            if (__instance.IsLocalPlayer())
+            if (isLocal)
             {
                 if (GlobalsManager.IsHosting)
                     SteamManager.Inst.Server.SendHostDamage();
@@ -71,12 +73,20 @@ namespace PAMultiplayer.Patch
                 }
                 
                 player.StartHurtDecay();
-                player.PlayerHitAnimation();
+             
+                if(isLocal)
+                    player.PlayerHitAnimation();
+                else
+                    player.PlayParticles(VGPlayer.ParticleTypes.Hit);
             }
             else
             {
                 player.PlayerDeath();
-                player.PlayerDeathAnimation();
+                
+                if(isLocal)
+                    player.PlayerDeathAnimation();
+                else
+                    player.PlayParticles(VGPlayer.ParticleTypes.Die);
             }
 
             return false;
