@@ -5,7 +5,7 @@ using UnityEngine.Localization.Tables;
 namespace PAMultiplayer.Patch;
 
 //made by Enchart
-
+//I honestly don't remember why I needed this
 
 [Serializable]
 public class TablePostprocessor : Il2CppSystem.Object

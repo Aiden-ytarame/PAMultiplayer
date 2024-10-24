@@ -163,6 +163,7 @@ public class GameManagerPatch
         
         GlobalsManager.Queue.Remove(GlobalsManager.LevelId.ToString());
         
+        //setup discord presence on singleplayer
         if (!GlobalsManager.IsMultiplayer)
         {
             if (!MultiplayerDiscordManager.IsInitialized) return;
@@ -182,11 +183,16 @@ public class GameManagerPatch
             return;
         }
         
+        //setup lobby screen
         __instance.Pause(false);
         __instance.Paused = true;
         __instance.gameObject.AddComponent<LobbyScreenManager>();
-        
+
+        //camera jiggle in multiplayer is very, very bad sometimes
+        EventManager.inst.HasJiggle = false;
         VGPlayerManager.Inst.players.Clear();
+        
+        //add players to playerManager
         if (GlobalsManager.IsHosting)
         {
             SteamLobbyManager.Inst.CurrentLobby.SetJoinable(true);
@@ -242,10 +248,10 @@ public class GameManagerPatch
          GameManager gm = GameManager.Inst;
          if (GlobalsManager.IsDownloading)
          {
-             
              yield return new WaitUntil(new System.Func<bool>(() => !SteamWorkshopFacepunch.inst.isLoadingLevels));
-             VGLevel level;
-             if (level = ArcadeLevelDataManager.Inst.GetSteamLevel(GlobalsManager.LevelId))
+             
+             VGLevel level = ArcadeLevelDataManager.Inst.GetSteamLevel(GlobalsManager.LevelId);
+             if (level)
              {
                  _level = level;
              }
@@ -288,7 +294,7 @@ public class GameManagerPatch
          }
          gm.LoadMetadata(_level);
         
-         
+        
          yield return gm.StartCoroutine(gm.LoadAudio(_level));
          
          if (GlobalsManager.IsHosting)
@@ -317,9 +323,7 @@ public class GameManagerPatch
              SetSeed(SteamLobbyManager.Inst.RandSeed);
          }
          
-         
          gm.LoadData(_level);
-       
          
          yield return gm.StartCoroutine(gm.LoadBackgrounds(_level));
         
@@ -338,7 +342,6 @@ public class GameManagerPatch
                  yield return new WaitUntil(new Func<bool>(() => SteamManager.Inst.Client.Connected));
                  yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
              }
-
          }
          
          yield return gm.StartCoroutine(gm.LoadTweens());
@@ -378,17 +381,21 @@ public class GameManagerPatch
 
         var level = item.Value;
         
-        
         if(level.ConsumerApp != 440310 || level.CreatorApp != 440310) 
         {
             SceneLoader.Inst.LoadSceneGroup("Menu");
             return new Item();
         }
         PAM.Logger.LogInfo($"Downloading [{level.Title}] created by [{level.Owner.Name}]");
-        await level.Subscribe();
-        await level.DownloadAsync();
-        GlobalsManager.IsDownloading = false;
 
+        if (string.IsNullOrEmpty(level.Directory))
+        {
+            await level.Subscribe();
+            await level.DownloadAsync();
+        }
+
+        GlobalsManager.IsDownloading = false;
+        
         return level;
     }
 

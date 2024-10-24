@@ -75,7 +75,7 @@ namespace PAMultiplayer.Patch
                 player.StartHurtDecay();
              
                 if(isLocal)
-                    player.PlayerHitAnimation();
+                    player.PlayerHitAnimation(); //this runs the camera shake, annoying in multiplayer
                 else
                     player.PlayParticles(VGPlayer.ParticleTypes.Hit);
             }
@@ -84,7 +84,7 @@ namespace PAMultiplayer.Patch
                 player.PlayerDeath();
                 
                 if(isLocal)
-                    player.PlayerDeathAnimation();
+                    player.PlayerDeathAnimation(); //this runs the camera shake, annoying in multiplayer
                 else
                     player.PlayParticles(VGPlayer.ParticleTypes.Die);
             }
