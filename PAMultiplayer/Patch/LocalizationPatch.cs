@@ -26,8 +26,7 @@ public class TablePostprocessor : Il2CppSystem.Object
 
         // this is where you actually start doing stuff
         // e.g. add a new localization entry, key can be anything you want
-        const string key = "ui.multiplayer.update";
-        stringTable.AddEntry(key, "<sprite name=info> Update Multiplayer");
-        
+       
+        stringTable.AddEntry("ui.multiplayer.update", "<sprite name=info> Update Multiplayer");
     }
 }

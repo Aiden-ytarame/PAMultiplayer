@@ -3,13 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
-using IEVO.UI.uGUIDirectedNavigation;
 using Il2CppSystems.SceneManagement;
 using UnityEngine;
-using TMPro;
 using PAMultiplayer.Managers;
 using SimpleJSON;
 using Steamworks.Data;
+using UnityEngine.Localization.Components;
 using UnityEngine.Localization.PropertyVariants;
 using UnityEngine.Localization.PropertyVariants.TrackedProperties;
 using UnityEngine.Networking;
@@ -227,6 +226,8 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         static void PostStart(SkipIntroMenu __instance)
         {
+            UI_Book book = __instance.transform.Find("Window/Content/Settings/Right Panel").GetComponent<UI_Book>();
+            
             void instantiateSlider(GameObject prefab, Transform parent, string label, string dataId, Action<float> setter)
             {
                 GameObject WarpSliderObj = Object.Instantiate(prefab, parent);
@@ -240,14 +241,14 @@ namespace PAMultiplayer.Patch
                 slider.Label.text = label;
 
                 slider.OnValueChanged.AddListener(setter);
-            
-                slider.subGraphics[0] = null;
-                Object.Destroy(slider.Label.transform.GetComponent<GameObjectLocalizer>());
+               
+                UIStateManager.inst.TextReferences[slider.Label] = label;
+                book.Pages[1].SubElements.Add(slider);
             }
             
             __instance.StartCoroutine(FetchGithubReleases().WrapToIl2Cpp());
             
-            GameObject sliderPrefab = __instance.transform.Find("Window/Content/Settings/Right Panel/Content/Audio/Content/Menu Music").gameObject;
+            GameObject sliderPrefab = book.transform.Find("Content/Audio/Content/Menu Music").gameObject;
             Transform audioParent = sliderPrefab.transform.parent;
             
             //destroy SFX toggles
@@ -272,9 +273,8 @@ namespace PAMultiplayer.Patch
             toggle.Value = DataManager.inst.GetSettingBool("MpTransparentPlayer", false);
             toggle.DataID = "MpTransparentPlayer";
             toggle.ToggleLabel.text = "Transparent Nanos";
-            
-            toggle.subGraphics[0] = null;
-            Object.Destroy(toggle.ToggleLabel.transform.GetComponent<GameObjectLocalizer>());
+            UIStateManager.inst.TextReferences[toggle.ToggleLabel] = "Transparent Nanos";
+            book.Pages[3].SubElements.Add(toggle);
         }
 
         static IEnumerator FetchGithubReleases()
@@ -304,7 +304,7 @@ namespace PAMultiplayer.Patch
             PAM.Logger.LogWarning("New Mp Version Available!");
             
             Transform buttons = GameObject.Find("Canvas/Window/Content/Main Menu/Buttons 3").transform;
-
+            
             //default has these buttons broken, fixed in next update 
             //todo: remove this after update
             if (DataManager.versionNumber == "24.8.5")
@@ -312,12 +312,12 @@ namespace PAMultiplayer.Patch
                 buttons.GetComponent<HorizontalLayoutGroup>().childControlWidth = true;
                 buttons.Find("Quit").gameObject.AddComponent<LayoutElement>().minWidth = 547.333f;
             }
-
             GameObject updateMod = Object.Instantiate(buttons.Find("Changelog"), buttons).gameObject;
             updateMod.name = "Update MP";
             updateMod.SetActive(true);
             
             var button = updateMod.GetComponent<MultiElementButton>();
+        
             button.onClick = new Button.ButtonClickedEvent();
             button.onClick.AddListener(new Action(() =>
             {
@@ -327,8 +327,9 @@ namespace PAMultiplayer.Patch
             updateMod.GetComponentInChildren<GameObjectLocalizer>().TrackedObjects._items[0]
                 .GetTrackedProperty<LocalizedStringProperty>("m_text").LocalizedString
                 .SetReference("Localization", "ui.multiplayer.update");
-
-            GameObject.Find("Canvas").GetComponent<UI_Book>().Pages[0].SubElements
+            
+            //stupid workaround to getting the wrong canvas
+            GameObject.Find("Canvas/Window").transform.parent.GetComponent<UI_Book>().Pages[0].SubElements
                 .Add(updateMod.GetComponent<UI_Button>());
         }
     }
