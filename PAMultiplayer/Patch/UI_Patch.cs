@@ -273,6 +273,7 @@ namespace PAMultiplayer.Patch
             toggle.Value = DataManager.inst.GetSettingBool("MpTransparentPlayer", false);
             toggle.DataID = "MpTransparentPlayer";
             toggle.ToggleLabel.text = "Transparent Nanos";
+            
             UIStateManager.inst.TextReferences[toggle.ToggleLabel] = "Transparent Nanos";
             book.Pages[3].SubElements.Add(toggle);
         }

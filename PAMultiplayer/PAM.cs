@@ -21,7 +21,7 @@ public class PAM : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "0.7.5";
+    public const string Version = "0.7.6";
 
     public override void Load()
     {
