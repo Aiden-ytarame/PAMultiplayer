@@ -23,12 +23,13 @@ namespace PAMultiplayer.Managers
 
         private readonly Dictionary<ulong, string> _specialColors = new()
         {
-            { 76561199551343591, "3e2dba" }, //Vyrmax
-            { 76561198895041739, "f582ff" }, //Maxine
-            { 76561198040724652, "f582ff" }, //Pidge
-            { 76561199141999343, "6ce6bb" }, //Aiden 00ffd0 
-            { 76561199106356594, "34eb67" }, //yikxle
-            { 76561199088465180, "7300ff" }  //Cube
+            { 76561199551343591, "3e2dba" }, //Vyrmax, frien
+            { 76561198895041739, "f582ff" }, //Maxine, frien kitty
+            { 76561198040724652, "f582ff" }, //Pidge, develepoer
+            { 76561199141999343, "6ce6bb" }, //Aiden, me
+            { 76561199106356594, "34eb67" }, //yikxle, frien
+            { 76561199088465180, "7300ff" },  //Cube, frien
+            { 76561198310357491, "66ccff" },  //cozm, made the mp logo 
         };
         Transform _playersList;
         GameObject _playerPrefab;
