@@ -242,7 +242,7 @@ namespace PAMultiplayer.Patch
 
                 slider.OnValueChanged.AddListener(setter);
                
-                UIStateManager.inst.TextReferences[slider.Label] = label;
+                UIStateManager.inst.RefreshTextCache(slider.Label, label);
                 book.Pages[1].SubElements.Add(slider);
             }
             
@@ -274,7 +274,7 @@ namespace PAMultiplayer.Patch
             toggle.DataID = "MpTransparentPlayer";
             toggle.ToggleLabel.text = "Transparent Nanos";
             
-            UIStateManager.inst.TextReferences[toggle.ToggleLabel] = "Transparent Nanos";
+            UIStateManager.inst.RefreshTextCache(toggle.ToggleLabel,"Transparent Nanos");
             book.Pages[3].SubElements.Add(toggle);
         }
 
