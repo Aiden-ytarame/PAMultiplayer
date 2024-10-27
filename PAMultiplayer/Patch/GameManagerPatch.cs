@@ -190,6 +190,11 @@ public class GameManagerPatch
 
         //camera jiggle in multiplayer is very, very bad sometimes
         EventManager.inst.HasJiggle = false;
+
+        foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+        {
+            vgPlayerData.PlayerObject?.PlayerDeath(0);
+        }
         VGPlayerManager.Inst.players.Clear();
         
         //add players to playerManager

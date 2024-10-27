@@ -188,8 +188,8 @@ namespace PAMultiplayer.Patch
         {
             if (!GlobalsManager.IsMultiplayer || !DataManager.inst.GetSettingBool("MpTransparentPlayer", false) || __instance.IsLocalPlayer()) return;
             
-            _col.a = 0.25f;
-            _colTail.a = 0.25f;
+            _col.a = 0.35f;
+            _colTail.a = 0.35f;
         }
         
         /// <summary>
