@@ -1,12 +1,9 @@
-using System;
 using System.Collections.Generic;
 using Il2CppSystems.SceneManagement;
-using Lachee.Discord;
 using Newtonsoft.Json;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
-using Random = System.Random;
 
 namespace PAMultiplayer.Managers;
 
@@ -18,13 +15,11 @@ public class SteamLobbyManager : MonoBehaviour
     public Lobby CurrentLobby;
     public bool InLobby { get; private set; }
     public static SteamLobbyManager Inst;
+    
+    
     private Dictionary<SteamId, bool> _loadedPlayers = new();
-
     public int RandSeed = 0;
     
-    //used to prevent 2 players having the same id
-    //I should scrap this and make and instead find an open id.
-    int _playerAmount = 1;
     public void CreateLobby()
     {
         SteamManager.Inst.StartServer();
@@ -118,9 +113,9 @@ public class SteamLobbyManager : MonoBehaviour
 
         HashSet<int> usedIds = new();
         int nextId = 0;
-        foreach (var player in VGPlayerManager.Inst.players)
+        foreach (var player in GlobalsManager.Players)
         {
-            usedIds.Add(player.PlayerID);
+            usedIds.Add(player.Value.PlayerID);
         }
 
         while (true)
@@ -149,7 +144,6 @@ public class SteamLobbyManager : MonoBehaviour
             }
         }
         VGPlayerManager.Inst.RespawnPlayers();
-        _playerAmount++;
     }
 
     private void OnLobbyEntered(Lobby lobby)
@@ -158,7 +152,7 @@ public class SteamLobbyManager : MonoBehaviour
         PAM.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
         CurrentLobby = lobby;
         InLobby = true;
-        _playerAmount = 0;
+        int _playerAmount = 0;
         
         if (lobby.Owner.Id.IsLocalPlayer()) return;
 
@@ -170,6 +164,11 @@ public class SteamLobbyManager : MonoBehaviour
 
             GlobalsManager.Players.Add(lobbyMember.Id, NewData);
 
+            AddPlayerToLoadList(lobbyMember.Id);
+            if(CurrentLobby.GetMemberData(lobbyMember, "IsLoaded") == "1")
+            {
+                SetLoaded(lobbyMember.Id);
+            }
             _playerAmount++;
         }
 
@@ -265,6 +264,22 @@ public class SteamLobbyManager : MonoBehaviour
         LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/buttons").gameObject.SetActive(true);
         LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/LobbyFailed").gameObject.SetActive(false);
     }
+    
+    private void AddPlayerToLoadList(SteamId playerSteamId)
+    {
+        _loadedPlayers.TryAdd(playerSteamId, false);
+    }
+
+    private void RemovePlayerFromLoadList(SteamId player)
+    {
+        _loadedPlayers?.Remove(player);
+    }
+
+    private void SetLoaded(SteamId playerSteamId)
+    {
+        if(_loadedPlayers.ContainsKey(playerSteamId))
+            _loadedPlayers[playerSteamId] = true;
+    }
 
     public void HideLobby()
     {
@@ -277,22 +292,6 @@ public class SteamLobbyManager : MonoBehaviour
         CurrentLobby.Leave();
         InLobby = false;
     }
-    
-    public void AddPlayerToLoadList(SteamId playerSteamId)
-    {
-        _loadedPlayers.TryAdd(playerSteamId, false);
-    }
-
-    public void RemovePlayerFromLoadList(SteamId player)
-    {
-        _loadedPlayers?.Remove(player);
-    }
-
-    public void SetLoaded(SteamId playerSteamId)
-    {
-        if(_loadedPlayers.ContainsKey(playerSteamId))
-            _loadedPlayers[playerSteamId] = true;
-    }
 
     public void UnloadAll()
     {
@@ -300,6 +299,11 @@ public class SteamLobbyManager : MonoBehaviour
         {
             _loadedPlayers[keyValuePair.Key] = false;
         }
+    }
+
+    public bool GetIsPlayerLoaded(SteamId playerSteamId)
+    {
+        return _loadedPlayers.GetValueOrDefault(playerSteamId, false);
     }
     public bool IsEveryoneLoaded => !_loadedPlayers.ContainsValue(false);
 }

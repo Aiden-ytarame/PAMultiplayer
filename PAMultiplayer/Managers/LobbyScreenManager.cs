@@ -34,8 +34,10 @@ namespace PAMultiplayer.Managers
         Transform _playersList;
         GameObject _playerPrefab;
 
-        private Transform _queueList;
+        Transform _queueList;
         GameObject _queueEntryPrefab;
+
+        TextMeshProUGUI _PlayersLoaded;
 
         //spawns the lobby GameObject from the assetBundle
         void Awake()
@@ -59,7 +61,7 @@ namespace PAMultiplayer.Managers
             pauseMenu = lobbyGo.GetComponent<PauseMenu>();
             _playersList = lobbyGo.transform.Find("Content/PlayerList");
             _queueList = lobbyGo.transform.Find("Queue/Content/QueueList");
-            
+            _PlayersLoaded = lobbyGo.transform.Find("Content/Players/Text (1)").GetComponent<TextMeshProUGUI>();
             //handles what should appear on the screen
             //like the buttons for the host
             //Waiting for host message for clients
@@ -113,7 +115,8 @@ namespace PAMultiplayer.Managers
             foreach (var friend in SteamLobbyManager.Inst.CurrentLobby.Members)
             {
                 AddPlayerToLobby(friend.Id, friend.Name);
-                if(SteamLobbyManager.Inst.CurrentLobby.GetMemberData(friend, "IsLoaded") == "1")
+                    
+                if(SteamLobbyManager.Inst.GetIsPlayerLoaded(friend.Id))
                 {
                     SetPlayerLoaded(friend.Id); 
                 }
@@ -146,6 +149,8 @@ namespace PAMultiplayer.Managers
             
             playerEntry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
             _playerList.Add(player, playerEntry);
+
+            _PlayersLoaded.text = "\u2591";
         }
 
         public void RemovePlayerFromLobby(SteamId player)
@@ -154,6 +159,7 @@ namespace PAMultiplayer.Managers
             {
                 Destroy(value.gameObject);
                 _playerList.Remove(player);
+                _PlayersLoaded.text = SteamLobbyManager.Inst.IsEveryoneLoaded ? "▓" : "\u2591";
             }
         }
 
@@ -162,7 +168,9 @@ namespace PAMultiplayer.Managers
             if (_playerList.TryGetValue(player, out var value))
             {
                 AudioManager.Inst?.PlaySound("Add", 1);
-                value.GetChild(1).GetComponent<TextMeshProUGUI>().text = "▓";    
+                value.GetChild(1).GetComponent<TextMeshProUGUI>().text = "▓";
+                
+                _PlayersLoaded.text = SteamLobbyManager.Inst.IsEveryoneLoaded ? "▓" : "\u2591";
             }
         }
 
