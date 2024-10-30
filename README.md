@@ -1,6 +1,6 @@
 ![Logo](Logo400x400.png)
 
-# **Project Arrhythmia Multiplayer**
+# Project Arrhythmia Multiplayer
 
 A multiplayer mod for Project arrhythmia Alpha.
 
@@ -14,7 +14,7 @@ Press Tab on keyboard, L1/LB on controller to show player names in game if youre
 
 Uses BepInEx.
 
-## **Installation**
+## Installation
 **(WIP)**
 
 * Download the latest [BepInEx 6.0.0 il2cpp for Win x64 games build](https://builds.bepinex.dev/projects/bepinex_be/704/BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.704%2B6b38cee.zip).
@@ -28,21 +28,61 @@ Uses BepInEx.
 * In your game's folder there will be a new folder called "bepinex". Extract PAM.zip inside the generated **/bepinex/plugins/** folder.
 * Open the game and enjoy!
 
-## **How to use**
+## How to use
 
 ### Host
 
 * Select any arcade level
 * Start the level by pressing the Mutliplayer button
-* Invite friends through steam
+* Invite friends through Steam or Discord
 * Wait for players to join your lobby and load the level (the indicator beside their names tell you when they've loaded)
 * Click start log and have fun!
 
 
 ### Join 
 
-* Join the host's game through their profile or accept their steam invite
+* Join the host's game through a Discord or Steam invite
 * Wait for the host to start the level and have fun!
+
+## Other Features
+
+### Queue
+
+In Arcade now levels have a '+' button on them, pressing it queues the levels. after finishing a level click the continue button to load the next level in queue! works in Singleplayer and Multiplayer with a proper queue list in the lobby.
+
+
+### Discord Integration
+
+The mod overhauls the discord rich presence of the game, it shows if you're in menus, the level youre currently playing or the level youre currently editing.
+
+![Rich Presence Showcase](https://github.com/user-attachments/assets/0c6c0785-23b0-482b-8d22-800590a484c7)
+
+Along with that, it shows the players in your lobby and allows you to invite players through Discord! To do that, when in a lobby and having the discord desktop app open, click the '+' icon and click **Invite ___ to Play Project Arrhythmia Multiplayer**.
+
+![HowToShowcase](https://github.com/user-attachments/assets/0a5474f1-80f2-42f2-a69c-1f2e8e2cef80)
+
+The invite also shows the level you're hosting!
+
+![InviteShowcase](https://github.com/user-attachments/assets/945fa985-c88e-459e-ae0e-49c80993de8b)
+
+
+### Settings
+
+The mod adds a few Multiplayer specific settings you should check out in the in-game settings menu.
+* Player Hit SFX - Changes which players triggers the hit sound. Default is All Players.
+* Player Hit Warp SFX - Changes which players triggers the warp effect on the song when a player is hit. Default is Local Player Only.
+* Transparent Nanos - Makes every player other than yourself transparent to make it easier to see yourself.
+
+
+## Building
+To build the mod from source, make a "lib" folder where the csproj is and put get all the assemblies required from the interop folder bepinex generates with the exception of 3 assemblies. 
+* Facepunch.Steamworks.Win64 - you can use the one from any Project Arrhythmia Multiplayer release or build it yourself from the Facepunch.Steamworks source.
+> [!NOTE]\
+> You have to build **Facepunch.Steamworks** yourself, the release does not work.
+
+* steam_api64 - You can use the steam_api64 available in Facepunch.Steamworks source as well.
+* DiscordRPC - Use the latest release of Lachee's discord-rpc-csharp.
+
 
 ## Thanks!
 Pidge! for helping me and showing some of the source :)
