@@ -73,6 +73,9 @@ The mod adds a few Multiplayer specific settings you should check out in the in-
 * Player Hit Warp SFX - Changes which players triggers the warp effect on the song when a player is hit. Default is Local Player Only.
 * Transparent Nanos - Makes every player other than yourself transparent to make it easier to see yourself.
 
+### Update Popup
+
+When a new Multiplayer update is available a "Update Multiplayer" button will appear in the main menu!
 
 ## Building
 To build the mod from source, make a "lib" folder where the csproj is and put get all the assemblies required from the interop folder bepinex generates with the exception of 3 assemblies. 
