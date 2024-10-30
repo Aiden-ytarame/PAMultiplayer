@@ -78,10 +78,10 @@ The mod adds a few Multiplayer specific settings you should check out in the in-
 When a new Multiplayer update is available a "Update Multiplayer" button will appear in the main menu!
 
 ## Building
-To build the mod from source, make a "lib" folder where the csproj is and put get all the assemblies required from the interop folder bepinex generates with the exception of 3 assemblies. 
-* Facepunch.Steamworks.Win64 - you can use the one from any Project Arrhythmia Multiplayer release or build it yourself from the Facepunch.Steamworks source.
+To build the mod from source, make a "lib" folder where the csproj is and put get all the assemblies required from the interop folder bepinex generates with the exception of 3 assemblies. For these exception you can either use the ones available in any Multiplayer release, or:
+* Facepunch.Steamworks.Win64 - you have build it yourself from the Facepunch.Steamworks source.
 > [!NOTE]\
-> You have to build **Facepunch.Steamworks** yourself or use one from an mp release, the Facepunch.Steamworks release does not work.
+> You have to build **Facepunch.Steamworks** yourself, the Facepunch.Steamworks release does not work.
 
 * steam_api64 - You can use the steam_api64 available in Facepunch.Steamworks source as well.
 * DiscordRPC - Use the latest release of Lachee's discord-rpc-csharp.
