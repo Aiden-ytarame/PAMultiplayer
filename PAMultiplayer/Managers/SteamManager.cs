@@ -85,6 +85,7 @@ public class SteamManager : MonoBehaviour
     public void StartClient(SteamId targetSteamId)
     {
         PAM.Logger.LogInfo($"Starting client. Connection to [{targetSteamId}]");
+        
         Client = SteamNetworkingSockets.ConnectRelay<PAMConnectionManager>(targetSteamId);
     }
 

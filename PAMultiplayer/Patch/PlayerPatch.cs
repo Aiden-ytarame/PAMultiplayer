@@ -126,7 +126,6 @@ namespace PAMultiplayer.Patch
 
         
         //for changing the player's shape.
-        //could change it to a hexagon so its less cursed
         public static Mesh CircleMesh;
         public static Mesh HexagonMesh;
         public static Mesh TriangleMesh;

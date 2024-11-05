@@ -236,7 +236,7 @@ namespace PAMultiplayer.Patch
                 slider.DataID = dataId;
                 slider.DataIDType = UI_Slider.DataType.Runtime;
                 slider.Range = new Vector2(0, 2);
-                slider.Values = new[]{"All Players", "Local player Only", "None"};
+                slider.Values = new[] { "All Players", "Local player Only", "None" };
                 slider.Value = DataManager.inst.GetSettingInt(dataId, 0);
                 slider.Label.text = label;
 
@@ -276,6 +276,7 @@ namespace PAMultiplayer.Patch
             
             UIStateManager.inst.RefreshTextCache(toggle.ToggleLabel,"Transparent Nanos");
             book.Pages[3].SubElements.Add(toggle);
+            
         }
 
         static IEnumerator FetchGithubReleases()

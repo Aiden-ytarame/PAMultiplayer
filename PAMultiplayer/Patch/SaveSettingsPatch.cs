@@ -47,5 +47,6 @@ public class MultiplayerSettings
 {
     public int PlayerWarpSFX { get; set; }
     public int PlayerHitSFX { get; set; }
+    
     public bool TransparentPlayer { get; set; }
 }

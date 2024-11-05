@@ -194,9 +194,13 @@ namespace PAMultiplayer.Managers
 
             if (queue.Count == 0)
             {
+                pauseMenu.transform.localPosition = Vector3.zero;
                 _queueList.parent.parent.gameObject.SetActive(false);
                 return;
             }
+          
+            pauseMenu.transform.localPosition = new Vector3(174.5f, 0, 0);
+            
             _queueList.parent.parent.gameObject.SetActive(true);
             foreach (var queueEntry in queue)
             {
