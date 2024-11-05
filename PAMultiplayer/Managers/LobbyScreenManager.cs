@@ -118,7 +118,7 @@ namespace PAMultiplayer.Managers
                     
                 if(SteamLobbyManager.Inst.GetIsPlayerLoaded(friend.Id))
                 {
-                    SetPlayerLoaded(friend.Id); 
+                    SetPlayerLoaded(friend.Id, false); 
                 }
             }
             
@@ -163,11 +163,14 @@ namespace PAMultiplayer.Managers
             }
         }
 
-        public void SetPlayerLoaded(SteamId player)
+        public void SetPlayerLoaded(SteamId player, bool playSound = true)
         {
             if (_playerList.TryGetValue(player, out var value))
             {
-                AudioManager.Inst?.PlaySound("Add", 1);
+                if (playSound)
+                {
+                    AudioManager.Inst?.PlaySound("Add", 1);
+                }
                 value.GetChild(1).GetComponent<TextMeshProUGUI>().text = "▓";
                 
                 _PlayersLoaded.text = SteamLobbyManager.Inst.IsEveryoneLoaded ? "▓" : "\u2591";

@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace PAMultiplayer.Packet;
 
-public enum PacketType : short
+public enum PacketType : ushort
 {
     Damage,
     Position,
@@ -15,38 +15,19 @@ public enum PacketType : short
     nextLevel
 }
 
-public enum PacketDataType : short
+public struct NetPacket 
 {
-    Int,
-    Vector,
-}
-
-public struct IntNetPacket 
-{
-    public PacketDataType DataType = PacketDataType.Int;
     public PacketType PacketType;
-    public SteamId SenderId;
-    public int Data;
+    public ulong SenderId;
+    public Vector2 Data = Vector2.zero;
 
-    public IntNetPacket()
+    public NetPacket(Vector2 data)
     {
-        PacketType = PacketType.Damage;
-        SenderId = default;
-        Data = default;
+        Data = data;
     }
-}
 
-public struct VectorNetPacket
-{
-    public PacketDataType DataType = PacketDataType.Vector;
-    public PacketType PacketType;
-    public SteamId SenderId;
-    public Vector2 Data;
-
-    public VectorNetPacket()
+    public NetPacket(int data)
     {
-        PacketType = PacketType.Damage;
-        SenderId = default;
-        Data = default;
+        Data.x = data;
     }
 }

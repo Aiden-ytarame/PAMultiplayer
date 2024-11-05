@@ -30,23 +30,27 @@ public class GameManagerPatch
             return;
         
         if (!GlobalsManager.IsMultiplayer) return;
-        
-        foreach (var mesh in Resources.FindObjectsOfTypeAll<Mesh>())
-        {
-            if (mesh.name == "circle")
-            {
-                Player_Patch.CircleMesh = mesh;
-            }
 
-            if (mesh.name == "hexagon")
+        if (Player_Patch.CircleMesh == null)
+        {
+            foreach (var mesh in Resources.FindObjectsOfTypeAll<Mesh>())
             {
-                Player_Patch.HexagonMesh = mesh;
-            }
-            if (mesh.name == "triangle")
-            {
-                Player_Patch.TriangleMesh = mesh;
+                if (mesh.name == "circle")
+                {
+                    Player_Patch.CircleMesh = mesh;
+                }
+
+                if (mesh.name == "hexagon")
+                {
+                    Player_Patch.HexagonMesh = mesh;
+                }
+                if (mesh.name == "triangle")
+                {
+                    Player_Patch.TriangleMesh = mesh;
+                }
             }
         }
+       
         __instance.gameObject.AddComponent<NetworkManager>();
 
         //this is for waiting for the Objects to load before initialing the server/client

@@ -21,8 +21,10 @@ namespace PAMultiplayer.Managers;
 /// </summary>
 public class PAMSocketManager : SocketManager
 {
+    const int PACKET_SIZE = 24;
+    
     #region SocketManagerOverrides
-
+    
     public override void OnConnecting(Connection connection, ConnectionInfo data)
     {
         connection.Accept();
@@ -42,7 +44,7 @@ public class PAMSocketManager : SocketManager
         PAM.Inst.Log.LogInfo($"Server: {data.Identity} is out of here");
     }
 
-    public override void OnMessage(Connection connection, NetIdentity identity, IntPtr data, int size, long messageNum,
+    public override unsafe void OnMessage(Connection connection, NetIdentity identity, IntPtr data, int size, long messageNum,
         long recvTime, int channel)
     {
         IPacketHandler GetHandler(PacketType type)
@@ -50,13 +52,13 @@ public class PAMSocketManager : SocketManager
             switch (type)
             {
                 case PacketType.Damage:
-                    SendMessages(Connected, data, size);
+                    SendMessageToAll(Connected, data, size);
                     break;
                 case PacketType.Position:
-                    SendMessages(Connected, data, size, SendType.Unreliable);
+                    SendMessageToAll(Connected, data, size, SendType.Unreliable);
                     break;
                 case PacketType.Boost:
-                    SendMessages(Connected, data, size, SendType.Unreliable);
+                    SendMessageToAll(Connected, data, size, SendType.Unreliable);
                     break;
                 default:
                     return null;
@@ -70,25 +72,16 @@ public class PAMSocketManager : SocketManager
             return null;
         }
         
-        // Read PacketType
-        PacketDataType dataType = (PacketDataType)Marshal.ReadInt16(data);
-
-        if (Marshal.ReadInt16(data) == 0)
-        {
-            var packet = Marshal.PtrToStructure<IntNetPacket>(data);
-            GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.Data);
-        }
-        else
-        {
-            var packet = Marshal.PtrToStructure<VectorNetPacket>(data);
-            GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.Data);
-        }
+        Span<byte> packetSpan = new Span<byte>((void*)data, PACKET_SIZE);
+        var packet = MemoryMarshal.Read<NetPacket>(packetSpan);
+        
+        GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.Data);
     }
 
     #endregion
 
     #region Send Messages
-    void SendMessages(HashSet<Connection> connections, IntPtr ptr, int size, SendType sendType = SendType.Reliable)
+    void SendMessageToAll(HashSet<Connection> connections, IntPtr ptr, int size, SendType sendType = SendType.Reliable)
     {
         foreach (var connection in connections)
         {
@@ -96,57 +89,49 @@ public class PAMSocketManager : SocketManager
         }
     }
 
-    void SendMessages(IntNetPacket packet, SendType sendType = SendType.Reliable)
+    unsafe void SendMessage(NetPacket packet, SendType sendType = SendType.Reliable)
     {
-        int length = Marshal.SizeOf(packet);
-        IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
-        Marshal.StructureToPtr(packet, unmanagedPointer, false);
-        SendMessages(Connected, unmanagedPointer, length, sendType);
-        Marshal.FreeHGlobal(unmanagedPointer);
+        Span<byte> packetSpan = stackalloc byte[PACKET_SIZE];
+        MemoryMarshal.Write(packetSpan, ref packet);
+       
+        fixed (byte* ptr = packetSpan)
+        {
+            SendMessageToAll(Connected, (IntPtr)ptr, PACKET_SIZE, sendType);
+        }
     }
-    void SendMessages(VectorNetPacket packet, SendType sendType = SendType.Reliable)
+    unsafe void SendMessage(Connection connection, NetPacket packet, SendType sendType = SendType.Reliable)
     {
-        int length = Marshal.SizeOf(packet);
-        IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
-        Marshal.StructureToPtr(packet, unmanagedPointer, false);
-        SendMessages(Connected, unmanagedPointer, length, sendType);
-        Marshal.FreeHGlobal(unmanagedPointer);
-    }
+        Span<byte> packetSpan = stackalloc byte[PACKET_SIZE];
+        MemoryMarshal.Write(packetSpan, ref packet);
 
-    
-    void SendHostPacket(IntNetPacket packet, SendType sendType = SendType.Reliable)
-    {
-        int length = Marshal.SizeOf(packet);
-        IntPtr unmanagedData = Marshal.AllocHGlobal(length);
-        Marshal.StructureToPtr(packet, unmanagedData, false);
-        
-        SendMessages(Connected, unmanagedData, length, sendType);
-        
-        Marshal.FreeHGlobal(unmanagedData);
+        fixed (byte* ptr = packetSpan)
+        {
+            connection.SendMessage((IntPtr)ptr, PACKET_SIZE, sendType);
+        }
     }
     
-    void SendHostPacket(VectorNetPacket packet, SendType sendType = SendType.Reliable)
-    {
-        int length = Marshal.SizeOf(packet);
-        IntPtr unmanagedData = Marshal.AllocHGlobal(length);
-        Marshal.StructureToPtr(packet, unmanagedData, false);
-        
-        SendMessages(Connected, unmanagedData, length, sendType);
-        
-        Marshal.FreeHGlobal(unmanagedData);
-    }
     #endregion
     public void StartLevel()
     {
         GlobalsManager.HasStarted = true;
-        var packet = new IntNetPacket() { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Start };
-        SendMessages(packet);
+        var packet = new NetPacket
+        {
+            PacketType = PacketType.Start,
+            SenderId = GlobalsManager.LocalPlayer,
+        };
+    
+        SendMessage(packet);
     }
 
     public void SendCheckpointHit(int index)
     {
-        var packet = new IntNetPacket() { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Checkpoint, Data = index };
-        SendMessages(packet);
+        var packet = new NetPacket(index)
+        {
+            PacketType = PacketType.Checkpoint,
+            SenderId = GlobalsManager.LocalPlayer,
+        };
+        
+        SendMessage(packet);
         if (IPacketHandler.PacketHandlers.TryGetValue(PacketType.Checkpoint, out var handler))
         {
             handler.ProcessPacket(packet.SenderId, packet.Data);
@@ -166,86 +151,81 @@ public class PAMSocketManager : SocketManager
                 new Predicate<DataManager.GameData.BeatmapData.Checkpoint>(x => x == checkpoint).ToIL2CPP());
         }
         
-        var packet = new IntNetPacket()
-            { SenderId = GlobalsManager.LocalPlayer, PacketType = PacketType.Rewind, Data = index };
-        SendMessages(packet);
+        var packet = new NetPacket(index)
+        {
+            PacketType = PacketType.Rewind,
+            SenderId = GlobalsManager.LocalPlayer,
+        };
+        SendMessage(packet);
+        
         if (IPacketHandler.PacketHandlers.TryGetValue(PacketType.Rewind, out var handler))
         {
             handler.ProcessPacket(packet.SenderId, packet.Data);
         }
-        
     }
     
     //this function sucks
     private void SendPlayerId(Connection connection, SteamId steamId, int id)
     {
-        int length = sizeof(short) + sizeof(short) + sizeof(ulong) + sizeof(float) + sizeof(float);
-
         foreach (var vgPlayerData in GlobalsManager.Players)
         {
-            IntPtr unmanagedPointer = Marshal.AllocHGlobal(length);
-            var packet = new VectorNetPacket()
+            var packet = new NetPacket(new Vector2(vgPlayerData.Value.PlayerID, GlobalsManager.Players.Count))
             {
                 PacketType = PacketType.PlayerId,
                 SenderId = vgPlayerData.Key,
-                Data = new Vector2(vgPlayerData.Value.PlayerID, GlobalsManager.Players.Count)
             };
-
-            Marshal.StructureToPtr(packet, unmanagedPointer, false);
-            connection.SendMessage(unmanagedPointer, length);
             
-            Marshal.FreeHGlobal(unmanagedPointer);
+            SendMessage(connection, packet);
         }
 
-        var info = new VectorNetPacket()
+        var info = new NetPacket(new Vector2(id, 1))
         {
             PacketType = PacketType.PlayerId,
             SenderId = steamId,
-            Data = new Vector2(id, 1)
         };
         
-        SendMessages(info);
+        SendMessage(info);
     }
 
     public void SendNextQueueLevel(ulong id, int seed)
     {
-        var packet = new IntNetPacket()
-            { SenderId = id, PacketType = PacketType.nextLevel, Data = seed};
-        SendMessages(packet);
+        var packet = new NetPacket(seed)
+        {
+            PacketType = PacketType.nextLevel,
+            SenderId = id,
+        };
+        SendMessage(packet);
     }
     //yes due to a mistake the host doesn't connect to the server as client 
     //so we handle his messages from here
 
     public void SendHostDamage()
     {
-        var packet = new IntNetPacket()
+        var packet = new NetPacket(GlobalsManager.Players[GlobalsManager.LocalPlayer].PlayerObject.Health)
         {
             PacketType = PacketType.Damage,
             SenderId = GlobalsManager.LocalPlayer,
-            Data = GlobalsManager.Players[GlobalsManager.LocalPlayer].PlayerObject.Health
         };
-        SendHostPacket(packet);
+        SendMessage(packet);
     }
     public void SendHostPosition(Vector2 pos)
     {
-        var packet = new VectorNetPacket()
+        var packet = new NetPacket(pos)
         {
             PacketType = PacketType.Position,
             SenderId = GlobalsManager.LocalPlayer,
-            Data = pos
         };
-        SendHostPacket(packet, SendType.Unreliable);
+        SendMessage(packet, SendType.Unreliable);
     }
 
     public void SendHostBoost()
     {
-        var packet = new IntNetPacket()
+        var packet = new NetPacket
         {
             PacketType = PacketType.Boost,
             SenderId = GlobalsManager.LocalPlayer,
-            Data = 0
         };
-        SendHostPacket(packet, SendType.Unreliable);
+        SendMessage(packet, SendType.Unreliable);
     }
 }
 
@@ -255,6 +235,7 @@ public class PAMSocketManager : SocketManager
 /// </summary>
 public class PAMConnectionManager : ConnectionManager
 {
+    const int PACKET_SIZE = 24;
     
     #region ConnectionManager Overrides
     
@@ -282,84 +263,59 @@ public class PAMConnectionManager : ConnectionManager
             SceneLoader.Inst.LoadSceneGroup("Arcade");
         }
     }
-    
-    public override void OnMessage(IntPtr data, int size, long messageNum, long recvTime, int channel)
+
+    public override unsafe void OnMessage(IntPtr data, int size, long messageNum, long recvTime, int channel)
     {
-        try
+        Span<byte> packetSpan = new Span<byte>((void*)data, PACKET_SIZE);
+        var packet = MemoryMarshal.Read<NetPacket>(packetSpan);
+        
+        if (IPacketHandler.PacketHandlers.TryGetValue(packet.PacketType, out var handler))
         {
-            if (Marshal.ReadInt16(data) == 0)
-            {
-                var packet = Marshal.PtrToStructure<IntNetPacket>(data);
-                if(IPacketHandler.PacketHandlers.TryGetValue(packet.PacketType, out var handler))
-                {
-                    handler.ProcessPacket(packet.SenderId, packet.Data);
-                }
-            }
-            else
-            {
-                var packet = Marshal.PtrToStructure<VectorNetPacket>(data);
-                if(IPacketHandler.PacketHandlers.TryGetValue(packet.PacketType, out var handler))
-                {
-                    handler.ProcessPacket(packet.SenderId, packet.Data);
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            PAM.Logger.LogError(e);
-            throw;
+            handler.ProcessPacket(packet.SenderId, packet.Data);
         }
     }
+
     #endregion
 
     #region Send Messages
     
-    void SendPacket(IntNetPacket packet, SendType sendType = SendType.Reliable)
+    unsafe void SendPacket(NetPacket packet, SendType sendType = SendType.Reliable)
     {
-        int length = Marshal.SizeOf(packet);
-        IntPtr unmanagedData = Marshal.AllocHGlobal(length);
-        Marshal.StructureToPtr(packet, unmanagedData, false);
-        Connection.SendMessage(unmanagedData, length, sendType);
-        Marshal.FreeHGlobal(unmanagedData);
-    } 
-    void SendPacket(VectorNetPacket packet, SendType sendType = SendType.Reliable)
-    {
-        int length = Marshal.SizeOf(packet);
-        IntPtr unmanagedData = Marshal.AllocHGlobal(length);
-        Marshal.StructureToPtr(packet, unmanagedData, false);
-        Connection.SendMessage(unmanagedData, length, sendType);
-        Marshal.FreeHGlobal(unmanagedData);
-    }
-    #endregion
+        Span<byte> packetSpan = stackalloc byte[PACKET_SIZE];
+        MemoryMarshal.Write(packetSpan, ref packet);
 
+        fixed (byte* ptr = packetSpan)
+        {
+            Connection.SendMessage((IntPtr)ptr, PACKET_SIZE, sendType);
+        }
+    } 
+  
+    #endregion
     public void SendDamage()
     {
-        var packet = new IntNetPacket()
+        var packet = new NetPacket(GlobalsManager.Players[GlobalsManager.LocalPlayer].PlayerObject.Health)
         {
             PacketType = PacketType.Damage,
             SenderId = GlobalsManager.LocalPlayer,
-            Data = GlobalsManager.Players[GlobalsManager.LocalPlayer].PlayerObject.Health
         };
         SendPacket(packet);
     }
 
     public void SendPosition(Vector2 pos)
     {
-        var packet = new VectorNetPacket()
+        var packet = new NetPacket(pos)
         {
             PacketType = PacketType.Position,
             SenderId = GlobalsManager.LocalPlayer,
-            Data = pos
         };
         SendPacket(packet, SendType.Unreliable);
     }
     public void SendBoost()
     {
-        var packet = new IntNetPacket()
+        var packet = new NetPacket
         {
             PacketType = PacketType.Boost,
             SenderId = GlobalsManager.LocalPlayer,
-            Data = 0
         };
         SendPacket(packet, SendType.Unreliable);
     }

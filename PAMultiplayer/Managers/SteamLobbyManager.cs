@@ -60,11 +60,12 @@ public class SteamLobbyManager : MonoBehaviour
         
         if (lobby.GetMemberData(friend, "IsLoaded") != "1") return;
 
+        SetLoaded(friend.Id);
+        
         if (LobbyScreenManager.Instance)
         {
             LobbyScreenManager.Instance.SetPlayerLoaded(friend.Id);
         }
-        SetLoaded(friend.Id);
     }
 
     private void OnLobbyMemberDisconnected(Lobby lobby, Friend friend)
@@ -73,13 +74,14 @@ public class SteamLobbyManager : MonoBehaviour
         
         AudioManager.Inst?.PlaySound("glitch", 1);
         
+        RemovePlayerFromLoadList(friend.Id);
+        
         if(LobbyScreenManager.Instance)
             LobbyScreenManager.Instance.RemovePlayerFromLobby(friend.Id);
         
         if(MultiplayerDiscordManager.IsInitialized)
             MultiplayerDiscordManager.Instance.UpdatePartySize(lobby.MemberCount);
         
-        RemovePlayerFromLoadList(friend.Id);
 
         if (GlobalsManager.Players.TryGetValue(friend.Id, out var player))
         {

@@ -19,16 +19,15 @@ public interface IPacketHandler
         { PacketType.Boost, new BoostPacket()},
         { PacketType.nextLevel, new NextLevelPacket()}
     };
-    public void ProcessPacket(SteamId senderId, object data);
+    public void ProcessPacket(SteamId senderId, Vector2 data);
 }
 
 public class PositionPacket : IPacketHandler
 {
-    public void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, Vector2 data)
     {
         if (senderId.IsLocalPlayer()) return;
         
-        var pos = (Vector2)data;
         if (GlobalsManager.Players.TryGetValue(senderId, out var playerData))
         {
             if (playerData.PlayerObject)
@@ -41,8 +40,8 @@ public class PositionPacket : IPacketHandler
                // Vector2 DeltaPos = rb.position - PosEnu.Current.Value;
                 //StaticManager.Players[PosEnu.Current.Key].PlayerObject.Player_Wrapper.transform.Rotate(new Vector3(0, 0, Mathf.Atan2(DeltaPos.x, DeltaPos.y)), Space.World);
 
-                var rot = pos - (Vector2)rb.position;
-                rb.position = pos;
+                var rot = data - (Vector2)rb.position;
+                rb.position = data;
                 if (rot.sqrMagnitude > 0.0001f)
                 {
                     rot.Normalize();
@@ -56,13 +55,13 @@ public class PositionPacket : IPacketHandler
 
 public class DamagePacket : IPacketHandler
 {
-    public void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, Vector2 data)
     {
         PAM.Inst.Log.LogWarning($"Damaging player { senderId}");
 
         if ( senderId.IsLocalPlayer()) return;
 
-        int health = (int)data;
+        int health = (int)data.x;
         if(GlobalsManager.Players.TryGetValue(senderId, out var player))
         {
             if (!player.PlayerObject || player.PlayerObject.isDead) return;
@@ -75,7 +74,7 @@ public class DamagePacket : IPacketHandler
 
 public class StartPacket : IPacketHandler
 {
-    public void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, Vector2 data)
     {
         LobbyScreenManager.Instance?.StartLevel();
     }
@@ -85,14 +84,12 @@ public class PlayerIdPacket : IPacketHandler
 {
     private static int _amountOfInfo;
 
-    public void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, Vector2 data)
     {
-        Vector2 info = (Vector2)data;
-
-        int id = (int)info.x;
+        int id = (int)data.x;
         
         //will likely remove this, this is useless
-        int amount = (int)info.y;
+        int amount = (int)data.y;
         
         GlobalsManager.HasLoadedAllInfo = false;
         _amountOfInfo++;
@@ -126,21 +123,21 @@ public class PlayerIdPacket : IPacketHandler
 
 public class CheckpointPacket : IPacketHandler
 {
-    public void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, Vector2 data)
     {
-        PAM.Logger.LogInfo($"Checkpoint [{(int)data}] Received");
+        PAM.Logger.LogInfo($"Checkpoint [{(int)data.x}] Received");
         GameManager.Inst.playingCheckpointAnimation = true;
         VGPlayerManager.Inst.RespawnPlayers();
 
-        GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation((int)data));
+        GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation((int)data.x));
     }
 }
 
 public class RewindPacket : IPacketHandler
 {
-    public void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, Vector2 data)
     {
-        PAM.Logger.LogInfo($"Rewind to Checkpoint [{(int)data}] Received");
+        PAM.Logger.LogInfo($"Rewind to Checkpoint [{(int)data.x}] Received");
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
         {
             if (vgPlayerData.PlayerObject && !vgPlayerData.PlayerObject.isDead)
@@ -150,13 +147,13 @@ public class RewindPacket : IPacketHandler
                 vgPlayerData.PlayerObject.PlayerDeath();
             }
         };
-        GameManager.Inst.RewindToCheckpoint((int)data);
+        GameManager.Inst.RewindToCheckpoint((int)data.x);
     }
 }
 
 public class BoostPacket : IPacketHandler
 {
-    public void ProcessPacket(SteamId senderId, object data)
+    public void ProcessPacket(SteamId senderId, Vector2 data)
     {
         if(senderId.IsLocalPlayer()) return;
         
@@ -169,9 +166,9 @@ public class BoostPacket : IPacketHandler
 
 public class NextLevelPacket : IPacketHandler
 {
-    public void ProcessPacket(SteamId levelId, object data)
+    public void ProcessPacket(SteamId levelId, Vector2 data)
     {
-        int seed = (int)data;
+        int seed = (int)data.x;
         GlobalsManager.LevelId = levelId;
         SteamLobbyManager.Inst.RandSeed = seed;
         GlobalsManager.IsReloadingLobby = true;
