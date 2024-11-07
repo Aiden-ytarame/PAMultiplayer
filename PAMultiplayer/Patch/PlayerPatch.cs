@@ -129,6 +129,7 @@ namespace PAMultiplayer.Patch
         public static Mesh CircleMesh;
         public static Mesh HexagonMesh;
         public static Mesh TriangleMesh;
+        
         /// <summary>
         /// changes the nano's shape if there's more than 4 players
         /// </summary>
@@ -154,7 +155,7 @@ namespace PAMultiplayer.Patch
                     trail.GetComponentInChildren<TrailRenderer>().enabled = false;
                 }
             }
-         
+            
             if (__instance.PlayerID < 4)
             {
                 return;

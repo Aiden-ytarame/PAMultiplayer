@@ -145,6 +145,7 @@ namespace PAMultiplayer.Patch
             if(player && player.isHurting == 0)
                 player.ChangeAnimationState(VGPlayer.ANIM_IDLE);
         }
+        
         [HarmonyPatch(typeof(GameManager), nameof(GameManager.UnPause))]
         [HarmonyPrefix]
         static bool PreGameUnpause(ref GameManager __instance)
@@ -282,7 +283,7 @@ namespace PAMultiplayer.Patch
         static IEnumerator FetchGithubReleases()
         {
             UnityWebRequest request =
-                UnityWebRequest.Get("https://api.github.com/repos/Aiden-ytarame/PAMultiplayer/releases");
+                UnityWebRequest.Get("https://api.github.com/repos/Aiden-ytarame/PAMultiplayer/releases/latest");
 
             yield return request.SendWebRequest();
 
@@ -292,8 +293,7 @@ namespace PAMultiplayer.Patch
                 yield break;
             }
 
-            JSONNode jsonNode = JSON.Parse(request.downloadHandler.text);
-            var latestRelease = jsonNode.AsArray[0];
+            JSONNode latestRelease = JSON.Parse(request.downloadHandler.text);
 
             bool isLatest = Version.Parse(latestRelease["tag_name"].Value.Substring(1)).CompareTo(Version.Parse(PAM.Version)) <= 0;
 

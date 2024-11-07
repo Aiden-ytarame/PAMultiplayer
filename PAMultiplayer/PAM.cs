@@ -8,6 +8,7 @@ using PAMultiplayer.Managers;
 using PAMultiplayer.Patch;
 using UnityEngine.Localization.Settings;
 
+
 namespace PAMultiplayer;
 
 [BepInPlugin(Guid, Name, Version)]
@@ -29,6 +30,7 @@ public class PAM : BasePlugin
         ClassInjector.RegisterTypeInIl2Cpp<NetworkManager>();
         ClassInjector.RegisterTypeInIl2Cpp<QueueButton>();
         ClassInjector.RegisterTypeInIl2Cpp<LobbyScreenManager>();
+        ClassInjector.RegisterTypeInIl2Cpp<LobbyGridLayoutGroup>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamManager>();
         ClassInjector.RegisterTypeInIl2Cpp<SteamLobbyManager>();
         ClassInjector.RegisterTypeInIl2Cpp<MultiplayerDiscordManager>();
