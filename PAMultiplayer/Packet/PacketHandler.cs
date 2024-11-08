@@ -91,7 +91,8 @@ public class PlayerIdPacket : IPacketHandler
         //will likely remove this, this is useless
         int amount = (int)data.y;
         
-        GlobalsManager.HasLoadedAllInfo = false;
+        GlobalsManager.HasLoadedBasePlayerIds = false;
+        
         _amountOfInfo++;
         PAM.Logger.LogInfo($"Player Id from [{senderId}] Received");
 
@@ -116,7 +117,7 @@ public class PlayerIdPacket : IPacketHandler
         if (_amountOfInfo >= amount)
         {
             _amountOfInfo = 0;
-            GlobalsManager.HasLoadedAllInfo = true;
+            GlobalsManager.HasLoadedBasePlayerIds = true;
         }
     }
 }

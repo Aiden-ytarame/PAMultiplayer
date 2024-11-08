@@ -174,7 +174,8 @@ public class SteamLobbyManager : MonoBehaviour
             _playerAmount++;
         }
 
-        GlobalsManager.HasLoadedAllInfo = false;
+        GlobalsManager.HasLoadedExternalInfo = false;
+        GlobalsManager.HasLoadedBasePlayerIds = false;
      
         if (ulong.TryParse(lobby.GetData("LevelId"), out var levelId))
         {

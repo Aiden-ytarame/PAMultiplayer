@@ -13,12 +13,18 @@ namespace PAMultiplayer.Managers
         public static readonly Dictionary<SteamId, VGPlayerManager.VGPlayerData> Players = new();
         public static List<string> Queue = new();
         
-        public static bool HasLoadedAllInfo;
-        public static bool IsHosting = false;
+        public static ulong LevelId;
         public static bool IsMultiplayer = false;
+        public static bool IsHosting = false;
+        
+        public static bool HasLoadedAllInfo => HasLoadedExternalInfo && HasLoadedBasePlayerIds;
+
+        public static bool HasLoadedExternalInfo;
+        public static bool HasLoadedBasePlayerIds;
+        
         public static bool IsReloadingLobby = false;
         public static bool HasStarted = false;
-        public static ulong LevelId;
+      
         public static bool IsDownloading = false;
     }
 }

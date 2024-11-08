@@ -12,6 +12,7 @@ using Steamworks;
 using Steamworks.Data;
 using Steamworks.Ugc;
 using UnityEngine;
+using UnityEngine.Networking;
 using VGFunctions;
 using Random = UnityEngine.Random;
 
@@ -52,7 +53,8 @@ public class GameManagerPatch
         }
        
         __instance.gameObject.AddComponent<NetworkManager>();
-
+        __instance.StartCoroutine(FetchExternalData().WrapToIl2Cpp());
+        
         //this is for waiting for the Objects to load before initialing the server/client
 
         if (GlobalsManager.IsHosting)
@@ -98,6 +100,44 @@ public class GameManagerPatch
             SceneLoader.Inst.manager.AddToLoadingTasks(newTask2);
         }
     }
+
+    /// <summary>
+    /// This is just a test for funsies, used to change special colors without updating the mod.
+    /// </summary>
+    static IEnumerator FetchExternalData()
+    {
+        UnityWebRequest webRequest =
+            UnityWebRequest.Get("https://aiden-ytarame.github.io/Test-static-files/ColoredNames.json");
+        yield return webRequest.SendWebRequest();
+
+        if (webRequest.result != UnityWebRequest.Result.Success)
+        {
+            PAM.Logger.LogError("Failed to fetch external data :(");
+            yield break;
+        }
+
+        JSONNode nameColors = JSON.Parse(webRequest.downloadHandler.text);
+        Dictionary<ulong, string> newColors = new();
+
+        foreach (var playerColor in nameColors)
+        {
+            if (!ulong.TryParse(playerColor.Key, out var id))
+            {
+                continue;
+            }
+
+            string color = playerColor.Value["color"];
+            if (color != null)
+            {
+                PAM.Logger.LogInfo($"Loaded custom color for { playerColor.Value["name"]}");
+                newColors.Add(id, color);
+            }
+        }
+
+        LobbyScreenManager.SpecialColors = newColors;
+        GlobalsManager.HasLoadedExternalInfo = true;
+    }
+
 
     private static bool paused;
     [HarmonyPatch(nameof(GameManager.Pause))]
