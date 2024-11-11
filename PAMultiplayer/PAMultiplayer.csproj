@@ -76,9 +76,6 @@
 	
     <ItemGroup>
       <None Remove="Assets\lobby menu" />
-      <EmbeddedResource Include="Assets\lobby menu">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </EmbeddedResource>
       <EmbeddedResource Remove="lib\costura64\**" />
       <None Remove="Assets\queue assets" />
       <EmbeddedResource Include="Assets\queue assets">

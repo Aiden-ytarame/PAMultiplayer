@@ -142,6 +142,7 @@ public class GameManagerPatch
     }
 
 
+    //wtf is this
     private static bool paused;
     [HarmonyPatch(nameof(GameManager.Pause))]
     [HarmonyPrefix]
@@ -153,20 +154,14 @@ public class GameManagerPatch
 
         if (paused)
         {
-           // __instance.PauseMenuScript.ClosePauseMenu();
-           // __instance.SetUIVolumeWeight(0.25f);
-           // __instance.UnPause();
+            __instance.UnPause();
+            paused = false;
             return false;
         }
-        if (_showUI)
-        {
-          //  __instance.PauseMenuScript.SetBGColor(__instance.LiveTheme.backgroundColor);
-           // __instance.SetUIVolumeWeight(1);
-           // __instance.PauseMenuScript.OpenPauseMenu();
-            __instance.Paused = false;
-            paused = true;
-        }
-
+      
+        __instance.Paused = false;
+        paused = true;
+        
         return false;
     }
     
@@ -175,7 +170,7 @@ public class GameManagerPatch
     static void PostUnPause()
     {
         if(!GlobalsManager.IsMultiplayer) return;
-
+        
         paused = false;
     }
 

@@ -25,19 +25,19 @@ public class LobbyScreenManager : MonoBehaviour
     public UI_Menu LobbyMenu;
     
     readonly Dictionary<ulong, Transform> _playerList = new();
+    
     Transform _playersList;
     GameObject _playerPrefab;
 
     Transform _queueList;
     GameObject _queueEntryPrefab;
 
-    TextMeshProUGUI _PlayersLoaded;
+    private MultiElementButton ResumeButton;
 
     //spawns the lobby GameObject from the assetBundle
     void Awake()
     {
         Instance = this;
-            
         VGCursor.Inst.ShowCursor();
 
         Transform UiManager = PauseUIManager.Inst.transform.parent;
@@ -59,58 +59,27 @@ public class LobbyScreenManager : MonoBehaviour
         LobbyMenu = lobbyGo.GetComponent<UI_Menu>();
         
         _playersList = lobbyGo.transform.Find("PlayersList");
-        
         _queueList = lobbyGo.transform.Find("QueueList");
-        //_PlayersLoaded = lobbyGo.transform.Find("Content/Players/Text (1)").GetComponent<TextMeshProUGUI>();
-            
-        //handles what should appear on the screen
-        //like the buttons for the host
-        //Waiting for host message for clients
-        //or Lobby Failed message
-        /*
-        if (GlobalsManager.IsHosting)
+        
+        var buttons = lobbyGo.transform.Find("Pause Menu");
+        ResumeButton = buttons.GetChild(0).GetComponent<MultiElementButton>();
+        
+        ResumeButton.onClick.AddListener(new Action(() =>
         {
-            var buttons = lobbyGo.transform.Find("Content/buttons");
+            LobbyMenu.HideAll();
+            GameManager.Inst.UnPause();
+        }));
 
-            buttons.GetChild(0).GetComponent<MultiElementButton>().Select();
-
-            buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
-            {
-                SceneLoader.Inst.LoadSceneGroup("Arcade");
-            }));
-
-            buttons.GetChild(2).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
-            {
-                SceneLoader.Inst.LoadSceneGroup("Menu");
-            }));
-
-            if (!SteamLobbyManager.Inst.InLobby)
-            {
-                lobbyGo.transform.Find("Content/buttons").gameObject.SetActive(false);
-                lobbyGo.transform.Find("Content/LobbyFailed").gameObject.SetActive(true);
-                lobbyGo.transform.Find("Content/LobbyFailed").GetComponentInChildren<MultiElementButton>().onClick
-                    .AddListener(new Action(
-                        () =>
-                        {
-                            PAM.Logger.LogDebug("RETRY");
-                            GlobalsManager.IsReloadingLobby = true;
-                            SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-                        }));
-            }
-        }
-        else //this is for the Waiting for host Message
+        buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
         {
-            lobbyGo.transform.Find("Content/buttons").gameObject.SetActive(false);
-            lobbyGo.transform.Find("Content/WaitingForHost").gameObject.SetActive(true);
-
-            var quitButton = lobbyGo.transform.Find("Content/WaitingForHost")
-                .GetComponentInChildren<MultiElementButton>();
-
-            quitButton.Select();
-            quitButton.onClick.AddListener(new Action(
-                () => { SceneLoader.Inst.LoadSceneGroup("Menu"); }));
+            SceneLoader.Inst.LoadSceneGroup("Arcade");
+        }));
+        
+        if (!GlobalsManager.IsHosting)
+        {
+            SetButtonActive(false);
         }
-*/
+        
         foreach (var friend in SteamLobbyManager.Inst.CurrentLobby.Members)
         {
             AddPlayerToLobby(friend.Id, friend.Name);
@@ -143,7 +112,6 @@ public class LobbyScreenManager : MonoBehaviour
         {
             Destroy(LobbyMenu.gameObject);
         }
-      
     }
 
     public void AddPlayerToLobby(SteamId player, string playerName)
@@ -163,8 +131,11 @@ public class LobbyScreenManager : MonoBehaviour
         playerEntry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
         playerEntry.GetComponent<UI_Text>().ShowCustom(0.2f);
         _playerList.Add(player, playerEntry);
-
-        //_PlayersLoaded.text = "░";
+        
+        if (GlobalsManager.IsHosting)
+        {
+            SetButtonActive(SteamLobbyManager.Inst.IsEveryoneLoaded); 
+        }
     }
 
     public void RemovePlayerFromLobby(SteamId player)
@@ -174,7 +145,12 @@ public class LobbyScreenManager : MonoBehaviour
             value.GetComponent<UI_Text>().HideCustom(0.2f);
             Destroy(value.gameObject, 0.3f);
             _playerList.Remove(player);
-            _PlayersLoaded.text = SteamLobbyManager.Inst.IsEveryoneLoaded ? "▓" : "░";
+            
+           
+            if (GlobalsManager.IsHosting)
+            {
+                SetButtonActive(SteamLobbyManager.Inst.IsEveryoneLoaded); 
+            }
         }
     }
 
@@ -192,7 +168,10 @@ public class LobbyScreenManager : MonoBehaviour
 
             UIStateManager.inst.RefreshTextCache(loadIcon, "▓");
 
-            //_PlayersLoaded.text = SteamLobbyManager.Inst.IsEveryoneLoaded ? "▓" : "░";
+            if (GlobalsManager.IsHosting)
+            {
+                SetButtonActive(SteamLobbyManager.Inst.IsEveryoneLoaded); 
+            }
         }
     }
 
@@ -200,7 +179,9 @@ public class LobbyScreenManager : MonoBehaviour
     {
         GlobalsManager.HasStarted = true;
         SteamLobbyManager.Inst.HideLobby();
-        //pauseMenu.UnPause();
+        
+        LobbyMenu.HideAll();
+        GameManager.Inst.UnPause();
     }
 
     public void UpdateQueue()
@@ -215,24 +196,27 @@ public class LobbyScreenManager : MonoBehaviour
 
         if (queue.Count == 0)
         {
-            transform.localPosition = Vector3.zero;
-            _queueList.parent.parent.gameObject.SetActive(false);
+            LobbyMenu.transform.Find("Queue Title").gameObject.SetActive(false);
             return;
         }
-
-        transform.localPosition = new Vector3(174.5f, 0, 0);
-
-        _queueList.parent.parent.gameObject.SetActive(true);
+        
         foreach (var queueEntry in queue)
         {
-            string text = queueEntry;
-            if (queueEntry.Length > 27)
-            {
-                text = queueEntry.Substring(0, 25) + "...";
-            }
-
             var entry = Instantiate(_queueEntryPrefab, _queueList).Cast<GameObject>();
-            entry.GetComponentInChildren<TextMeshProUGUI>().text = text;
+            entry.GetComponentInChildren<TextMeshProUGUI>().text = queueEntry;
         }
+    }
+    
+    void SetButtonActive(bool active)
+    {
+        if (ResumeButton.interactable == active) return;
+        
+        ResumeButton.interactable = active;
+        ResumeButton.enabled = active;
+
+        Color newColor = active ? Color.white : new Color(1, 1, 1, 0.188f);
+        ResumeButton.targetGraphics.subGraphics[0].color = newColor;
+        
+        ResumeButton.uiElement.PlayGlitch(0.6f, 0, 0.5f);
     }
 }

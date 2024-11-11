@@ -156,6 +156,9 @@ namespace PAMultiplayer.Patch
             {
                 return false;
             }
+
+            __instance.Paused = false;
+            
             if (GlobalsManager.IsHosting)
             {
                 SteamManager.Inst.Server.StartLevel();
@@ -180,7 +183,7 @@ namespace PAMultiplayer.Patch
                 GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
                 Object.Destroy(LobbyScreenManager.Instance);
             }
-            //__instance.SetUIVolumeWeight(0.25f);
+            CameraDB.Inst.SetUIVolumeWeightOut(0.2f);
             return true;
         }
     }
