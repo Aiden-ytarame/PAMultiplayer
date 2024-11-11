@@ -75,10 +75,10 @@ namespace PAMultiplayer.Patch
         }
     }
 
-    [HarmonyPatch(typeof(PauseMenu))]
+    [HarmonyPatch(typeof(PauseUIManager))]
     public static class PauseMenuPatch
     {
-        [HarmonyPatch(nameof(PauseMenu.RestartLevel))]
+        [HarmonyPatch(nameof(PauseUIManager.RestartLevel))]
         [HarmonyPrefix]
         static bool PreRestartLevel()
         {
@@ -90,7 +90,7 @@ namespace PAMultiplayer.Patch
     [HarmonyPatch]
     public class PauseLobbyPatch
     {
-        [HarmonyPatch(typeof(PauseMenu), nameof(PauseMenu.UnPause))]
+        [HarmonyPatch(typeof(PauseUIManager), nameof(PauseUIManager.CloseWithEffects))]
         [HarmonyPrefix]
         static bool PreMenuUnpause()
         {
@@ -180,7 +180,7 @@ namespace PAMultiplayer.Patch
                 GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
                 Object.Destroy(LobbyScreenManager.Instance);
             }
-            __instance.SetUIVolumeWeight(0.25f);
+            //__instance.SetUIVolumeWeight(0.25f);
             return true;
         }
     }

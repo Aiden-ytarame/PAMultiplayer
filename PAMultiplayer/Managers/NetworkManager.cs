@@ -15,7 +15,7 @@ namespace PAMultiplayer.Managers
     public class NetworkManager : MonoBehaviour
     {
         private bool _pressedNameKey;
-
+        private ulong debugCount;
 
         void Update()
         {
@@ -31,13 +31,25 @@ namespace PAMultiplayer.Managers
                 }
             }
 
-            if (Input.GetKeyInt(KeyCode.Tab) || Input.GetKeyInt(KeyCode.JoystickButton4)) //left shoulder (?)
+            if (Input.GetKeyInt(KeyCode.P))
+            {
+                //to make this an on button down action
+                if (!_pressedNameKey)
+                {
+                    _pressedNameKey = true;
+                    debugCount--;
+                    LobbyScreenManager.Instance?.RemovePlayerFromLobby(124241124 + debugCount);
+                }
+            }
+            else if (Input.GetKeyInt(KeyCode.Tab) || Input.GetKeyInt(KeyCode.JoystickButton4)) //left shoulder (?)
             {
                 //to make this an on button down action
                 if (!_pressedNameKey)
                 {
                     _pressedNameKey = true;
                     GameManager.Inst.StartCoroutine(PauseLobbyPatch.ShowNames().WrapToIl2Cpp());
+                    LobbyScreenManager.Instance?.AddPlayerToLobby(124241124 + debugCount, debugCount.ToString());
+                    debugCount++;
                 }
             }
             else

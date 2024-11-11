@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
@@ -27,22 +28,29 @@ public class PAM : BasePlugin
     public override void Load()
     {
         //inject types
-        ClassInjector.RegisterTypeInIl2Cpp<NetworkManager>();
-        ClassInjector.RegisterTypeInIl2Cpp<QueueButton>();
-        ClassInjector.RegisterTypeInIl2Cpp<LobbyScreenManager>();
-        ClassInjector.RegisterTypeInIl2Cpp<SteamManager>();
-        ClassInjector.RegisterTypeInIl2Cpp<SteamLobbyManager>();
-        ClassInjector.RegisterTypeInIl2Cpp<MultiplayerDiscordManager>();
-        
-        Log.LogInfo("Applying table postprocessor");
-        ClassInjector.RegisterTypeInIl2Cpp<TablePostprocessor>(new RegisterTypeOptions
+        try
         {
-            Interfaces = new Il2CppInterfaceCollection(new[] { typeof(ITablePostprocessor) })
-        });
-        var postprocessor = new TablePostprocessor();
-        var provider = new ITablePostprocessor(postprocessor.Pointer);
+            ClassInjector.RegisterTypeInIl2Cpp<TablePostprocessor>(new RegisterTypeOptions
+            {
+                Interfaces = new Il2CppInterfaceCollection(new[] { typeof(ITablePostprocessor) })
+            });
+            var postprocessor = new TablePostprocessor();
+            var provider = new ITablePostprocessor(postprocessor.Pointer);
         
-        LocalizationSettings.StringDatabase.TablePostprocessor = provider;
+            LocalizationSettings.StringDatabase.TablePostprocessor = provider;
+            
+            ClassInjector.RegisterTypeInIl2Cpp<NetworkManager>();
+            ClassInjector.RegisterTypeInIl2Cpp<QueueButton>();
+            ClassInjector.RegisterTypeInIl2Cpp<LobbyScreenManager>();
+            ClassInjector.RegisterTypeInIl2Cpp<SteamManager>();
+            ClassInjector.RegisterTypeInIl2Cpp<SteamLobbyManager>();
+            ClassInjector.RegisterTypeInIl2Cpp<MultiplayerDiscordManager>();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+        
      
         //patch all
         Inst = this;

@@ -84,6 +84,10 @@
       <EmbeddedResource Include="Assets\queue assets">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </EmbeddedResource>
+      <None Remove="Assets\lobbymenuv2" />
+      <EmbeddedResource Include="Assets\lobbymenuv2">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
     </ItemGroup>
 	
     <ItemGroup>

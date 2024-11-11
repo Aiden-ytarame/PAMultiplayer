@@ -153,16 +153,16 @@ public class GameManagerPatch
 
         if (paused)
         {
-            __instance.PauseMenuScript.ClosePauseMenu();
-            __instance.SetUIVolumeWeight(0.25f);
-            __instance.UnPause();
+           // __instance.PauseMenuScript.ClosePauseMenu();
+           // __instance.SetUIVolumeWeight(0.25f);
+           // __instance.UnPause();
             return false;
         }
         if (_showUI)
         {
-            __instance.PauseMenuScript.SetBGColor(__instance.LiveTheme.backgroundColor);
-            __instance.SetUIVolumeWeight(1);
-            __instance.PauseMenuScript.OpenPauseMenu();
+          //  __instance.PauseMenuScript.SetBGColor(__instance.LiveTheme.backgroundColor);
+           // __instance.SetUIVolumeWeight(1);
+           // __instance.PauseMenuScript.OpenPauseMenu();
             __instance.Paused = false;
             paused = true;
         }

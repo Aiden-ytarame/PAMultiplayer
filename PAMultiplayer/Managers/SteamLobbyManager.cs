@@ -262,10 +262,10 @@ public class SteamLobbyManager : MonoBehaviour
         //this actually might not need to exist
         //since we should go back to the menu on lobby failed
         //but I never tested this so we keep just in case
-        if (!LobbyScreenManager.Instance?.pauseMenu) return; //this is for the "Lobby failed to be created" message
+     //   if (!LobbyScreenManager.Instance?.pauseMenu) return; //this is for the "Lobby failed to be created" message
         
-        LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/buttons").gameObject.SetActive(true);
-        LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/LobbyFailed").gameObject.SetActive(false);
+      //  LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/buttons").gameObject.SetActive(true);
+   //     LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/LobbyFailed").gameObject.SetActive(false);
     }
     
     private void AddPlayerToLoadList(SteamId playerSteamId)
