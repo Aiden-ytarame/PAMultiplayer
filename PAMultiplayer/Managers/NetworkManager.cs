@@ -15,11 +15,22 @@ namespace PAMultiplayer.Managers
     public class NetworkManager : MonoBehaviour
     {
         private bool _pressedNameKey;
-        
+
+
         void Update()
         {
-            if (!GlobalsManager.IsMultiplayer) return;
-            
+            if (GlobalsManager.Players.TryGetValue(GlobalsManager.LocalPlayer, out var playerData))
+            {
+                if (playerData.PlayerObject)
+                {
+                    var V2 = playerData.PlayerObject.Player_Rigidbody.transform.position;
+                    if (GlobalsManager.IsHosting)
+                        SteamManager.Inst.Server?.SendHostPosition(V2);
+                    else
+                        SteamManager.Inst.Client?.SendPosition(V2);
+                }
+            }
+
             if (Input.GetKeyInt(KeyCode.Tab) || Input.GetKeyInt(KeyCode.JoystickButton4)) //left shoulder (?)
             {
                 //to make this an on button down action
@@ -33,24 +44,9 @@ namespace PAMultiplayer.Managers
             {
                 _pressedNameKey = false;
             }
-            
+
             SteamManager.Inst.Server?.Receive();
             SteamManager.Inst.Client?.Receive();
-        }
-
-        private void FixedUpdate()
-        {
-            if (GlobalsManager.Players.TryGetValue(GlobalsManager.LocalPlayer, out var playerData))
-            {
-                if (playerData.PlayerObject)
-                {
-                    var V2 =playerData.PlayerObject.Player_Rigidbody.transform.position;
-                    if (GlobalsManager.IsHosting)
-                        SteamManager.Inst.Server?.SendHostPosition(V2);
-                    else
-                        SteamManager.Inst.Client?.SendPosition(V2);
-                }
-            }
         }
 
         private void OnDestroy()

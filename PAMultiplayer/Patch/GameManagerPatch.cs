@@ -106,6 +106,9 @@ public class GameManagerPatch
     /// </summary>
     static IEnumerator FetchExternalData()
     {
+        //we could just have this json file on the mp repo,
+        //but I dont want to have a bunch of commits just changing the name colors.
+        //we also can make this repo not a github page but eh, why not 
         UnityWebRequest webRequest =
             UnityWebRequest.Get("https://aiden-ytarame.github.io/Test-static-files/ColoredNames.json");
         yield return webRequest.SendWebRequest();
@@ -129,7 +132,7 @@ public class GameManagerPatch
             string color = playerColor.Value["color"];
             if (color != null)
             {
-                PAM.Logger.LogInfo($"Loaded custom color for { playerColor.Value["name"]}");
+                PAM.Logger.LogInfo($"Loaded custom color for { playerColor.Value["name"].Value}");
                 newColors.Add(id, color);
             }
         }
