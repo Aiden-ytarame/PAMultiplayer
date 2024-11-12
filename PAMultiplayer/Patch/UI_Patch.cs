@@ -40,15 +40,12 @@ namespace PAMultiplayer.Patch
                 GlobalsManager.IsHosting = true;
                 GlobalsManager.IsMultiplayer = true;
 
-                if (GlobalsManager.Queue.Count > 0)
-                {
-                    PublishedFileId id = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID;
-                    if (!GlobalsManager.Queue.Contains(id.ToString()))
-                        GlobalsManager.Queue.Add(id.ToString());
+                PublishedFileId id = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID;
+                if (!GlobalsManager.Queue.Contains(id.ToString()))
+                    GlobalsManager.Queue.Add(id.ToString());
 
-                    ArcadeManager.Inst.CurrentArcadeLevel =
-                        ArcadeLevelDataManager.Inst.GetSteamLevel(ulong.Parse(GlobalsManager.Queue[0]));
-                }
+                ArcadeManager.Inst.CurrentArcadeLevel =
+                    ArcadeLevelDataManager.Inst.GetSteamLevel(ulong.Parse(GlobalsManager.Queue[0]));
 
                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
             }));

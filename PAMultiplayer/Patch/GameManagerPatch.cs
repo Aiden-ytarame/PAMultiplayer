@@ -305,7 +305,6 @@ public class GameManagerPatch
              else
              {
                  //loading screen
-                 //IL2CPP.il2cpp_thread_attach(IL2CPP.il2cpp_domain_get());
                  var newTask = new TaskData
                  {
                      Name = "Downloading Level",
@@ -347,7 +346,7 @@ public class GameManagerPatch
          if (GlobalsManager.IsHosting)
          {
              SteamLobbyManager.Inst.RandSeed = Random.seed;
-             SetSeed(Random.seed);
+             //SyncSeedPatch.SetSeed(Random.seed);
              
              if(GlobalsManager.IsReloadingLobby)
              {
@@ -367,13 +366,12 @@ public class GameManagerPatch
          }
          else
          {
-             SetSeed(SteamLobbyManager.Inst.RandSeed);
+             //SyncSeedPatch.SetSeed(SteamLobbyManager.Inst.RandSeed);
          }
          
          gm.LoadData(_level);
-         
+
          yield return gm.StartCoroutine(gm.LoadBackgrounds(_level));
-        
          yield return gm.StartCoroutine(gm.LoadObjects(_level));
 
          if (!GlobalsManager.IsReloadingLobby)
@@ -390,7 +388,6 @@ public class GameManagerPatch
                  yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
              }
          }
-         
          yield return gm.StartCoroutine(gm.LoadTweens());
          
          GlobalsManager.IsReloadingLobby = false;
@@ -444,13 +441,6 @@ public class GameManagerPatch
         GlobalsManager.IsDownloading = false;
         
         return level;
-    }
-
-    static void SetSeed(int _seed)
-    {
-        Random.InitState(_seed);
-        ObjectManager.inst.seed = _seed;
-        ObjectManager.inst.oldState = Random.state;
     }
     
     //this is patched manually in Plugin.cs

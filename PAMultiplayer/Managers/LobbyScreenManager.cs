@@ -179,6 +179,7 @@ public class LobbyScreenManager : MonoBehaviour
     {
         GlobalsManager.HasStarted = true;
         SteamLobbyManager.Inst.HideLobby();
+        SteamLobbyManager.Inst.UnloadAll();
         
         LobbyMenu.HideAll();
         GameManager.Inst.UnPause();
@@ -217,6 +218,6 @@ public class LobbyScreenManager : MonoBehaviour
         Color newColor = active ? Color.white : new Color(1, 1, 1, 0.188f);
         ResumeButton.targetGraphics.subGraphics[0].color = newColor;
         
-        ResumeButton.uiElement.PlayGlitch(0.6f, 0, 0.5f);
+        ResumeButton.GetComponent<UI_Button>().PlayGlitch(0.6f, 0, 0.5f);
     }
 }

@@ -3,6 +3,7 @@ using HarmonyLib;
 using Il2CppInterop.Runtime;
 using PAMultiplayer.Managers;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace PAMultiplayer.Patch;
 
