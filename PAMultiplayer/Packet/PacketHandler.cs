@@ -129,6 +129,7 @@ public class CheckpointPacket : IPacketHandler
         PAM.Logger.LogInfo($"Checkpoint [{(int)data.x}] Received");
         GameManager.Inst.playingCheckpointAnimation = true;
         VGPlayerManager.Inst.RespawnPlayers();
+        VGPlayerManager.Inst.HealPlayers();
 
         GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation((int)data.x));
     }

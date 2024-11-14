@@ -97,6 +97,6 @@
     </ItemGroup>
 	
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-      <Exec Command="xcopy /q /Y &quot;D:\Downloads\UnityPorted\MODS\PAGit\PAMultiplayer\PAMultiplayer\bin\Debug\net6.0\PAMultiplayer.dll&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Project Arrhythmia\BepInEx\plugins\PAMultiplayer&quot; &gt; nul" />
+      <Exec Command="xcopy /q /Y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Project Arrhythmia\BepInEx\plugins\PAMultiplayer&quot; &gt; nul" />
     </Target>
 </Project>

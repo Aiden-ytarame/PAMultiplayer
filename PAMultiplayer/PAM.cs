@@ -51,7 +51,6 @@ public class PAM : BasePlugin
             Console.WriteLine(e);
         }
         
-     
         //patch all
         Inst = this;
         harmony = new Harmony(Guid);

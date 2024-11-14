@@ -339,14 +339,15 @@ public class GameManagerPatch
              }
          }
          gm.LoadMetadata(_level);
-        
-        
+         
          yield return gm.StartCoroutine(gm.LoadAudio(_level));
          
          if (GlobalsManager.IsHosting)
          {
              SteamLobbyManager.Inst.RandSeed = Random.seed;
              //SyncSeedPatch.SetSeed(Random.seed);
+             Random.InitState(0);
+             //SyncRng.seed = 0;
              
              if(GlobalsManager.IsReloadingLobby)
              {
@@ -463,3 +464,5 @@ public static class TaskExtension
         return Il2CppSystem.Threading.Tasks.Task.Run(new Action(task.Wait));
     }
 }
+
+
