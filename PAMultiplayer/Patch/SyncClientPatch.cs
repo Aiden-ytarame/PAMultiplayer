@@ -20,7 +20,7 @@ public static class CheckpointHandler
     {
         if (!GlobalsManager.IsMultiplayer) return true; //if single player run as normal
 
-        if (!GlobalsManager.IsHosting) return false; //only host runs checkpoint logic.
+        if (!GlobalsManager.IsHosting || DataManager.inst.gameData.beatmapData == null) return false; //only host runs checkpoint logic.
         
         float songTime = __instance.CurrentSongTimeSmoothed;
         var activated = __instance.checkpointsActivated;
@@ -82,6 +82,7 @@ public static class RewindHandler
         }
     }
 }
+
 internal static class PredicateExtension
 {
     //this is here so I dont have to call ConvertDelegate manually every time. will likely re-use this in other mods
