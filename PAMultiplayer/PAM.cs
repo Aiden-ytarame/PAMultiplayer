@@ -50,8 +50,7 @@ public class PAM : BasePlugin
         {
             Console.WriteLine(e);
         }
-
-       
+        
         //patch all
         Inst = this;
         harmony = new Harmony(Guid);
@@ -62,6 +61,7 @@ public class PAM : BasePlugin
         var prefix = new HarmonyMethod(typeof(GameManagerPatch).GetMethod("OverrideLoadGame"));
         
         harmony.Patch(loadGameMoveNext, prefix);
+        
         Log.LogInfo($"Plugin {Guid} is loaded!");
     }
     

@@ -360,7 +360,6 @@ public class GameManagerPatch
                      levelNames.Add(level.TrackName);
                  }
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
-                 
                  SteamManager.Inst.Server.SendNextQueueLevel(GlobalsManager.LevelId, SteamLobbyManager.Inst.RandSeed);
              }
          }

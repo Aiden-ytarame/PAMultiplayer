@@ -189,11 +189,12 @@ public class PAMSocketManager : SocketManager
 
     public void SendNextQueueLevel(ulong id, int seed)
     {
-        var packet = new NetPacket(seed)
+        var packet = new NetPacket()
         {
             PacketType = PacketType.nextLevel,
             SenderId = id,
         };
+        packet.Data.x = BitConverter.ToSingle(BitConverter.GetBytes(seed));
         SendMessage(packet);
     }
     //yes due to a mistake the host doesn't connect to the server as client 
@@ -298,6 +299,7 @@ public class PAMConnectionManager : ConnectionManager
             PacketType = PacketType.Damage,
             SenderId = GlobalsManager.LocalPlayer,
         };
+     
         SendPacket(packet);
     }
 
