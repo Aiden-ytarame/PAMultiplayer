@@ -217,6 +217,8 @@ public class SteamLobbyManager : MonoBehaviour
         }
         PAM.Logger.LogInfo($"SEED : {RandSeed}");
 
+        GlobalsManager.Queue.Clear();
+        
         foreach (var level in ArcadeLevelDataManager.Inst.ArcadeLevels)
         {
             if (level.SteamInfo.ItemID.Value == GlobalsManager.LevelId)
@@ -258,14 +260,6 @@ public class SteamLobbyManager : MonoBehaviour
         
         lobby.SetData("HealthMod", DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0).ToString());
         lobby.SetData("SpeedMod", DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0).ToString());
-        
-        //this actually might not need to exist
-        //since we should go back to the menu on lobby failed
-        //but I never tested this so we keep just in case
-     //   if (!LobbyScreenManager.Instance?.pauseMenu) return; //this is for the "Lobby failed to be created" message
-        
-      //  LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/buttons").gameObject.SetActive(true);
-   //     LobbyScreenManager.Instance.pauseMenu.transform.Find("Content/LobbyFailed").gameObject.SetActive(false);
     }
     
     private void AddPlayerToLoadList(SteamId playerSteamId)
