@@ -300,12 +300,7 @@ public class GameManagerPatch
              VGLevel level = ArcadeLevelDataManager.Inst.GetSteamLevel(GlobalsManager.LevelId);
              if (level)
              {
-                 if (GlobalsManager.Queue.Count > 0)
-                 {
-                     //checking if this is the cause of a bug
-                     PAM.Logger.LogWarning(
-                         $"tried to download a level while queue is not empty! global [{level.TrackName}], queue [{ArcadeLevelDataManager.Inst.GetSteamLevel(ulong.Parse(GlobalsManager.Queue[0])).TrackName}]");
-                 }
+                 GlobalsManager.IsDownloading = false;
                  _level = level;
              }
              else

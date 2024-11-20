@@ -69,11 +69,7 @@
       <HintPath>lib\UnityEngine.UnityWebRequestModule.dll</HintPath>
     </Reference>
   </ItemGroup>
-	
-    <ItemGroup>
-      <None Remove="lib\costura64\**" />
-    </ItemGroup>
-	
+  
     <ItemGroup>
       <None Remove="Assets\lobby menu" />
       <EmbeddedResource Remove="lib\costura64\**" />
@@ -91,11 +87,7 @@
       <None Remove="lib\Facepunch.Steamworks.Win64.dll" />
       <Content Include="lib\Facepunch.Steamworks.Win64.dll" />
     </ItemGroup>
-	
-    <ItemGroup>
-      <Compile Remove="lib\costura64\**" />
-    </ItemGroup>
-	
+  
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
       <Exec Command="xcopy /q /Y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Project Arrhythmia\BepInEx\plugins\PAMultiplayer&quot; &gt; nul" />
     </Target>

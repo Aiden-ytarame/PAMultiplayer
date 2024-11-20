@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Packet;
@@ -194,7 +195,8 @@ public class PAMSocketManager : SocketManager
             PacketType = PacketType.nextLevel,
             SenderId = id,
         };
-        packet.Data.x = BitConverter.ToSingle(BitConverter.GetBytes(seed));
+        var seedBytes = BitConverter.GetBytes(seed);
+        packet.Data.x = BitConverter.IsLittleEndian ? BitConverter.ToSingle(seedBytes) : BitConverter.ToSingle(seedBytes.Reverse().ToArray());
         SendMessage(packet);
     }
     //yes due to a mistake the host doesn't connect to the server as client 

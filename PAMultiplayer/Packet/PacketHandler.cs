@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
 using Steamworks;
@@ -171,14 +172,15 @@ public class NextLevelPacket : IPacketHandler
 {
     public void ProcessPacket(SteamId levelId, Vector2 data)
     {
-        int seed = BitConverter.ToInt32( BitConverter.GetBytes(data.x));
+        var seedBytes = BitConverter.GetBytes(data.x);
+        int seed = BitConverter.IsLittleEndian ? BitConverter.ToInt32(seedBytes) : BitConverter.ToInt32(seedBytes.Reverse().ToArray());
         
         PAM.Logger.LogInfo($"NEW SEED : {seed}");
+      
         GlobalsManager.LevelId = levelId;
-        SteamLobbyManager.Inst.RandSeed = int.Parse(SteamLobbyManager.Inst.CurrentLobby.GetData("seed"));
+        SteamLobbyManager.Inst.RandSeed = seed;
         GlobalsManager.IsReloadingLobby = true;
         
-
         foreach (var level in ArcadeLevelDataManager.Inst.ArcadeLevels)
         {
             if (level.SteamInfo.ItemID.Value == GlobalsManager.LevelId)
