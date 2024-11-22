@@ -172,10 +172,9 @@ public class NextLevelPacket : IPacketHandler
 {
     public void ProcessPacket(SteamId levelId, Vector2 data)
     {
-        var seedBytes = BitConverter.GetBytes(data.x);
-        int seed = BitConverter.IsLittleEndian ? BitConverter.ToInt32(seedBytes) : BitConverter.ToInt32(seedBytes.Reverse().ToArray());
+        int seed = BitConverter.ToInt32( BitConverter.GetBytes(data.x));
         
-        PAM.Logger.LogInfo($"NEW SEED : {seed}");
+        PAM.Logger.LogInfo($"New random seed : {seed}");
       
         GlobalsManager.LevelId = levelId;
         SteamLobbyManager.Inst.RandSeed = seed;

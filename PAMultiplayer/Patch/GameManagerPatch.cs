@@ -347,7 +347,6 @@ public class GameManagerPatch
          {
              SteamLobbyManager.Inst.RandSeed = Random.seed;
              ObjectManager.inst.seed = Random.seed;
-             Test.seed = Random.seed;
              
              if(GlobalsManager.IsReloadingLobby)
              {
@@ -368,10 +367,21 @@ public class GameManagerPatch
          else
          {
              ObjectManager.inst.seed = SteamLobbyManager.Inst.RandSeed;
-             Test.seed = SteamLobbyManager.Inst.RandSeed;
          }
-         
-         gm.LoadData(_level);
+
+         try
+         {
+             gm.LoadData(_level);
+         }
+         catch (Exception e)
+         {
+             PAM.Logger.LogFatal("LEVEL FAILED TO LOAD : logging all and going back to menu");
+             PAM.Logger.LogError(e);
+             PAM.Logger.LogError(e.InnerException);
+             SceneLoader.Inst.LoadSceneGroup("Menu");
+             yield break;
+         }
+     
 
          yield return gm.StartCoroutine(gm.LoadBackgrounds(_level));
          yield return gm.StartCoroutine(gm.LoadObjects(_level));
@@ -417,7 +427,7 @@ public class GameManagerPatch
     static async Task<Item> DownloadLevel()
     {
         var item = await SteamUGC.QueryFileAsync(GlobalsManager.LevelId);
-
+       
         if (!item.HasValue)
         {
             PAM.Logger.LogError("Level not found, is it deleted from the workshop?");
@@ -465,20 +475,3 @@ public static class TaskExtension
         return Il2CppSystem.Threading.Tasks.Task.Run(new Action(task.Wait));
     }
 }
-
-[HarmonyPatch(typeof(ObjectManager))]
-public static class Test
-{
-    public static int seed;
-    
-    [HarmonyPatch(nameof(ObjectManager.CreateObjectData))]
-    [HarmonyPostfix]
-    public static void test1(int _i,  ref ObjectHelpers.GameObjectRef __result)
-    {
-        Random.InitState(seed);
-        __result.sequence.randomState = Random.state;
-        seed = Random.RandomRangeInt(int.MinValue, int.MaxValue);
-    }
-    
-}
-

@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -75,7 +76,6 @@ public class PAMSocketManager : SocketManager
         
         Span<byte> packetSpan = new Span<byte>((void*)data, PACKET_SIZE);
         var packet = MemoryMarshal.Read<NetPacket>(packetSpan);
-        
         GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.Data);
     }
 
@@ -195,8 +195,7 @@ public class PAMSocketManager : SocketManager
             PacketType = PacketType.nextLevel,
             SenderId = id,
         };
-        var seedBytes = BitConverter.GetBytes(seed);
-        packet.Data.x = BitConverter.IsLittleEndian ? BitConverter.ToSingle(seedBytes) : BitConverter.ToSingle(seedBytes.Reverse().ToArray());
+        packet.Data.x = BitConverter.ToSingle( BitConverter.GetBytes(seed));
         SendMessage(packet);
     }
     //yes due to a mistake the host doesn't connect to the server as client 

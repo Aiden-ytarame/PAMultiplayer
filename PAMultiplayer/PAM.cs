@@ -64,5 +64,4 @@ public class PAM : BasePlugin
         
         Log.LogInfo($"Plugin {Guid} is loaded!");
     }
-    
 }
