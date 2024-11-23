@@ -66,7 +66,6 @@ public class LobbyScreenManager : MonoBehaviour
         
         ResumeButton.onClick.AddListener(new Action(() =>
         {
-            LobbyMenu.HideAll();
             GameManager.Inst.UnPause();
         }));
 
@@ -110,6 +109,7 @@ public class LobbyScreenManager : MonoBehaviour
     {
         if (LobbyMenu)
         {
+            LobbyMenu.HideAll();
             Destroy(LobbyMenu.gameObject);
         }
     }

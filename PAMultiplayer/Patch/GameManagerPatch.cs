@@ -369,16 +369,17 @@ public class GameManagerPatch
          {
              ObjectManager.inst.seed = SteamLobbyManager.Inst.RandSeed;
          }
-         
+         PAM.Logger.LogFatal($"SEED: {ObjectManager.inst.seed}");
          try
          {
              gm.LoadData(_level);
+             PAM.Logger.LogFatal($"SEED: {ObjectManager.inst.seed}");
          }
          catch (Exception e)
          {
-             PAM.Logger.LogFatal("LEVEL FAILED TO LOAD : logging all and going back to menu");
-             PAM.Logger.LogError(e);
-             PAM.Logger.LogError(e.InnerException);
+             PAM.Logger.LogFatal("LEVEL FAILED TO LOAD, going back to menu");
+             PAM.Logger.LogDebug(e);
+        
              SceneLoader.Inst.manager.ClearLoadingTasks();
              SceneLoader.Inst.LoadSceneGroup("Menu");
              yield break;

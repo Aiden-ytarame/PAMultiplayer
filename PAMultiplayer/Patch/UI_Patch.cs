@@ -178,7 +178,9 @@ namespace PAMultiplayer.Patch
                 VGPlayerManager.inst.RespawnPlayers();
                 
                 GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
-                Object.Destroy(LobbyScreenManager.Instance);
+                
+                LobbyScreenManager.Instance.LobbyMenu.HideAll();
+                Object.Destroy(LobbyScreenManager.Instance, 1);
             }
             CameraDB.Inst.SetUIVolumeWeightOut(0.2f);
             return true;
