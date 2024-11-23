@@ -275,6 +275,7 @@ public class GameManagerPatch
         else
         {
             //if failed to connect to server
+            SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.Inst.LoadSceneGroup("Menu");
         }
 
@@ -368,7 +369,7 @@ public class GameManagerPatch
          {
              ObjectManager.inst.seed = SteamLobbyManager.Inst.RandSeed;
          }
-
+         
          try
          {
              gm.LoadData(_level);
@@ -378,6 +379,7 @@ public class GameManagerPatch
              PAM.Logger.LogFatal("LEVEL FAILED TO LOAD : logging all and going back to menu");
              PAM.Logger.LogError(e);
              PAM.Logger.LogError(e.InnerException);
+             SceneLoader.Inst.manager.ClearLoadingTasks();
              SceneLoader.Inst.LoadSceneGroup("Menu");
              yield break;
          }
@@ -431,6 +433,7 @@ public class GameManagerPatch
         if (!item.HasValue)
         {
             PAM.Logger.LogError("Level not found, is it deleted from the workshop?");
+            SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.Inst.LoadSceneGroup("Menu");
             return new Item();
         }
@@ -439,6 +442,7 @@ public class GameManagerPatch
         
         if(level.ConsumerApp != 440310 || level.CreatorApp != 440310) 
         {
+            SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.Inst.LoadSceneGroup("Menu");
             return new Item();
         }
