@@ -346,9 +346,9 @@ public class GameManagerPatch
          
          if (GlobalsManager.IsHosting)
          {
-             SteamLobbyManager.Inst.RandSeed = Random.seed;
+             SteamLobbyManager.Inst.RandSeed = 1;//Random.seed;
              ObjectManager.inst.seed = Random.seed;
-             
+             Test.seed = SteamLobbyManager.Inst.RandSeed;
              if(GlobalsManager.IsReloadingLobby)
              {
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LevelId", GlobalsManager.LevelId.ToString());
@@ -367,6 +367,7 @@ public class GameManagerPatch
          }
          else
          {
+             Test.seed = SteamLobbyManager.Inst.RandSeed;
              ObjectManager.inst.seed = SteamLobbyManager.Inst.RandSeed;
          }
          PAM.Logger.LogFatal($"SEED: {ObjectManager.inst.seed}");
@@ -479,4 +480,20 @@ public static class TaskExtension
     {
         return Il2CppSystem.Threading.Tasks.Task.Run(new Action(task.Wait));
     }
+}
+
+[HarmonyPatch(typeof(ObjectManager))]
+public static class Test
+{
+    public static int seed;
+    
+    [HarmonyPatch(nameof(ObjectManager.CreateObjectData))]
+    [HarmonyPostfix]
+    public static void test1(int _i,  ref ObjectHelpers.GameObjectRef __result)
+    {
+        Random.InitState(seed);
+        __result.sequence.randomState = Random.state;
+        seed = Random.RandomRangeInt(int.MinValue, int.MaxValue);
+    }
+    
 }
