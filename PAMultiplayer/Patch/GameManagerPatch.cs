@@ -14,6 +14,7 @@ using Steamworks.Ugc;
 using UnityEngine;
 using UnityEngine.Networking;
 using VGFunctions;
+using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
 
@@ -263,8 +264,6 @@ public class GameManagerPatch
         }
         else if (SteamManager.Inst.Client.Connected)
         {
-            //if connected successfully
-           
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
             foreach (var vgPlayerData in GlobalsManager.Players)
             {
@@ -346,7 +345,7 @@ public class GameManagerPatch
          
          if (GlobalsManager.IsHosting)
          {
-             SteamLobbyManager.Inst.RandSeed = 1;//Random.seed;
+             SteamLobbyManager.Inst.RandSeed = Random.seed;
              ObjectManager.inst.seed = Random.seed;
              Test.seed = SteamLobbyManager.Inst.RandSeed;
              if(GlobalsManager.IsReloadingLobby)
@@ -370,17 +369,18 @@ public class GameManagerPatch
              Test.seed = SteamLobbyManager.Inst.RandSeed;
              ObjectManager.inst.seed = SteamLobbyManager.Inst.RandSeed;
          }
-         PAM.Logger.LogFatal($"SEED: {ObjectManager.inst.seed}");
+      
+         
          try
          {
              gm.LoadData(_level);
-             PAM.Logger.LogFatal($"SEED: {ObjectManager.inst.seed}");
          }
          catch (Exception e)
          {
              PAM.Logger.LogFatal("LEVEL FAILED TO LOAD, going back to menu");
              PAM.Logger.LogDebug(e);
         
+             GlobalsManager.IsReloadingLobby = false;
              SceneLoader.Inst.manager.ClearLoadingTasks();
              SceneLoader.Inst.LoadSceneGroup("Menu");
              yield break;
@@ -435,6 +435,7 @@ public class GameManagerPatch
         if (!item.HasValue)
         {
             PAM.Logger.LogError("Level not found, is it deleted from the workshop?");
+            GlobalsManager.IsReloadingLobby = false;
             SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.Inst.LoadSceneGroup("Menu");
             return new Item();
@@ -444,6 +445,7 @@ public class GameManagerPatch
         
         if(level.ConsumerApp != 440310 || level.CreatorApp != 440310) 
         {
+            GlobalsManager.IsReloadingLobby = false;
             SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.Inst.LoadSceneGroup("Menu");
             return new Item();
@@ -464,6 +466,14 @@ public class GameManagerPatch
     //this is patched manually in Plugin.cs
     public static bool OverrideLoadGame(ref bool __result)
     {
+        //if you go to next level in a queue and there was a camrera parented object on level end, it stays FOREVER. t
+        //this makes sure that doesnt happen.
+        for (int i = 0; i < CameraDB.Inst.CameraParentedRoot.childCount; i++)
+        {
+            Object.Destroy(CameraDB.Inst.CameraParentedRoot.GetChild(i).gameObject);
+        }
+
+      
         if (!GameManager.Inst.IsArcade || !GlobalsManager.IsMultiplayer)
             return true;
         
