@@ -177,5 +177,10 @@ public static class LevelEndScreenPatch
             SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
             PAM.Logger.LogInfo("Starting next level in queue!");
         }));
+
+        if (GlobalsManager.IsMultiplayer)
+        {
+            __instance.DisableButton(buttonsParent.Find("Restart Level").GetComponent<MultiElementButton>());
+        }
     }
 }

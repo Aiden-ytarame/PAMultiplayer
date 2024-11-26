@@ -127,7 +127,7 @@ namespace PAMultiplayer.Patch
         
         //for changing the player's shape.
         public static Mesh CircleMesh;
-        public static Mesh HexagonMesh;
+        public static Mesh ArrowMesh;
         public static Mesh TriangleMesh;
         
         /// <summary>
@@ -155,7 +155,7 @@ namespace PAMultiplayer.Patch
                     trail.GetComponentInChildren<TrailRenderer>().enabled = false;
                 }
             }
-            
+         
             if (__instance.PlayerID < 4)
             {
                 return;
@@ -167,10 +167,6 @@ namespace PAMultiplayer.Patch
             }
             else if (__instance.PlayerID < 12)
             {
-                SetPlayerMesh(__instance, HexagonMesh);
-            }
-            else
-            {
                 SetPlayerMesh(__instance, TriangleMesh);
                 
                 Vector3 offsetRot = new Vector3(0, 0, -90);
@@ -179,6 +175,18 @@ namespace PAMultiplayer.Patch
                 player.Find("core").Rotate(offsetRot);
                 player.Find("zen-marker").Rotate(offsetRot);
                 player.transform.Find("boost").Rotate(offsetRot);
+              
+            }
+            else
+            {
+                SetPlayerMesh(__instance, ArrowMesh);
+                Transform player = __instance.Player_Wrapper.transform;
+
+                Vector3 newScale = new Vector3(2, 2, 1);
+
+                player.Find("core").localScale = newScale;
+                player.Find("zen-marker").localScale = newScale;
+                player.transform.Find("boost").localScale = newScale;
             }
         }
 

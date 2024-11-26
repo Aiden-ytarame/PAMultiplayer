@@ -11,6 +11,7 @@ using SimpleJSON;
 using Steamworks;
 using Steamworks.Data;
 using Steamworks.Ugc;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 using VGFunctions;
@@ -31,8 +32,53 @@ public class GameManagerPatch
         if (__instance.IsEditor)
             return;
         
-        if (!GlobalsManager.IsMultiplayer) return;
+        Transform pauseUi = PauseUIManager.Inst.transform.Find("Pause Menu");
+        Transform restartButton = pauseUi.Find("Restart");
+        Transform skipButton = pauseUi.Find("Skip Queue Level");
+        
+        if (!skipButton)
+        {
+            skipButton = Transform.Instantiate(restartButton, pauseUi);
+            skipButton.name = "Skip Queue Level";
+            skipButton.SetSiblingIndex(2);
+            
+            UIStateManager.Inst.RefreshTextCache( skipButton.Find("Title Wrapper/Title").GetComponent<TextMeshProUGUI>(), "Skip Level");
+            UIStateManager.Inst.RefreshTextCache( skipButton.Find("Content/Text").GetComponent<TextMeshProUGUI>(), "Skips the current level in queue");
+            
+            var button = skipButton.GetComponent<MultiElementButton>();
+            button.onClick = new();
+            button.onClick.AddListener(new Action(() =>
+            {
+                PauseUIManager.Inst.CloseUI();
+                ulong id = ulong.Parse(GlobalsManager.Queue[0]);
+                ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetSteamLevel(id);
+                GlobalsManager.LevelId = id;
+            
+            
+                if (GlobalsManager.IsMultiplayer)
+                {
+                    GlobalsManager.IsReloadingLobby = true;
+                    SteamLobbyManager.Inst.UnloadAll();
+                }
+            
+                SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+                PAM.Logger.LogInfo("Starting next level in queue!");
+            }));
 
+            PauseUIManager.Inst.PauseMenu.AllViews["main"].Elements.Add(skipButton.GetComponent<UI_Button>());
+        }
+        
+        skipButton.gameObject.SetActive(GlobalsManager.Queue.Count >= 2);
+        
+        if (!GlobalsManager.IsMultiplayer)
+        {
+           restartButton.gameObject.SetActive(true);
+           return;
+        }
+
+        restartButton.gameObject.SetActive(false);
+        
+        
         if (Player_Patch.CircleMesh == null)
         {
             foreach (var mesh in Resources.FindObjectsOfTypeAll<Mesh>())
@@ -42,9 +88,9 @@ public class GameManagerPatch
                     Player_Patch.CircleMesh = mesh;
                 }
 
-                if (mesh.name == "hexagon")
+                if (mesh.name == "full_arrow")
                 {
-                    Player_Patch.HexagonMesh = mesh;
+                    Player_Patch.ArrowMesh = mesh;
                 }
                 if (mesh.name == "triangle")
                 {
@@ -99,6 +145,8 @@ public class GameManagerPatch
                 }).ToIl2Cpp()
             };
             SceneLoader.Inst.manager.AddToLoadingTasks(newTask2);
+            
+            skipButton.gameObject.SetActive(false);
         }
     }
 
@@ -466,7 +514,7 @@ public class GameManagerPatch
     //this is patched manually in Plugin.cs
     public static bool OverrideLoadGame(ref bool __result)
     {
-        //if you go to next level in a queue and there was a camrera parented object on level end, it stays FOREVER. t
+        //if you go to next level in a queue and there was a camera parented object on level end, it stays FOREVER.
         //this makes sure that doesnt happen.
         for (int i = 0; i < CameraDB.Inst.CameraParentedRoot.childCount; i++)
         {

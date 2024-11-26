@@ -19,7 +19,7 @@ namespace PAMultiplayer.Patch
 {
   
     /// <summary>
-    /// adds the Multiplayer modifier to the UI
+    /// adds the Multiplayer button to the UI
     /// </summary>
     [HarmonyPatch(typeof(ModifiersManager))]
     public static class UI_Patch
@@ -338,7 +338,7 @@ namespace PAMultiplayer.Patch
         }
     }
     /// <summary>
-    /// prevents the changelog button from destroying itself
+    /// prevents the changelog button from destroying itself, so we can copy it for the Update Button
     /// </summary>
     [HarmonyPatch(typeof(ShowChangeLog))]
     public static class ChangelogsPatch
