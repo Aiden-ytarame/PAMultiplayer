@@ -24,6 +24,17 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch(typeof(GameManager))]
 public class GameManagerPatch
 {
+    [HarmonyPatch(nameof(GameManager.Start))]
+    [HarmonyPrefix]
+    static void PreStart()
+    {
+        //if you go to next level in a queue and there was a camera parented object on level end, it stays FOREVER.
+        //this makes sure that doesnt happen.
+        for (int i = 0; i < CameraDB.Inst.CameraParentedRoot.childCount; i++)
+        {
+            Object.Destroy(CameraDB.Inst.CameraParentedRoot.GetChild(i).gameObject);
+        }
+    }
     //sets the loading screen awaits
     [HarmonyPatch(nameof(GameManager.Start))]
     [HarmonyPostfix]
@@ -62,7 +73,7 @@ public class GameManagerPatch
                 }
             
                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-                PAM.Logger.LogInfo("Starting next level in queue!");
+                PAM.Logger.LogInfo("Skipping to next level in queue!");
             }));
 
             PauseUIManager.Inst.PauseMenu.AllViews["main"].Elements.Add(skipButton.GetComponent<UI_Button>());
@@ -437,7 +448,7 @@ public class GameManagerPatch
 
          yield return gm.StartCoroutine(gm.LoadBackgrounds(_level));
          yield return gm.StartCoroutine(gm.LoadObjects(_level));
-
+       
          if (!GlobalsManager.IsReloadingLobby)
          {
              if (GlobalsManager.IsHosting)
@@ -452,6 +463,8 @@ public class GameManagerPatch
                  yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
              }
          }
+         
+         
          yield return gm.StartCoroutine(gm.LoadTweens());
          
          GlobalsManager.IsReloadingLobby = false;
@@ -514,14 +527,6 @@ public class GameManagerPatch
     //this is patched manually in Plugin.cs
     public static bool OverrideLoadGame(ref bool __result)
     {
-        //if you go to next level in a queue and there was a camera parented object on level end, it stays FOREVER.
-        //this makes sure that doesnt happen.
-        for (int i = 0; i < CameraDB.Inst.CameraParentedRoot.childCount; i++)
-        {
-            Object.Destroy(CameraDB.Inst.CameraParentedRoot.GetChild(i).gameObject);
-        }
-
-      
         if (!GameManager.Inst.IsArcade || !GlobalsManager.IsMultiplayer)
             return true;
         
@@ -544,7 +549,7 @@ public static class TaskExtension
 public static class Test
 {
     public static int seed;
-    
+
     [HarmonyPatch(nameof(ObjectManager.CreateObjectData))]
     [HarmonyPostfix]
     public static void test1(int _i,  ref ObjectHelpers.GameObjectRef __result)

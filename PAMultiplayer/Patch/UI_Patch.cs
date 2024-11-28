@@ -309,13 +309,6 @@ namespace PAMultiplayer.Patch
             
             Transform buttons = GameObject.Find("Canvas/Window/Content/Main Menu/Buttons 3").transform;
             
-            //default has these buttons broken, fixed in next update 
-            //todo: remove this after update
-            if (DataManager.versionNumber == "24.8.5")
-            {
-                buttons.GetComponent<HorizontalLayoutGroup>().childControlWidth = true;
-                buttons.Find("Quit").gameObject.AddComponent<LayoutElement>().minWidth = 547.333f;
-            }
             GameObject updateMod = Object.Instantiate(buttons.Find("Changelog"), buttons).gameObject;
             updateMod.name = "Update MP";
             updateMod.SetActive(true);
