@@ -208,7 +208,7 @@ namespace PAMultiplayer.Patch
                 "Boykisser sent kisses!",
                 "The developer wants me to say something here.",
                 "I'm a furry. So what?",
-                "You might be an Nano but you should hydrate anyways.",
+                "You might be a Nano but you should hydrate anyways.",
                 "Before time began there was The Cube...",
                 "Ready to be carried by another Nano again?",
                 "Squeezing your Nano through the internet wire...",
