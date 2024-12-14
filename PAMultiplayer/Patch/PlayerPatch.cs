@@ -1,5 +1,6 @@
 ﻿using System;
 using HarmonyLib;
+using PAMultiplayer;
 using PAMultiplayer.Managers;
 using Rewired;
 using UnityEngine;
@@ -225,7 +226,25 @@ namespace PAMultiplayer.Patch
 
     }
 }
-
+[HarmonyPatch(typeof(VGPlayerManager))]
+public static class PlayerManagerPatch
+{
+    [HarmonyPatch(nameof(VGPlayerManager.OnControllerConnected))]
+    [HarmonyPrefix]
+    static bool PreConnected(ControllerStatusChangedEventArgs args)
+    {
+    //    args.
+    
+       // PAM.Logger.LogError(ReInput.players.GetPlayer(args.controllerId).id);
+        return !GlobalsManager.IsMultiplayer;
+    }
+    [HarmonyPatch(nameof(VGPlayerManager.OnControllerDisconnected))]
+    [HarmonyPrefix]
+    static bool PreDisConnected()
+    {
+        return !GlobalsManager.IsMultiplayer;
+    }
+}
 [HarmonyPatch(typeof(DataManager.BeatmapTheme))]
 public static class BeatmapThemePatch
 {
@@ -240,6 +259,7 @@ public static class BeatmapThemePatch
         return false;
     }
 }
+
 static class PlayerIsLocalExtension
 {
     public static bool IsLocalPlayer(this VGPlayer player)

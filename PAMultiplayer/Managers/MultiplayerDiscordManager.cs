@@ -8,6 +8,7 @@ using PAMultiplayer.Managers;
 using Steamworks;
 using UnityEngine;
 
+
 /// <summary>
 /// The discord manager the game uses is very finicky and broken so we use this instead.
 /// </summary>
@@ -58,7 +59,6 @@ public class MultiplayerDiscordManager : MonoBehaviour
 			new ConsoleLogger(LogLevel.Warning),
 			false);
 		
-		
 		client.OnError += (_, e) => PAM.Logger.LogError($"An error occurred with Discord RPC Client: {e.Message} ({e.Code})");
 		client.OnReady += onReady;
 
@@ -84,8 +84,10 @@ public class MultiplayerDiscordManager : MonoBehaviour
 			{
 				PAM.Logger.LogError("Failed to parse secret.");
 			}
+
+			return;
 		}
-		PAM.Logger.LogError("Failed to join lobby from discord, steam wasn't initialized.");
+		PAM.Logger.LogError("Failed to join lobby from discord, steam wasn't initialized or youre already in a lobby");
 	}
 
 	private void onReady(object _, ReadyMessage __)

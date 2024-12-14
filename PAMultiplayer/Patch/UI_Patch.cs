@@ -8,7 +8,6 @@ using UnityEngine;
 using PAMultiplayer.Managers;
 using SimpleJSON;
 using Steamworks.Data;
-using UnityEngine.Localization.Components;
 using UnityEngine.Localization.PropertyVariants;
 using UnityEngine.Localization.PropertyVariants.TrackedProperties;
 using UnityEngine.Networking;
@@ -179,7 +178,7 @@ namespace PAMultiplayer.Patch
                 
                 GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
                 
-                LobbyScreenManager.Instance.LobbyMenu.HideAll();
+                LobbyScreenManager.Instance.StartLevel();
                 Object.Destroy(LobbyScreenManager.Instance, 1);
             }
             CameraDB.Inst.SetUIVolumeWeightOut(0.2f);

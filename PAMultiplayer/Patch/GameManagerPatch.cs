@@ -352,6 +352,9 @@ public class GameManagerPatch
     static IEnumerator CustomLoadGame(VGLevel _level)
     {
          GameManager gm = GameManager.Inst;
+         gm.LoadTimer = new();
+         gm.LoadTimer.Start();
+         
          if (GlobalsManager.IsDownloading)
          {
              yield return new WaitUntil(new System.Func<bool>(() => !SteamWorkshopFacepunch.inst.isLoadingLevels));
@@ -466,9 +469,14 @@ public class GameManagerPatch
          
          
          yield return gm.StartCoroutine(gm.LoadTweens());
-         
+
+         //todo:
+         //DataManager.inst.gameData.beatmapData.checkpoints.Sort((x, y) => x.time.CompareTo(y.time));
          GlobalsManager.IsReloadingLobby = false;
-         gm.PauseDebounce = new Debounce();
+         if (VGPlayerManager.Inst.players.Count == 0)
+         {
+             VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){ControllerID = 0, PlayerID = 0});
+         }
          gm.PlayGame();
     }
 
@@ -497,6 +505,7 @@ public class GameManagerPatch
         {
             PAM.Logger.LogError("Level not found, is it deleted from the workshop?");
             GlobalsManager.IsReloadingLobby = false;
+            GlobalsManager.IsDownloading = false;
             SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.Inst.LoadSceneGroup("Menu");
             return new Item();
@@ -507,6 +516,7 @@ public class GameManagerPatch
         if(level.ConsumerApp != 440310 || level.CreatorApp != 440310) 
         {
             GlobalsManager.IsReloadingLobby = false;
+            GlobalsManager.IsDownloading = false;
             SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.Inst.LoadSceneGroup("Menu");
             return new Item();
@@ -560,3 +570,4 @@ public static class Test
     }
     
 }
+

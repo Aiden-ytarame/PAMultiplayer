@@ -23,7 +23,7 @@ public class PAM : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "0.8.2.2";
+    public const string Version = "0.8.3";
 
     public override void Load()
     {
@@ -45,6 +45,7 @@ public class PAM : BasePlugin
             ClassInjector.RegisterTypeInIl2Cpp<SteamManager>();
             ClassInjector.RegisterTypeInIl2Cpp<SteamLobbyManager>();
             ClassInjector.RegisterTypeInIl2Cpp<MultiplayerDiscordManager>();
+            
         }
         catch (Exception e)
         {

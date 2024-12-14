@@ -27,10 +27,9 @@ public class SteamManager : MonoBehaviour
         
         SteamMatchmaking.OnLobbyInvite += OnLobbyInvite;
         SteamFriends.OnGameLobbyJoinRequested += OnGameLobbyJoinRequested;
-        
         InitSteamClient();
     }
-    
+
     private void Update()
     {
         if (SteamClient.IsValid)
@@ -81,7 +80,7 @@ public class SteamManager : MonoBehaviour
         PAM.Logger.LogInfo($"Invite received from [{friend.Name}]");
         //handle invite dialog
     }
-
+    
     public void StartClient(SteamId targetSteamId)
     {
         PAM.Logger.LogInfo($"Starting client. Connection to [{targetSteamId}]");

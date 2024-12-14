@@ -9,8 +9,6 @@ using Newtonsoft.Json;
 using Steamworks;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Serialization;
-using UnityEngine.UI;
 
 namespace PAMultiplayer.Managers;
 
@@ -33,6 +31,7 @@ public class LobbyScreenManager : MonoBehaviour
     GameObject _queueEntryPrefab;
 
     private MultiElementButton ResumeButton;
+    private MultiElementButton QuitButton;
 
     //spawns the lobby GameObject from the assetBundle
     void Awake()
@@ -69,7 +68,8 @@ public class LobbyScreenManager : MonoBehaviour
             GameManager.Inst.UnPause();
         }));
 
-        buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
+        QuitButton = buttons.GetChild(1).GetComponent<MultiElementButton>();
+        QuitButton.onClick.AddListener(new Action(() =>
         {
             SceneLoader.Inst.LoadSceneGroup("Arcade");
         }));
@@ -104,6 +104,16 @@ public class LobbyScreenManager : MonoBehaviour
         LobbyMenu.ShowBase();
         LobbyMenu.SwapView("main");
         CameraDB.Inst.SetUIVolumeWeightIn(0.2f);
+
+        if (GlobalsManager.IsHosting)
+        {
+            ResumeButton.Select();
+        }
+        else
+        {
+            QuitButton.Select();
+        }
+
     }
     private void OnDestroy()
     {
@@ -177,6 +187,10 @@ public class LobbyScreenManager : MonoBehaviour
 
     public void StartLevel()
     {
+        if (GlobalsManager.HasStarted)
+        {
+            return;
+        }
         GlobalsManager.HasStarted = true;
         SteamLobbyManager.Inst.HideLobby();
         SteamLobbyManager.Inst.UnloadAll();

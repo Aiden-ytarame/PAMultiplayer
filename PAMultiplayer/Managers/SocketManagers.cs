@@ -145,11 +145,9 @@ public class PAMSocketManager : SocketManager
         
         if (DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) <= 1)
         {
-            var checkpoint = GameManager.Inst.GetClosestIndex(DataManager.inst.gameData.beatmapData.checkpoints,
-                GameManager.Inst.CurrentSongTimeSmoothed);
-        
-            index = DataManager.inst.gameData.beatmapData.checkpoints.FindIndex(
-                new Predicate<DataManager.GameData.BeatmapData.Checkpoint>(x => x == checkpoint).ToIL2CPP());
+
+
+            index = GameManager.Inst.currentCheckpointIndex;
         }
         
         var packet = new NetPacket(index)

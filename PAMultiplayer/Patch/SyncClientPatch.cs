@@ -23,14 +23,17 @@ public static class CheckpointHandler
         if (!GlobalsManager.IsHosting || DataManager.inst.gameData.beatmapData == null) return false; //only host runs checkpoint logic.
         
         float songTime = __instance.CurrentSongTimeSmoothed;
-        var activated = __instance.checkpointsActivated;
-        if (__instance.checkpointsActivated.Length > 0 && DataManager.inst.gameData.beatmapData.checkpoints.Count > 0)
+     
+        if (DataManager.inst.gameData.beatmapData.checkpoints.Count > 0)
         {
             int tmpIndex = -1;
             
             for (var i = 0; i < DataManager.inst.gameData.beatmapData.checkpoints.Count; i++)
             {
-                if (DataManager.inst.gameData.beatmapData.checkpoints[i].time <= songTime && !activated[i])
+                if(i <= __instance.currentCheckpointIndex)
+                    continue;
+                
+                if (DataManager.inst.gameData.beatmapData.checkpoints[i].time <= songTime)
                 {
                     tmpIndex = i;
                     break;
@@ -39,6 +42,7 @@ public static class CheckpointHandler
             
             if (tmpIndex != -1)
             {
+                __instance.currentCheckpointIndex = tmpIndex;
                 SteamManager.Inst.Server.SendCheckpointHit(tmpIndex);
             }
         }
