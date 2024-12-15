@@ -1,6 +1,7 @@
 ﻿using BepInEx.Unity.IL2CPP.UnityEngine;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using PAMultiplayer.Patch;
+using Rewired;
 using UnityEngine;
 using KeyCode = BepInEx.Unity.IL2CPP.UnityEngine.KeyCode;
 
@@ -44,8 +45,26 @@ namespace PAMultiplayer.Managers
                 _pressedNameKey = false;
             }
 
+            TryToGetController();
+            
             SteamManager.Inst.Server?.Receive();
             SteamManager.Inst.Client?.Receive();
+        }
+
+        void TryToGetController()
+        {
+            for (int i = 0; i < ReInput.controllers.controllerCount; i++)
+            {
+                var controller = ReInput.controllers.Controllers[i];
+                if (controller.isConnected && controller.enabled && 
+                    (controller.type == ControllerType.Keyboard || controller.type == ControllerType.Joystick))
+                {
+                    if (!ReInput.players.GetPlayer(0).controllers.ContainsController(controller))
+                    {
+                        ReInput.players.GetPlayer(0).controllers.AddController(controller, true);
+                    }
+                }
+            }
         }
 
         private void OnDestroy()
@@ -59,6 +78,7 @@ namespace PAMultiplayer.Managers
             SteamManager.Inst.EndClient();
             GlobalsManager.Players.Clear();
             VGPlayerManager.Inst.players.Clear();
+            VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){ControllerID = 0, PlayerID = 0});
         }
         
     }

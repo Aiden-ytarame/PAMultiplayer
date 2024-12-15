@@ -179,7 +179,7 @@ namespace PAMultiplayer.Patch
                 GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
                 
                 LobbyScreenManager.Instance.StartLevel();
-                Object.Destroy(LobbyScreenManager.Instance, 1);
+                Object.Destroy(LobbyScreenManager.Instance, 0.2f);
             }
             CameraDB.Inst.SetUIVolumeWeightOut(0.2f);
             return true;

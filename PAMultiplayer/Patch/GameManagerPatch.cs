@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
+using Il2CppInterop.Runtime;
 using Il2CppSystems.SceneManagement;
 using Newtonsoft.Json;
 using PAMultiplayer.Managers;
@@ -357,13 +358,23 @@ public class GameManagerPatch
          
          if (GlobalsManager.IsDownloading)
          {
-             yield return new WaitUntil(new System.Func<bool>(() => !SteamWorkshopFacepunch.inst.isLoadingLevels));
+             VGLevel levelTest;
+             while (SteamWorkshopFacepunch.inst.isLoadingLevels)
+             {
+                 yield return new WaitForSeconds(1);
+
+                 if (ArcadeLevelDataManager.Inst.GetSteamLevel(GlobalsManager.LevelId))
+                 {
+                     break;
+                 }
+             }
+        
              
-             VGLevel level = ArcadeLevelDataManager.Inst.GetSteamLevel(GlobalsManager.LevelId);
-             if (level)
+             levelTest = ArcadeLevelDataManager.Inst.GetSteamLevel(GlobalsManager.LevelId);
+             if (levelTest)
              {
                  GlobalsManager.IsDownloading = false;
-                 _level = level;
+                 _level = levelTest;
              }
              else
              {
@@ -469,13 +480,16 @@ public class GameManagerPatch
          
          
          yield return gm.StartCoroutine(gm.LoadTweens());
-
-         //todo:
-         //DataManager.inst.gameData.beatmapData.checkpoints.Sort((x, y) => x.time.CompareTo(y.time));
+         
+         var comparision = DelegateSupport.ConvertDelegate<Il2CppSystem.Comparison<DataManager.GameData.BeatmapData.Checkpoint>>(
+             new Comparison<DataManager.GameData.BeatmapData.Checkpoint>((x, y) => x.time.CompareTo(y.time)));
+         
+         DataManager.inst.gameData.beatmapData.checkpoints.Sort(comparision);
+         
          GlobalsManager.IsReloadingLobby = false;
          if (VGPlayerManager.Inst.players.Count == 0)
          {
-             VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){ControllerID = 0, PlayerID = 0});
+             VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){PlayerID = 0, ControllerID = 0});
          }
          gm.PlayGame();
     }

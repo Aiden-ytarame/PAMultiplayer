@@ -233,9 +233,6 @@ public static class PlayerManagerPatch
     [HarmonyPrefix]
     static bool PreConnected(ControllerStatusChangedEventArgs args)
     {
-    //    args.
-    
-       // PAM.Logger.LogError(ReInput.players.GetPlayer(args.controllerId).id);
         return !GlobalsManager.IsMultiplayer;
     }
     [HarmonyPatch(nameof(VGPlayerManager.OnControllerDisconnected))]

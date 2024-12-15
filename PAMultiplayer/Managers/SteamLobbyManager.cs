@@ -85,6 +85,9 @@ public class SteamLobbyManager : MonoBehaviour
 
         if (GlobalsManager.Players.TryGetValue(friend.Id, out var player))
         {
+            string hex = VGPlayerManager.Inst.GetPlayerColorHex(player.PlayerID);
+            VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{friend.Name}</color>] Disconnected", 2.5f);
+            
             VGPlayerManager.Inst.players.Remove(player);
             GlobalsManager.Players.Remove(friend.Id);
             
