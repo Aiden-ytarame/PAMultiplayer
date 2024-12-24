@@ -76,6 +76,17 @@ public class PAMSocketManager : SocketManager
         
         Span<byte> packetSpan = new Span<byte>((void*)data, PACKET_SIZE);
         var packet = MemoryMarshal.Read<NetPacket>(packetSpan);
+        
+        if (packet.PacketType == PacketType.Damage && DataManager.inst.GetSettingBool("mp_linkedHealth", false))
+        {
+            int health = (int)packet.Data.x;
+            
+            if (GlobalsManager.LocalPlayerObj.Health >= health)
+            {
+                SendDamageAll(health);
+            }
+            return;
+        }
         GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.Data);
     }
 
@@ -118,7 +129,7 @@ public class PAMSocketManager : SocketManager
         var packet = new NetPacket
         {
             PacketType = PacketType.Start,
-            SenderId = GlobalsManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayerId,
         };
     
         SendMessage(packet);
@@ -129,7 +140,7 @@ public class PAMSocketManager : SocketManager
         var packet = new NetPacket(index)
         {
             PacketType = PacketType.Checkpoint,
-            SenderId = GlobalsManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayerId,
         };
         
         SendMessage(packet);
@@ -153,7 +164,7 @@ public class PAMSocketManager : SocketManager
         var packet = new NetPacket(index)
         {
             PacketType = PacketType.Rewind,
-            SenderId = GlobalsManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayerId,
         };
         SendMessage(packet);
         
@@ -190,7 +201,7 @@ public class PAMSocketManager : SocketManager
     {
         var packet = new NetPacket()
         {
-            PacketType = PacketType.nextLevel,
+            PacketType = PacketType.NextLevel,
             SenderId = id,
         };
         packet.Data.x = BitConverter.ToSingle( BitConverter.GetBytes(seed));
@@ -201,10 +212,10 @@ public class PAMSocketManager : SocketManager
 
     public void SendHostDamage()
     {
-        var packet = new NetPacket(GlobalsManager.Players[GlobalsManager.LocalPlayer].PlayerObject.Health)
+        var packet = new NetPacket(GlobalsManager.LocalPlayerObj.Health)
         {
             PacketType = PacketType.Damage,
-            SenderId = GlobalsManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayerId,
         };
         SendMessage(packet);
     }
@@ -213,7 +224,7 @@ public class PAMSocketManager : SocketManager
         var packet = new NetPacket(pos)
         {
             PacketType = PacketType.Position,
-            SenderId = GlobalsManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayerId,
         };
         SendMessage(packet, SendType.Unreliable);
     }
@@ -223,9 +234,24 @@ public class PAMSocketManager : SocketManager
         var packet = new NetPacket
         {
             PacketType = PacketType.Boost,
-            SenderId = GlobalsManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayerId,
         };
         SendMessage(packet, SendType.Unreliable);
+    }
+
+    public void SendDamageAll(int healthPreHit)
+    {
+        var packet = new NetPacket(healthPreHit)
+        {
+            PacketType = PacketType.DamageAll,
+            SenderId = GlobalsManager.LocalPlayerId,
+        };
+        SendMessage(packet);
+        
+        if (IPacketHandler.PacketHandlers.TryGetValue(PacketType.DamageAll, out var handler))
+        {
+            handler.ProcessPacket(packet.SenderId, packet.Data);
+        }
     }
 }
 
@@ -291,12 +317,12 @@ public class PAMConnectionManager : ConnectionManager
     } 
   
     #endregion
-    public void SendDamage()
+    public void SendDamage(int healthPreHit)
     {
-        var packet = new NetPacket(GlobalsManager.Players[GlobalsManager.LocalPlayer].PlayerObject.Health)
+        var packet = new NetPacket(healthPreHit)
         {
             PacketType = PacketType.Damage,
-            SenderId = GlobalsManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayerId,
         };
      
         SendPacket(packet);
@@ -307,7 +333,7 @@ public class PAMConnectionManager : ConnectionManager
         var packet = new NetPacket(pos)
         {
             PacketType = PacketType.Position,
-            SenderId = GlobalsManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayerId,
         };
         SendPacket(packet, SendType.Unreliable);
     }
@@ -316,7 +342,7 @@ public class PAMConnectionManager : ConnectionManager
         var packet = new NetPacket
         {
             PacketType = PacketType.Boost,
-            SenderId = GlobalsManager.LocalPlayer,
+            SenderId = GlobalsManager.LocalPlayerId,
         };
         SendPacket(packet, SendType.Unreliable);
     }

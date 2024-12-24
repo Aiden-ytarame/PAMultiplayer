@@ -55,7 +55,7 @@ public class SteamManager : MonoBehaviour
             SteamNetworkingUtils.ConnectionTimeout = 5000;
             SteamNetworkingUtils.Timeout = 6000;
    
-            GlobalsManager.LocalPlayer = SteamClient.SteamId;
+            GlobalsManager.LocalPlayerId = SteamClient.SteamId;
             PAM.Inst.Log.LogInfo("Steam Initialized");
         }
         catch(Exception)
@@ -138,6 +138,6 @@ public static class SteamIdLocalExtension
 {
     public static bool IsLocalPlayer(this SteamId id)
     {
-        return id == GlobalsManager.LocalPlayer;
+        return id == GlobalsManager.LocalPlayerId;
     }
 }

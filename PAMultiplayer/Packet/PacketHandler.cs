@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
+using PAMultiplayer.Patch;
 using Steamworks;
 using UnityEngine;
 
@@ -19,7 +20,8 @@ public interface IPacketHandler
         { PacketType.Checkpoint, new CheckpointPacket()},
         { PacketType.Rewind, new RewindPacket()},
         { PacketType.Boost, new BoostPacket()},
-        { PacketType.nextLevel, new NextLevelPacket()}
+        { PacketType.NextLevel, new NextLevelPacket()},
+        { PacketType.DamageAll, new DamageAllPacket()}
     };
     public void ProcessPacket(SteamId senderId, Vector2 data);
 }
@@ -59,7 +61,7 @@ public class DamagePacket : IPacketHandler
 {
     public void ProcessPacket(SteamId senderId, Vector2 data)
     {
-        PAM.Inst.Log.LogWarning($"Damaging player { senderId}");
+        PAM.Inst.Log.LogDebug($"Damaging player { senderId}");
 
         if ( senderId.IsLocalPlayer()) return;
 
@@ -71,6 +73,38 @@ public class DamagePacket : IPacketHandler
             player.PlayerObject.PlayerHit();
         }
       
+    }
+}
+
+public class DamageAllPacket : IPacketHandler
+{
+    public void ProcessPacket(SteamId senderId, Vector2 data)
+    {
+        
+        int healthPreHit = (int)data.x;
+        PAM.Inst.Log.LogInfo($"Damaging all players {healthPreHit}");
+        
+        foreach (var vgPlayerData in GlobalsManager.Players)
+        {
+            VGPlayer player = vgPlayerData.Value.PlayerObject;
+            if (player && !player.isDead)
+            {
+                if (player.Health < healthPreHit)
+                {
+                    PAM.Inst.Log.LogWarning($"Old message");
+                    continue;
+                }
+
+                if (player.IsLocalPlayer())
+                {
+                    PAM.Inst.Log.LogWarning($"LOCAL");
+                    Player_Patch.isDamageAll = true;
+                }
+                
+                player.Health = healthPreHit;
+                player.PlayerHit();
+            }
+        }
     }
 }
 

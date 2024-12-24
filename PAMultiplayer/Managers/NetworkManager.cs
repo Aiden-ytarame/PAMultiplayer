@@ -19,15 +19,15 @@ namespace PAMultiplayer.Managers
 
         void Update()
         {
-            if (GlobalsManager.Players.TryGetValue(GlobalsManager.LocalPlayer, out var playerData))
+            if (GlobalsManager.Players.TryGetValue(GlobalsManager.LocalPlayerId, out var playerData))
             {
                 if (playerData.PlayerObject)
                 {
-                    var V2 = playerData.PlayerObject.Player_Rigidbody.transform.position;
+                    var v2 = playerData.PlayerObject.Player_Wrapper.position;
                     if (GlobalsManager.IsHosting)
-                        SteamManager.Inst.Server?.SendHostPosition(V2);
+                        SteamManager.Inst.Server?.SendHostPosition(v2);
                     else
-                        SteamManager.Inst.Client?.SendPosition(V2);
+                        SteamManager.Inst.Client?.SendPosition(v2);
                 }
             }
             

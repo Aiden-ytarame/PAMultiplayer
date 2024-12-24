@@ -191,23 +191,37 @@ public class SteamLobbyManager : MonoBehaviour
             return;
         }
         
+        //modifiers
         if (int.TryParse(lobby.GetData("HealthMod"), out var healthMod))
         {
             DataManager.inst.UpdateSettingEnum("ArcadeHealthMod", healthMod);
         }
         else
         {
+            DataManager.inst.UpdateSettingEnum("ArcadeHealthMod", 0);
             PAM.Logger.LogInfo("No Health Mod specified.");
         }
-        
+        //
         if (int.TryParse(lobby.GetData("SpeedMod"), out var speedMod))
         {
             DataManager.inst.UpdateSettingEnum("ArcadeSpeedMod", speedMod);
         }
         else
         {
+            DataManager.inst.UpdateSettingEnum("ArcadeSpeedMod", 0);
             PAM.Logger.LogInfo("No Speed Mod specified.");
         }
+        //
+        if (bool.TryParse(lobby.GetData("LinkedMod"), out var linkedMod))
+        {
+            DataManager.inst.UpdateSettingBool("mp_linkedHealth", linkedMod);
+        }
+        else
+        {
+            DataManager.inst.UpdateSettingBool("mp_linkedHealth", false);
+            PAM.Logger.LogInfo("No Linked Mod specified.");
+        }
+     
         
         if(int.TryParse(lobby.GetData("seed"), out int seed))
         {
@@ -262,6 +276,7 @@ public class SteamLobbyManager : MonoBehaviour
         lobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
         
         lobby.SetData("HealthMod", DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0).ToString());
+        lobby.SetData("LinkedMod", DataManager.inst.GetSettingBool("mp_linkedHealth", false).ToString());
         lobby.SetData("SpeedMod", DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0).ToString());
     }
     

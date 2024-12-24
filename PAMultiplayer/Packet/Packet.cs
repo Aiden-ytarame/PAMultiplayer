@@ -11,7 +11,8 @@ public enum PacketType : ushort
     Checkpoint,
     Rewind,
     Boost,
-    nextLevel
+    NextLevel,
+    DamageAll
 }
 
 public struct NetPacket 

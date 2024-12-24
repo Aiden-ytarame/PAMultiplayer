@@ -23,31 +23,71 @@ namespace PAMultiplayer.Patch
             return false; //only collide if is local player
         }
 
-        ///we re-write the whole function just to check for the MpPlayerWarp setting...
+
+        public static bool isDamageAll = false;
         [HarmonyPatch(nameof(VGPlayer.PlayerHit))]
         [HarmonyPrefix]
         static bool Hit_Pre(ref VGPlayer __instance)
         {
-            if (!GlobalsManager.IsMultiplayer) return true;
+            if (!GlobalsManager.IsMultiplayer)
+            {
+                if (DataManager.inst.GetSettingBool("mp_linkedHealth", false))
+                {
+                    if (GameManager.Inst.Paused)
+                        return false;
+                    
+                    if (DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) == 1)
+                        return false;
+                    
+                    
+                    foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+                    {
+                        if (vgPlayerData.PlayerObject && !vgPlayerData.PlayerObject.isDead && vgPlayerData.PlayerObject != __instance)
+                        {
+                            vgPlayerData.PlayerObject.PlayerHit();
+                        }
+                    }
+                }
+                return true;
+            }
 
             if (GameManager.Inst.Paused)
                 return false;
+            
 
             if (DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) == 1)
                 return false;
-
-            bool isLocal = __instance.IsLocalPlayer();
+            
+            
+            VGPlayer player = __instance;
+            bool isLocal = player.IsLocalPlayer();
             
             //hit is valid
             if (isLocal)
             {
                 if (GlobalsManager.IsHosting)
-                    SteamManager.Inst.Server.SendHostDamage();
+                {
+                    if (DataManager.inst.GetSettingBool("mp_linkedHealth", false))
+                    {
+                        if (!isDamageAll)
+                        {
+                            SteamManager.Inst.Server.SendDamageAll(player.Health);
+                            return false;
+                        }
+
+                    }
+                    else
+                        SteamManager.Inst.Server.SendHostDamage();
+                }
                 else
-                    SteamManager.Inst.Client.SendDamage();
+                {
+                    if (!DataManager.inst.GetSettingBool("mp_linkedHealth", false) || !isDamageAll)
+                        SteamManager.Inst.Client.SendDamage(player.Health);
+                }
+
+                isDamageAll = false;
             }
             
-            VGPlayer player = __instance;
             
             --player.Health;
             player.StopCoroutine("RegisterCloseCall");
@@ -212,14 +252,7 @@ namespace PAMultiplayer.Patch
         {
             if (!GlobalsManager.IsMultiplayer) return true;
 
-            if (__instance.IsLocalPlayer())
-            {
-                __result = ReInput.players.GetPlayer(0);
-            }
-            else
-            {
-                __result = ReInput.players.GetPlayer(1);
-            }
+            __result = ReInput.players.GetPlayer(__instance.IsLocalPlayer() ? 0 : 1);
 
             return false;
         }

@@ -8,6 +8,7 @@ using UnityEngine;
 using PAMultiplayer.Managers;
 using SimpleJSON;
 using Steamworks.Data;
+using TMPro;
 using UnityEngine.Localization.PropertyVariants;
 using UnityEngine.Localization.PropertyVariants.TrackedProperties;
 using UnityEngine.Networking;
@@ -68,6 +69,28 @@ namespace PAMultiplayer.Patch
                     //SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
                 }   
             }));
+            
+            var row1 = __instance.transform.Find("r-2");
+            var linkedHealthToggle = Object.Instantiate(row1.GetChild(0), __instance.transform).GetComponent<MultiElementToggle>();
+            var modText = linkedHealthToggle.gameObject.GetComponentInChildren<TextMeshProUGUI>();
+            
+            UIStateManager.Inst.RefreshTextCache(modText, "<size=75%><sprite name=\"heart\"><size=100%>Linked Health");
+            modText.text = "<size=75%><sprite name=\"heart\"><size=100%>Linked Health";
+            linkedHealthToggle.name = "mp_linkedHealth";
+            
+            linkedHealthToggle.onValueChanged = new();
+            linkedHealthToggle.onValueChanged.AddListener(new Action<bool>(on =>
+            {
+                DataManager.inst.UpdateSettingBool("mp_linkedHealth", on);
+            }));
+            
+            DataManager.inst.UpdateSettingBool("mp_linkedHealth", false);
+            linkedHealthToggle.isOn = false;
+            linkedHealthToggle.wasOn = false;
+            
+            //adds to the 'Song Menu' page so it plays the glitch effect on this toggle 
+            Object.FindFirstObjectByType<UI_Book>().Pages[1].SubElements.Add(linkedHealthToggle.uiElement);
+
         }
     }
 
@@ -110,7 +133,7 @@ namespace PAMultiplayer.Patch
                 if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
                 {
                     string text = currentLobbyMember.Name;;
-                    if (currentLobbyMember.Id == GlobalsManager.LocalPlayer)
+                    if (currentLobbyMember.Id == GlobalsManager.LocalPlayerId)
                     {
                         text = "YOU";
                         if (player.PlayerObject)
@@ -202,7 +225,7 @@ namespace PAMultiplayer.Patch
                 "You can always call other Nanos for help!",
                 "Git Gud",
                 "I'm in your walls.",
-                "Good Nano.",
+                "Good Nano~",
                 "No tips for you >:)",
                 "Boykisser sent kisses!",
                 "The developer wants me to say something here.",
@@ -211,6 +234,7 @@ namespace PAMultiplayer.Patch
                 "Before time began there was The Cube...",
                 "Ready to be carried by another Nano again?",
                 "Squeezing your Nano through the internet wire...",
+                "Meow!"
             };
             //thanks Pidge for making this public after I complained lol
             __instance.Tips = customTips.ToArray();

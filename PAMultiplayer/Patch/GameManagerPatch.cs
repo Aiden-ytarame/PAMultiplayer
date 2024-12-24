@@ -15,7 +15,6 @@ using Steamworks.Ugc;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
-using VGFunctions;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
@@ -311,7 +310,7 @@ public class GameManagerPatch
                 //player 0 is never added, so we add it here
                 var newData = new VGPlayerManager.VGPlayerData() { PlayerID = 0, ControllerID = 0 };
                 VGPlayerManager.Inst.players.Add(newData);
-                GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayer, newData);
+                GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayerId, newData);
             }
             else
             {
@@ -402,11 +401,12 @@ public class GameManagerPatch
                  
                  vgLevel.InitArcadeData(result.Directory);
                  InitSteamInfo(ref vgLevel, result.Id, result.Directory, result);
+                 
                  ArcadeLevelDataManager.Inst.ArcadeLevels.Add(vgLevel);
                  
                  yield return gm.StartCoroutine(SteamWorkshopFacepunch.inst.LoadAlbumArt(result.Id, result.Directory));
                  yield return gm.StartCoroutine(SteamWorkshopFacepunch.inst.LoadMusic(result.Id, result.Directory));
-
+                 
                  _level = vgLevel; 
                  
                  ArcadeManager.Inst.CurrentArcadeLevel = vgLevel;
@@ -584,4 +584,3 @@ public static class Test
     }
     
 }
-

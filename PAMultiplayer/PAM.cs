@@ -23,11 +23,10 @@ public class PAM : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "0.8.3.1";
+    public const string Version = "0.8.4";
 
     public override void Load()
     {
-        //inject types
         try
         {
             ClassInjector.RegisterTypeInIl2Cpp<TablePostprocessor>(new RegisterTypeOptions

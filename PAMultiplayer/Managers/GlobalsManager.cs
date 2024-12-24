@@ -8,7 +8,8 @@ namespace PAMultiplayer.Managers
     /// </summary>
     public static class GlobalsManager
     {
-        public static SteamId LocalPlayer;
+        public static VGPlayer LocalPlayerObj => Players[LocalPlayerId]?.PlayerObject;
+        public static SteamId LocalPlayerId;
         public static int LocalPlayerObjectId;
         public static readonly Dictionary<SteamId, VGPlayerManager.VGPlayerData> Players = new();
         public static List<string> Queue = new();
@@ -24,7 +25,6 @@ namespace PAMultiplayer.Managers
         
         public static bool IsReloadingLobby = false;
         public static bool HasStarted = false;
-      
         public static bool IsDownloading = false;
     }
 }
