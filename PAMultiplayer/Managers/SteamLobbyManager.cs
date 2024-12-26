@@ -85,13 +85,13 @@ public class SteamLobbyManager : MonoBehaviour
 
         if (GlobalsManager.Players.TryGetValue(friend.Id, out var player))
         {
-            string hex = VGPlayerManager.Inst.GetPlayerColorHex(player.PlayerID);
+            string hex = VGPlayerManager.Inst.GetPlayerColorHex(player.VGPlayerData.PlayerID);
             VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{friend.Name}</color>] Disconnected", 2.5f);
             
-            VGPlayerManager.Inst.players.Remove(player);
+            VGPlayerManager.Inst.players.Remove(player.VGPlayerData);
             GlobalsManager.Players.Remove(friend.Id);
             
-            VGPlayer playerObj = player.PlayerObject;
+            VGPlayer playerObj = player.VGPlayerData.PlayerObject;
             
             if (!playerObj) return;
             
@@ -120,7 +120,7 @@ public class SteamLobbyManager : MonoBehaviour
         int nextId = 0;
         foreach (var player in GlobalsManager.Players)
         {
-            usedIds.Add(player.Value.PlayerID);
+            usedIds.Add(player.Value.VGPlayerData.PlayerID);
         }
 
         while (true)
@@ -140,12 +140,12 @@ public class SteamLobbyManager : MonoBehaviour
             ControllerID = nextId
         };
         
-        GlobalsManager.Players.TryAdd(friend.Id, newData);
+        GlobalsManager.Players.TryAdd(friend.Id, new PlayerData(newData, friend.Name));
         {
             //do not add new players if on loading screen 
             if (GameManager.Inst && GameManager.Inst.CurGameState != GameManager.GameState.Loading)
             {
-                VGPlayerManager.Inst.players.Add(GlobalsManager.Players[friend.Id]);
+                VGPlayerManager.Inst.players.Add(GlobalsManager.Players[friend.Id].VGPlayerData);
             }
         }
         VGPlayerManager.Inst.RespawnPlayers();
@@ -167,7 +167,7 @@ public class SteamLobbyManager : MonoBehaviour
             NewData.PlayerID = _playerAmount; //by the way, this can cause problems
             NewData.ControllerID = _playerAmount;
 
-            GlobalsManager.Players.Add(lobbyMember.Id, NewData);
+            GlobalsManager.Players.Add(lobbyMember.Id, new PlayerData(NewData, lobbyMember.Name));
 
             AddPlayerToLoadList(lobbyMember.Id);
             if(CurrentLobby.GetMemberData(lobbyMember, "IsLoaded") == "1")

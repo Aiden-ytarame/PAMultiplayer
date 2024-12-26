@@ -71,7 +71,7 @@ namespace PAMultiplayer.Patch
                     {
                         if (!isDamageAll)
                         {
-                            SteamManager.Inst.Server.SendDamageAll(player.Health);
+                            SteamManager.Inst.Server.SendDamageAll(player.Health, GlobalsManager.LocalPlayerId);
                             return false;
                         }
 

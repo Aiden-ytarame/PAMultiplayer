@@ -136,16 +136,16 @@ namespace PAMultiplayer.Patch
                     if (currentLobbyMember.Id == GlobalsManager.LocalPlayerId)
                     {
                         text = "YOU";
-                        if (player.PlayerObject)
+                        if (player.VGPlayerData.PlayerObject)
                         {
-                            GameManager.Inst.StartCoroutine(ShowDecay(player.PlayerObject).WrapToIl2Cpp());
+                            GameManager.Inst.StartCoroutine(ShowDecay(player.VGPlayerData.PlayerObject).WrapToIl2Cpp());
                         }
                     }
                    
                     //band-aid fix for an error here
                     try
                     {
-                        player.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
+                        player.VGPlayerData.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
                     }
                     catch (Exception)
                     {

@@ -36,7 +36,7 @@ public class PAMSocketManager : SocketManager
     public override void OnConnected(Connection connection, ConnectionInfo data)
     {
         base.OnConnected(connection, data);
-        SendPlayerId(connection, data.Identity.SteamId, GlobalsManager.Players[data.Identity.SteamId].PlayerID);
+        SendPlayerId(connection, data.Identity.SteamId, GlobalsManager.Players[data.Identity.SteamId].VGPlayerData.PlayerID);
         PAM.Inst.Log.LogInfo($"Server: {data.Identity.SteamId} has joined the game");
     }
 
@@ -83,7 +83,7 @@ public class PAMSocketManager : SocketManager
             
             if (GlobalsManager.LocalPlayerObj.Health >= health)
             {
-                SendDamageAll(health);
+                SendDamageAll(health, packet.SenderId);
             }
             return;
         }
@@ -179,7 +179,7 @@ public class PAMSocketManager : SocketManager
     {
         foreach (var vgPlayerData in GlobalsManager.Players)
         {
-            var packet = new NetPacket(new Vector2(vgPlayerData.Value.PlayerID, GlobalsManager.Players.Count))
+            var packet = new NetPacket(new Vector2(vgPlayerData.Value.VGPlayerData.PlayerID, GlobalsManager.Players.Count))
             {
                 PacketType = PacketType.PlayerId,
                 SenderId = vgPlayerData.Key,
@@ -239,7 +239,7 @@ public class PAMSocketManager : SocketManager
         SendMessage(packet, SendType.Unreliable);
     }
 
-    public void SendDamageAll(int healthPreHit)
+    public void SendDamageAll(int healthPreHit, ulong hitPlayerId)
     {
         var packet = new NetPacket(healthPreHit)
         {

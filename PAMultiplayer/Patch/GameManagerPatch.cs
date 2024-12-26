@@ -310,13 +310,13 @@ public class GameManagerPatch
                 //player 0 is never added, so we add it here
                 var newData = new VGPlayerManager.VGPlayerData() { PlayerID = 0, ControllerID = 0 };
                 VGPlayerManager.Inst.players.Add(newData);
-                GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayerId, newData);
+                GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayerId, new PlayerData(newData, SteamClient.Name));
             }
             else
             {
                 foreach (var vgPlayerData in GlobalsManager.Players)
                 {
-                    VGPlayerManager.Inst.players.Add(vgPlayerData.Value);
+                    VGPlayerManager.Inst.players.Add(vgPlayerData.Value.VGPlayerData);
                 }
             }
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
@@ -326,7 +326,7 @@ public class GameManagerPatch
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
             foreach (var vgPlayerData in GlobalsManager.Players)
             {
-                VGPlayerManager.Inst.players.Add(vgPlayerData.Value);
+                VGPlayerManager.Inst.players.Add(vgPlayerData.Value.VGPlayerData);
             }
             VGPlayerManager.Inst.RespawnPlayers();
         }

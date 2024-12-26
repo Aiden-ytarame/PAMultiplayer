@@ -21,9 +21,9 @@ namespace PAMultiplayer.Managers
         {
             if (GlobalsManager.Players.TryGetValue(GlobalsManager.LocalPlayerId, out var playerData))
             {
-                if (playerData.PlayerObject)
+                if (playerData.VGPlayerData.PlayerObject)
                 {
-                    var v2 = playerData.PlayerObject.Player_Wrapper.position;
+                    var v2 = playerData.VGPlayerData.PlayerObject.Player_Wrapper.position;
                     if (GlobalsManager.IsHosting)
                         SteamManager.Inst.Server?.SendHostPosition(v2);
                     else

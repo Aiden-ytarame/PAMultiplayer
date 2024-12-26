@@ -34,9 +34,9 @@ public class PositionPacket : IPacketHandler
         
         if (GlobalsManager.Players.TryGetValue(senderId, out var playerData))
         {
-            if (playerData.PlayerObject)
+            if (playerData.VGPlayerData.PlayerObject)
             {
-                VGPlayer player = GlobalsManager.Players[senderId].PlayerObject;
+                VGPlayer player = GlobalsManager.Players[senderId].VGPlayerData.PlayerObject;
                 
                 if(!player) return;
                 
@@ -68,9 +68,9 @@ public class DamagePacket : IPacketHandler
         int health = (int)data.x;
         if(GlobalsManager.Players.TryGetValue(senderId, out var player))
         {
-            if (!player.PlayerObject || player.PlayerObject.isDead) return;
-            player.PlayerObject.Health = health;
-            player.PlayerObject.PlayerHit();
+            if (!player.VGPlayerData.PlayerObject || player.VGPlayerData.PlayerObject.isDead) return;
+            player.VGPlayerData.PlayerObject.Health = health;
+            player.VGPlayerData.PlayerObject.PlayerHit();
         }
       
     }
@@ -83,10 +83,16 @@ public class DamageAllPacket : IPacketHandler
         
         int healthPreHit = (int)data.x;
         PAM.Inst.Log.LogInfo($"Damaging all players {healthPreHit}");
+
+        if (GlobalsManager.Players.TryGetValue(senderId, out var playerData))
+        {
+            string hex = VGPlayerManager.Inst.GetPlayerColorHex(playerData.VGPlayerData.PlayerID);
+            VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{playerData.Name}</color>] got hit!", 1.5f);
+        }
         
         foreach (var vgPlayerData in GlobalsManager.Players)
         {
-            VGPlayer player = vgPlayerData.Value.PlayerObject;
+            VGPlayer player = vgPlayerData.Value.VGPlayerData.PlayerObject;
             if (player && !player.isDead)
             {
                 if (player.Health < healthPreHit)
@@ -137,7 +143,7 @@ public class PlayerIdPacket : IPacketHandler
             if (senderId.IsLocalPlayer())
                 GlobalsManager.LocalPlayerObjectId = id;
             
-            player.PlayerID = id;
+            player.VGPlayerData.PlayerID = id;
         }
         else
         {
@@ -146,7 +152,7 @@ public class PlayerIdPacket : IPacketHandler
                 PlayerID = id,
                 ControllerID = id
             };
-            GlobalsManager.Players.Add(senderId, newData);
+            GlobalsManager.Players.Add(senderId, new PlayerData(newData, "placeHolder"));
             VGPlayerManager.Inst.players.Add(newData);
 
         }
@@ -197,7 +203,7 @@ public class BoostPacket : IPacketHandler
         
         if (GlobalsManager.Players.TryGetValue(senderId, out var player))
         {
-            player.PlayerObject?.PlayParticles(VGPlayer.ParticleTypes.Boost);
+            player.VGPlayerData.PlayerObject?.PlayParticles(VGPlayer.ParticleTypes.Boost);
         }
     }
 }

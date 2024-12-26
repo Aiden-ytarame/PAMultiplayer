@@ -3,15 +3,21 @@ using Steamworks;
 
 namespace PAMultiplayer.Managers
 {
+    public struct PlayerData(VGPlayerManager.VGPlayerData vgPlayerData, string name)
+    {
+        public string Name = name;
+        public VGPlayerManager.VGPlayerData VGPlayerData = vgPlayerData;
+    }
     /// <summary>
     /// Holds global variables like Local player steamId and Player list
     /// </summary>
     public static class GlobalsManager
     {
-        public static VGPlayer LocalPlayerObj => Players[LocalPlayerId]?.PlayerObject;
+        public static VGPlayer LocalPlayerObj => Players[LocalPlayerId].VGPlayerData?.PlayerObject;
         public static SteamId LocalPlayerId;
         public static int LocalPlayerObjectId;
-        public static readonly Dictionary<SteamId, VGPlayerManager.VGPlayerData> Players = new();
+        public static readonly Dictionary<SteamId, PlayerData> Players = new();
+        
         public static List<string> Queue = new();
         
         public static ulong LevelId;
