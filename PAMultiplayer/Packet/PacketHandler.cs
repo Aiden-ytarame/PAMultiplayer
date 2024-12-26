@@ -84,11 +84,15 @@ public class DamageAllPacket : IPacketHandler
         int healthPreHit = (int)data.x;
         PAM.Inst.Log.LogInfo($"Damaging all players {healthPreHit}");
 
-        if (GlobalsManager.Players.TryGetValue(senderId, out var playerData))
+        if (DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true))
         {
-            string hex = VGPlayerManager.Inst.GetPlayerColorHex(playerData.VGPlayerData.PlayerID);
-            VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{playerData.Name}</color>] got hit!", 1.5f);
+            if (GlobalsManager.Players.TryGetValue(senderId, out var playerData))
+            {
+                string hex = VGPlayerManager.Inst.GetPlayerColorHex(playerData.VGPlayerData.PlayerID);
+                VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{playerData.Name}</color>] got hit!", 1f);
+            }
         }
+       
         
         foreach (var vgPlayerData in GlobalsManager.Players)
         {

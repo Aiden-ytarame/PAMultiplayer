@@ -293,16 +293,28 @@ namespace PAMultiplayer.Patch
             });
             
             GameObject togglePrefab = __instance.transform.Find("Window/Content/Settings/Right Panel/Content/Accessibility/Content/High Contrast").gameObject;
-            var toggle = Object.Instantiate(togglePrefab, togglePrefab.transform.parent).GetComponent<UI_Toggle>();
-            toggle.transform.SetSiblingIndex(3);
             
-            toggle.Value = DataManager.inst.GetSettingBool("MpTransparentPlayer", false);
-            toggle.DataID = "MpTransparentPlayer";
-            toggle.ToggleLabel.text = "Transparent Nanos";
+            //
+            var TranparentNanoToggle = Object.Instantiate(togglePrefab, togglePrefab.transform.parent).GetComponent<UI_Toggle>();
+            TranparentNanoToggle.transform.SetSiblingIndex(3);
             
-            UIStateManager.inst.RefreshTextCache(toggle.ToggleLabel,"Transparent Nanos");
-            book.Pages[3].SubElements.Add(toggle);
+            TranparentNanoToggle.Value = DataManager.inst.GetSettingBool("MpTransparentPlayer", false);
+            TranparentNanoToggle.DataID = "MpTransparentPlayer";
+            TranparentNanoToggle.ToggleLabel.text = "Transparent Nanos";
             
+            UIStateManager.inst.RefreshTextCache(TranparentNanoToggle.ToggleLabel,"Transparent Nanos");
+            book.Pages[3].SubElements.Add(TranparentNanoToggle);
+            
+            //
+            var LinkedHealthHitPopupToggle = Object.Instantiate(togglePrefab, togglePrefab.transform.parent).GetComponent<UI_Toggle>();
+            LinkedHealthHitPopupToggle.transform.SetSiblingIndex(3);
+            
+            LinkedHealthHitPopupToggle.Value = DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true);
+            LinkedHealthHitPopupToggle.DataID = "MpLinkedHealthPopup";
+            LinkedHealthHitPopupToggle.ToggleLabel.text = "Linked Health Hit Popup";
+            
+            UIStateManager.inst.RefreshTextCache(LinkedHealthHitPopupToggle.ToggleLabel,"Linked Health Hit Popup");
+            book.Pages[3].SubElements.Add(LinkedHealthHitPopupToggle);
         }
 
         static IEnumerator FetchGithubReleases()

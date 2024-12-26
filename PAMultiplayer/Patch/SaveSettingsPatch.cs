@@ -22,6 +22,7 @@ public static class SaveSettingsPatch
             PlayerWarpSFX = DataManager.inst.GetSettingInt("MpPlayerWarpSFX", 1),
             PlayerHitSFX = DataManager.inst.GetSettingInt("MpPlayerSFX", 0),
             TransparentPlayer = DataManager.inst.GetSettingBool("MpTransparentPlayer", false),
+            LinkedHealthPopup = DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true)
         };
         
         string json = JsonSerializer.Serialize(settings);
@@ -33,20 +34,26 @@ public static class SaveSettingsPatch
     static void PreStart()
     {
         string path = Directory.GetCurrentDirectory() + "\\settings\\multiplayer-settings.vgc";
-        if (!File.Exists(path)) return;
-
-        MultiplayerSettings settings = JsonSerializer.Deserialize<MultiplayerSettings>(File.ReadAllText(path));
+        
+        MultiplayerSettings settings = new();
+        
+        if (File.Exists(path))
+        {
+            settings = JsonSerializer.Deserialize<MultiplayerSettings>(File.ReadAllText(path));
+        }
         
         DataManager.inst.UpdateSettingInt("MpPlayerWarpSFX", settings.PlayerWarpSFX);
         DataManager.inst.UpdateSettingInt("MpPlayerSFX", settings.PlayerHitSFX);
         DataManager.inst.UpdateSettingBool("MpTransparentPlayer", settings.TransparentPlayer);
+        DataManager.inst.UpdateSettingBool("MpLinkedHealthPopup", settings.LinkedHealthPopup);
     }
 }
 
-public class MultiplayerSettings 
+public class MultiplayerSettings
 {
-    public int PlayerWarpSFX { get; set; }
+    public int PlayerWarpSFX { get; set; } = 1;
     public int PlayerHitSFX { get; set; }
     
     public bool TransparentPlayer { get; set; }
+    public bool LinkedHealthPopup { get; set; } = true;
 }

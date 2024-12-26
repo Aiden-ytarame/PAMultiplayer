@@ -139,14 +139,18 @@ public class SteamLobbyManager : MonoBehaviour
             PlayerID = nextId,
             ControllerID = nextId
         };
-        
-        GlobalsManager.Players.TryAdd(friend.Id, new PlayerData(newData, friend.Name));
+
+        if(GlobalsManager.Players.TryAdd(friend.Id, new PlayerData(newData, friend.Name)))
         {
             //do not add new players if on loading screen 
             if (GameManager.Inst && GameManager.Inst.CurGameState != GameManager.GameState.Loading)
             {
                 VGPlayerManager.Inst.players.Add(GlobalsManager.Players[friend.Id].VGPlayerData);
             }
+        }
+        else
+        {
+            GlobalsManager.Players[friend.Id].SetName(friend.Name);
         }
         VGPlayerManager.Inst.RespawnPlayers();
     }

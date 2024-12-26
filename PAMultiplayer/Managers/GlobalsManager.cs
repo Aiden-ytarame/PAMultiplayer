@@ -7,6 +7,11 @@ namespace PAMultiplayer.Managers
     {
         public string Name = name;
         public VGPlayerManager.VGPlayerData VGPlayerData = vgPlayerData;
+
+        public void SetName(string name)
+        {
+            Name = name;
+        }
     }
     /// <summary>
     /// Holds global variables like Local player steamId and Player list
