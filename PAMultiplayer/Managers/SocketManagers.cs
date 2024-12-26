@@ -244,7 +244,7 @@ public class PAMSocketManager : SocketManager
         var packet = new NetPacket(healthPreHit)
         {
             PacketType = PacketType.DamageAll,
-            SenderId = GlobalsManager.LocalPlayerId,
+            SenderId = hitPlayerId,
         };
         SendMessage(packet);
         
