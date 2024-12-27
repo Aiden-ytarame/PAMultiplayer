@@ -156,8 +156,6 @@ public class PAMSocketManager : SocketManager
         
         if (DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) <= 1)
         {
-
-
             index = GameManager.Inst.currentCheckpointIndex;
         }
         
