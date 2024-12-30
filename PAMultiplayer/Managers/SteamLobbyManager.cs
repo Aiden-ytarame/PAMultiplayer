@@ -239,15 +239,13 @@ public class SteamLobbyManager : MonoBehaviour
         PAM.Logger.LogInfo($"SEED : {RandSeed}");
 
         GlobalsManager.Queue.Clear();
-        
-        foreach (var level in ArcadeLevelDataManager.Inst.ArcadeLevels)
+
+        var level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId.ToString());
+        if (level != null)
         {
-            if (level.SteamInfo.ItemID.Value == GlobalsManager.LevelId)
-            {
-                ArcadeManager.Inst.CurrentArcadeLevel = level;
-                SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-                return;
-            }
+            ArcadeManager.Inst.CurrentArcadeLevel = level;
+            SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+            return;
         }
 
         GlobalsManager.IsDownloading = true;
@@ -274,7 +272,7 @@ public class SteamLobbyManager : MonoBehaviour
         List<string> levelNames = new();
         foreach (var id in GlobalsManager.Queue)
         {
-            VGLevel level = ArcadeLevelDataManager.Inst.GetSteamLevel(ulong.Parse(id));
+            VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
             levelNames.Add(level.TrackName);
         }
         lobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));

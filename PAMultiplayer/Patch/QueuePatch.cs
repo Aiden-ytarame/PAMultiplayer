@@ -164,7 +164,7 @@ public static class LevelEndScreenPatch
         nextLevel.onClick.AddListener(new Action(() =>
         {
             ulong id = ulong.Parse(GlobalsManager.Queue[0]);
-            ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetSteamLevel(id);
+            ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.Queue[0]);
             GlobalsManager.LevelId = id;
             
             

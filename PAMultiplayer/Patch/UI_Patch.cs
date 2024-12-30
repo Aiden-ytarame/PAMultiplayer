@@ -45,7 +45,7 @@ namespace PAMultiplayer.Patch
                     GlobalsManager.Queue.Add(id.ToString());
 
                 ArcadeManager.Inst.CurrentArcadeLevel =
-                    ArcadeLevelDataManager.Inst.GetSteamLevel(ulong.Parse(GlobalsManager.Queue[0]));
+                    ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.Queue[0]);
 
                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
             }));
@@ -57,14 +57,14 @@ namespace PAMultiplayer.Patch
             {
                 if (GlobalsManager.Queue.Count > 0)
                 {
-                    PublishedFileId id = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID;
-                    if (!GlobalsManager.Queue.Contains(id.ToString()))
-                        GlobalsManager.Queue.Add(id.ToString());
+                    string id = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo != null ? ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.ToString() : ArcadeManager.Inst.CurrentArcadeLevel.name;
+                    if (!GlobalsManager.Queue.Contains(id))
+                        GlobalsManager.Queue.Add(id);
 
                     ulong queueLevel = ulong.Parse(GlobalsManager.Queue[0]);
                     GlobalsManager.LevelId = queueLevel;
                     ArcadeManager.Inst.CurrentArcadeLevel =
-                        ArcadeLevelDataManager.Inst.GetSteamLevel(queueLevel);
+                        ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.Queue[0]);
                     
                     //SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
                 }   

@@ -62,7 +62,7 @@ public class GameManagerPatch
             {
                 PauseUIManager.Inst.CloseUI();
                 ulong id = ulong.Parse(GlobalsManager.Queue[0]);
-                ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetSteamLevel(id);
+                ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.Queue[0]);
                 GlobalsManager.LevelId = id;
             
             
@@ -251,7 +251,7 @@ public class GameManagerPatch
         {
             if (ArcadeManager.Inst.CurrentArcadeLevel)
             {
-                var item = await SteamUGC.QueryFileAsync(ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID);
+                var item = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo != null ? await SteamUGC.QueryFileAsync(ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID) : new Item();
 
                 string levelCover = "null_level";
                 if (item.HasValue && item.Value.Result == Result.OK)
@@ -362,14 +362,14 @@ public class GameManagerPatch
              {
                  yield return new WaitForSeconds(1);
 
-                 if (ArcadeLevelDataManager.Inst.GetSteamLevel(GlobalsManager.LevelId))
+                 if (ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId.ToString()))
                  {
                      break;
                  }
              }
         
              
-             levelTest = ArcadeLevelDataManager.Inst.GetSteamLevel(GlobalsManager.LevelId);
+             levelTest = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId.ToString());
              if (levelTest)
              {
                  GlobalsManager.IsDownloading = false;
@@ -404,8 +404,8 @@ public class GameManagerPatch
                  
                  ArcadeLevelDataManager.Inst.ArcadeLevels.Add(vgLevel);
                  
-                 yield return gm.StartCoroutine(SteamWorkshopFacepunch.inst.LoadAlbumArt(result.Id, result.Directory));
-                 yield return gm.StartCoroutine(SteamWorkshopFacepunch.inst.LoadMusic(result.Id, result.Directory));
+                 yield return gm.StartCoroutine(FileManager.inst.LoadAlbumArt(result.Id.ToString(), result.Directory));
+                 yield return gm.StartCoroutine(FileManager.inst.LoadMusic(result.Id.ToString(), result.Directory));
                  
                  _level = vgLevel; 
                  
@@ -429,7 +429,7 @@ public class GameManagerPatch
                  List<string> levelNames = new();
                  foreach (var id in GlobalsManager.Queue)
                  {
-                     VGLevel level = ArcadeLevelDataManager.Inst.GetSteamLevel(ulong.Parse(id));
+                     VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
                      levelNames.Add(level.TrackName);
                  }
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
