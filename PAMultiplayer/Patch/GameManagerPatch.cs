@@ -61,8 +61,8 @@ public class GameManagerPatch
             button.onClick.AddListener(new Action(() =>
             {
                 PauseUIManager.Inst.CloseUI();
-                ulong id = ulong.Parse(GlobalsManager.Queue[0]);
-                ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.Queue[0]);
+                string id = GlobalsManager.Queue[0];
+                ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
                 GlobalsManager.LevelId = id;
             
             
@@ -263,7 +263,7 @@ public class GameManagerPatch
             }
         }
         
-        GlobalsManager.Queue.Remove(GlobalsManager.LevelId.ToString());
+        GlobalsManager.Queue.Remove(GlobalsManager.LevelId);
         
         //setup discord presence on singleplayer
         if (!GlobalsManager.IsMultiplayer)
@@ -362,14 +362,14 @@ public class GameManagerPatch
              {
                  yield return new WaitForSeconds(1);
 
-                 if (ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId.ToString()))
+                 if (ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId))
                  {
                      break;
                  }
              }
         
              
-             levelTest = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId.ToString());
+             levelTest = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId);
              if (levelTest)
              {
                  GlobalsManager.IsDownloading = false;
@@ -434,7 +434,27 @@ public class GameManagerPatch
                  }
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
                  PAM.Logger.LogError(SteamLobbyManager.Inst.RandSeed);
-                 SteamManager.Inst.Server.SendNextQueueLevel(GlobalsManager.LevelId, SteamLobbyManager.Inst.RandSeed);
+                 
+                 if(ulong.TryParse(GlobalsManager.LevelId, out var nextQueueId))
+                 {
+                     SteamManager.Inst.Server.SendNextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
+                 }
+                 else
+                 {
+                     PAM.Logger.LogError("tried sending Local Level with non numbered name, name too big or negative value. Skipping.");
+                     
+                     GlobalsManager.Queue.Remove(GlobalsManager.LevelId);
+                     string id = GlobalsManager.Queue[0];
+                     ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
+                     GlobalsManager.LevelId = id;
+                     
+                     GlobalsManager.IsReloadingLobby = true;
+                     SteamLobbyManager.Inst.UnloadAll();
+                    
+                     SceneLoader.Inst.manager.ClearLoadingTasks();
+                     SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+                     yield break;
+                 }
              }
          }
          else
@@ -442,7 +462,6 @@ public class GameManagerPatch
              Test.seed = SteamLobbyManager.Inst.RandSeed;
              ObjectManager.inst.seed = SteamLobbyManager.Inst.RandSeed;
          }
-      
          
          try
          {
@@ -513,15 +532,26 @@ public class GameManagerPatch
 
     static async Task<Item> DownloadLevel()
     {
-        var item = await SteamUGC.QueryFileAsync(GlobalsManager.LevelId);
-       
-        if (!item.HasValue)
+        void FailLoad(string errorMessage)
         {
-            PAM.Logger.LogError("Level not found, is it deleted from the workshop?");
+            PAM.Logger.LogError(errorMessage);
             GlobalsManager.IsReloadingLobby = false;
             GlobalsManager.IsDownloading = false;
             SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.Inst.LoadSceneGroup("Menu");
+        }
+        
+        if (!ulong.TryParse(GlobalsManager.LevelId, out var id))
+        {
+            FailLoad("Invalid level ID to download");
+            return new Item();
+        }
+        
+        var item = await SteamUGC.QueryFileAsync(id);
+       
+        if (!item.HasValue)
+        {
+            FailLoad("Level not found, is it deleted from the workshop?");
             return new Item();
         }
 
@@ -529,10 +559,7 @@ public class GameManagerPatch
         
         if(level.ConsumerApp != 440310 || level.CreatorApp != 440310) 
         {
-            GlobalsManager.IsReloadingLobby = false;
-            GlobalsManager.IsDownloading = false;
-            SceneLoader.Inst.manager.ClearLoadingTasks();
-            SceneLoader.Inst.LoadSceneGroup("Menu");
+            FailLoad("Workshop item is not from PA");
             return new Item();
         }
         PAM.Logger.LogInfo($"Downloading [{level.Title}] created by [{level.Owner.Name}]");

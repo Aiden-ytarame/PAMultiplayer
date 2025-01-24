@@ -220,18 +220,16 @@ public class NextLevelPacket : IPacketHandler
         
         PAM.Logger.LogInfo($"New random seed : {seed}");
       
-        GlobalsManager.LevelId = levelId;
+        GlobalsManager.LevelId = levelId.ToString();
         SteamLobbyManager.Inst.RandSeed = seed;
         GlobalsManager.IsReloadingLobby = true;
         
-        foreach (var level in ArcadeLevelDataManager.Inst.ArcadeLevels)
+        VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId);
+        if (level)
         {
-            if (level.SteamInfo.ItemID.Value == GlobalsManager.LevelId)
-            {
-                ArcadeManager.Inst.CurrentArcadeLevel = level;
-                SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-                return;
-            }
+            ArcadeManager.Inst.CurrentArcadeLevel = level;
+            SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+            return;
         }
 
         GlobalsManager.IsDownloading = true;

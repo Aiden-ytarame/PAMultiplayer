@@ -25,7 +25,7 @@ namespace PAMultiplayer.Managers
         
         public static List<string> Queue = new();
         
-        public static ulong LevelId;
+        public static string LevelId;
         public static bool IsMultiplayer = false;
         public static bool IsHosting = false;
         

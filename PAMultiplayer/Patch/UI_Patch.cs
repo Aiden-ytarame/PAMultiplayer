@@ -61,10 +61,10 @@ namespace PAMultiplayer.Patch
                     if (!GlobalsManager.Queue.Contains(id))
                         GlobalsManager.Queue.Add(id);
 
-                    ulong queueLevel = ulong.Parse(GlobalsManager.Queue[0]);
-                    GlobalsManager.LevelId = queueLevel;
+                    id = GlobalsManager.Queue[0];
+                    GlobalsManager.LevelId = id;
                     ArcadeManager.Inst.CurrentArcadeLevel =
-                        ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.Queue[0]);
+                        ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
                     
                     //SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
                 }   

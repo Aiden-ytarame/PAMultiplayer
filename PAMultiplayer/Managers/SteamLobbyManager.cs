@@ -44,6 +44,28 @@ public class SteamLobbyManager : MonoBehaviour
         
         SteamMatchmaking.OnLobbyMemberDataChanged += OnLobbyMemberDataChanged;
         SteamMatchmaking.OnLobbyDataChanged += OnOnLobbyDataChanged;
+        
+        SteamMatchmaking.OnChatMessage += OnChatMessage;
+    }
+
+    private void OnChatMessage(Lobby lobby, Friend friend, string message)
+    {
+        if (!GlobalsManager.Players.TryGetValue(friend.Id, out var player))
+        {
+            return;
+        }
+
+        if (!player.VGPlayerData.PlayerObject || player.VGPlayerData.PlayerObject.isDead)
+        {
+            return;
+        }
+        
+        if (message.Length > 25)
+        {
+            message = message.Substring(0, 25);
+        }
+        
+        player.VGPlayerData.PlayerObject.SpeechBubble?.DisplayText(message.Replace('_',' '), 3);
     }
 
     private void OnOnLobbyDataChanged(Lobby lobby)
@@ -183,8 +205,9 @@ public class SteamLobbyManager : MonoBehaviour
 
         GlobalsManager.HasLoadedExternalInfo = false;
         GlobalsManager.HasLoadedBasePlayerIds = false;
-     
-        if (ulong.TryParse(lobby.GetData("LevelId"), out var levelId))
+
+        string levelId = lobby.GetData("LevelId");
+        if (!string.IsNullOrEmpty(levelId))
         {
             GlobalsManager.LevelId = levelId;
         }
@@ -240,7 +263,7 @@ public class SteamLobbyManager : MonoBehaviour
 
         GlobalsManager.Queue.Clear();
 
-        var level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId.ToString());
+        var level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId);
         if (level != null)
         {
             ArcadeManager.Inst.CurrentArcadeLevel = level;
@@ -265,8 +288,9 @@ public class SteamLobbyManager : MonoBehaviour
 
         _loadedPlayers = new();
         InLobby = true;
-        GlobalsManager.LevelId = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.Value;
-        lobby.SetData("LevelId", GlobalsManager.LevelId.ToString());
+        VGLevel currentLevel = ArcadeManager.Inst.CurrentArcadeLevel;
+        GlobalsManager.LevelId = currentLevel.SteamInfo != null ?  currentLevel.SteamInfo.ItemID.Value.ToString() : currentLevel.name;
+        lobby.SetData("LevelId", GlobalsManager.LevelId);
         lobby.SetData("seed", RandSeed.ToString());
 
         List<string> levelNames = new();
