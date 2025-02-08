@@ -55,7 +55,7 @@ public class SteamLobbyManager : MonoBehaviour
             return;
         }
 
-        if (!player.VGPlayerData.PlayerObject || player.VGPlayerData.PlayerObject.isDead)
+        if (!player.VGPlayerData.PlayerObject.IsValidPlayer())
         {
             return;
         }
@@ -65,7 +65,7 @@ public class SteamLobbyManager : MonoBehaviour
             message = message.Substring(0, 25);
         }
         
-        player.VGPlayerData.PlayerObject.SpeechBubble?.DisplayText(message.Replace('_',' '), 3);
+        player.VGPlayerData.PlayerObject.SpeechBubble?.DisplayText(message.Replace('_',' '), 5);
     }
 
     private void OnOnLobbyDataChanged(Lobby lobby)
@@ -73,6 +73,11 @@ public class SteamLobbyManager : MonoBehaviour
         if (LobbyScreenManager.Instance)
         {
             LobbyScreenManager.Instance.UpdateQueue();
+        }
+        
+        if (bool.TryParse(lobby.GetData("LinkedMod"), out var linkedMod))
+        {
+            DataManager.inst.UpdateSettingBool("mp_linkedHealth", linkedMod);
         }
     }
 
@@ -300,7 +305,6 @@ public class SteamLobbyManager : MonoBehaviour
             levelNames.Add(level.TrackName);
         }
         lobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
-        
         lobby.SetData("HealthMod", DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0).ToString());
         lobby.SetData("LinkedMod", DataManager.inst.GetSettingBool("mp_linkedHealth", false).ToString());
         lobby.SetData("SpeedMod", DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0).ToString());

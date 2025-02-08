@@ -68,7 +68,7 @@ public class DamagePacket : IPacketHandler
         int health = (int)data.x;
         if(GlobalsManager.Players.TryGetValue(senderId, out var player))
         {
-            if (!player.VGPlayerData.PlayerObject || player.VGPlayerData.PlayerObject.isDead) return;
+            if (!player.VGPlayerData.PlayerObject.IsValidPlayer()) return;
             player.VGPlayerData.PlayerObject.Health = health;
             player.VGPlayerData.PlayerObject.PlayerHit();
         }
@@ -97,7 +97,7 @@ public class DamageAllPacket : IPacketHandler
         foreach (var vgPlayerData in GlobalsManager.Players)
         {
             VGPlayer player = vgPlayerData.Value.VGPlayerData.PlayerObject;
-            if (player && !player.isDead)
+            if (player.IsValidPlayer())
             {
                 if (player.Health < healthPreHit)
                 {
@@ -108,7 +108,7 @@ public class DamageAllPacket : IPacketHandler
                 if (player.IsLocalPlayer())
                 {
                     PAM.Inst.Log.LogWarning($"LOCAL");
-                    Player_Patch.isDamageAll = true;
+                    Player_Patch.IsDamageAll = true;
                 }
                 
                 player.Health = healthPreHit;
@@ -188,7 +188,7 @@ public class RewindPacket : IPacketHandler
         PAM.Logger.LogInfo($"Rewind to Checkpoint [{(int)data.x}] Received");
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
         {
-            if (vgPlayerData.PlayerObject && !vgPlayerData.PlayerObject.isDead)
+            if (vgPlayerData.PlayerObject.IsValidPlayer())
             {
                 vgPlayerData.PlayerObject.Health = 0;
                 vgPlayerData.PlayerObject.ClearEvents();

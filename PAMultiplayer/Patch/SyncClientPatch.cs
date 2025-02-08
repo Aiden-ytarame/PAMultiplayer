@@ -70,9 +70,8 @@ public static class RewindHandler
                 //if any player is alive don't rewind
                 foreach (var vgPlayerData in VGPlayerManager.Inst.players)
                 {
-                   if(vgPlayerData.PlayerObject) //if player object exists
-                       if (!vgPlayerData.PlayerObject.isDead) //if not dead
-                           return; //dont rewind
+                   if(vgPlayerData.PlayerObject.IsValidPlayer()) //if player object exist
+                       return; //dont rewind
                 }
                 SteamManager.Inst.Server?.SendRewindToCheckpoint();
             });

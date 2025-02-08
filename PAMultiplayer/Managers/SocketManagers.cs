@@ -23,7 +23,15 @@ namespace PAMultiplayer.Managers;
 /// </summary>
 public class PAMSocketManager : SocketManager
 {
+    public struct ConnectionWrapper(Connection connection, ulong connectionId)
+    {
+        public Connection Connection = connection;
+        public ulong ConnectionId = connectionId;
+    }
+    
     const int PACKET_SIZE = 24;
+    public Dictionary<ConnectionWrapper, int> ConnectionWrappers = new();
+    private int playerCounter;
     
     #region SocketManagerOverrides
     
@@ -36,13 +44,23 @@ public class PAMSocketManager : SocketManager
     public override void OnConnected(Connection connection, ConnectionInfo data)
     {
         base.OnConnected(connection, data);
+        ConnectionWrappers.TryAdd(new ConnectionWrapper(connection, data.Identity.SteamId), playerCounter++);
         SendPlayerId(connection, data.Identity.SteamId, GlobalsManager.Players[data.Identity.SteamId].VGPlayerData.PlayerID);
+        
         PAM.Inst.Log.LogInfo($"Server: {data.Identity.SteamId} has joined the game");
     }
 
     public override void OnDisconnected(Connection connection, ConnectionInfo data)
     {
         base.OnDisconnected(connection, data);
+        foreach (var keyValuePair in ConnectionWrappers)
+        {
+            if (keyValuePair.Key.Connection == connection)
+            {
+                ConnectionWrappers.Remove(keyValuePair.Key);
+                break;
+            }
+        }
         PAM.Inst.Log.LogInfo($"Server: {data.Identity} is out of here");
     }
 
@@ -250,6 +268,24 @@ public class PAMSocketManager : SocketManager
         {
             handler.ProcessPacket(packet.SenderId, packet.Data);
         }
+    }
+
+    public bool TryToKickPlayer(int id)
+    {
+        foreach (var connection in ConnectionWrappers)
+        {
+            if (connection.Value == id)
+            {
+                return connection.Key.Connection.Close();
+            }
+        }
+
+        return false;
+    }
+
+    public string GetConnectionName()
+    {
+        return "test";
     }
 }
 

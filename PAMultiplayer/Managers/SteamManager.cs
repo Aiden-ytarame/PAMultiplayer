@@ -34,6 +34,7 @@ public class SteamManager : MonoBehaviour
     {
         if (SteamClient.IsValid)
         {
+            SteamApps.CurrentBetaName
             SteamClient.RunCallbacks();
         }
     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using HarmonyLib;
 using PAMultiplayer;
 using PAMultiplayer.Managers;
@@ -24,7 +25,7 @@ namespace PAMultiplayer.Patch
         }
 
 
-        public static bool isDamageAll = false;
+        public static bool IsDamageAll = false;
         [HarmonyPatch(nameof(VGPlayer.PlayerHit))]
         [HarmonyPrefix]
         static bool Hit_Pre(ref VGPlayer __instance)
@@ -42,7 +43,7 @@ namespace PAMultiplayer.Patch
                     
                     foreach (var vgPlayerData in VGPlayerManager.Inst.players)
                     {
-                        if (vgPlayerData.PlayerObject && !vgPlayerData.PlayerObject.isDead && vgPlayerData.PlayerObject != __instance)
+                        if (vgPlayerData.PlayerObject.IsValidPlayer() && vgPlayerData.PlayerObject != __instance)
                         {
                             vgPlayerData.PlayerObject.PlayerHit();
                         }
@@ -61,7 +62,7 @@ namespace PAMultiplayer.Patch
             
             VGPlayer player = __instance;
             bool isLocal = player.IsLocalPlayer();
-            
+
             //hit is valid
             if (isLocal)
             {
@@ -69,7 +70,7 @@ namespace PAMultiplayer.Patch
                 {
                     if (DataManager.inst.GetSettingBool("mp_linkedHealth", false))
                     {
-                        if (!isDamageAll)
+                        if (!IsDamageAll)
                         {
                             SteamManager.Inst.Server.SendDamageAll(player.Health, GlobalsManager.LocalPlayerId);
                             return false;
@@ -81,11 +82,11 @@ namespace PAMultiplayer.Patch
                 }
                 else
                 {
-                    if (!DataManager.inst.GetSettingBool("mp_linkedHealth", false) || !isDamageAll)
+                    if (!DataManager.inst.GetSettingBool("mp_linkedHealth", false) || !IsDamageAll)
                         SteamManager.Inst.Client.SendDamage(player.Health);
                 }
 
-                isDamageAll = false;
+                IsDamageAll = false;
             }
             
             
@@ -290,10 +291,15 @@ public static class BeatmapThemePatch
     }
 }
 
-static class PlayerIsLocalExtension
+static class PlayerExtensions
 {
     public static bool IsLocalPlayer(this VGPlayer player)
     {
         return player.PlayerID == GlobalsManager.LocalPlayerObjectId;
+    }
+    
+    public static bool IsValidPlayer(this VGPlayer player)
+    {
+        return player != null && !player.isDead;
     }
 }
