@@ -6,7 +6,7 @@ using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
 using Il2CppInterop.Runtime.Injection;
 using PAMultiplayer.Managers;
-using PAMultiplayer.Patch; 
+using PAMultiplayer.Patch;
 using UnityEngine.Localization.Settings;
 
 
@@ -59,9 +59,9 @@ public class PAM : BasePlugin
         var loadGameMoveNext = typeof(GameManager).GetNestedTypes().FirstOrDefault(t => t.Name.Contains("LoadGame"))?
             .GetMethod("MoveNext");
         var prefix = new HarmonyMethod(typeof(GameManagerPatch).GetMethod("OverrideLoadGame"));
-        
         harmony.Patch(loadGameMoveNext, prefix);
-        
+
+
         Log.LogInfo($"Plugin {Guid} is loaded!");
     }
 }

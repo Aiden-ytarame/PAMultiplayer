@@ -1,7 +1,6 @@
 using System;
-using System.Buffers.Binary;
+using System.IO;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Packet;
@@ -9,12 +8,12 @@ using PAMultiplayer.Patch;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
+using MemoryStream = System.IO.MemoryStream;
 
 namespace PAMultiplayer.Managers;
 
 //this whole file sucks
 //Ive got to do some major refactoring here
-
 
 
 /// <summary>
@@ -29,9 +28,34 @@ public class PAMSocketManager : SocketManager
         public ulong ConnectionId = connectionId;
     }
     
-    const int PACKET_SIZE = 24;
-    public Dictionary<ConnectionWrapper, int> ConnectionWrappers = new();
-    private int playerCounter;
+    private const int MAX_PACKET_SIZE = 24;
+    
+    private readonly MemoryStream _stream;
+    private readonly MemoryStream _outStream;
+    private readonly BinaryReader _reader;
+    private readonly BinaryWriter _writer;
+    
+    public readonly Dictionary<ConnectionWrapper, int> ConnectionWrappers = new();
+    private int _playerCounter;
+
+    public PAMSocketManager()
+    {
+        _stream = new MemoryStream(MAX_PACKET_SIZE);
+        _outStream = new MemoryStream(MAX_PACKET_SIZE);
+        _reader = new BinaryReader(_stream);
+        _writer = new BinaryWriter(_outStream);
+        
+        _stream.SetLength(MAX_PACKET_SIZE);
+        _outStream.SetLength(MAX_PACKET_SIZE);
+    }
+
+    ~PAMSocketManager()
+    {
+        _reader.Dispose();
+        _writer.Dispose();
+        _stream.Dispose();
+        _outStream.Dispose();
+    }
     
     #region SocketManagerOverrides
     
@@ -44,7 +68,7 @@ public class PAMSocketManager : SocketManager
     public override void OnConnected(Connection connection, ConnectionInfo data)
     {
         base.OnConnected(connection, data);
-        ConnectionWrappers.TryAdd(new ConnectionWrapper(connection, data.Identity.SteamId), playerCounter++);
+        ConnectionWrappers.TryAdd(new ConnectionWrapper(connection, data.Identity.SteamId), _playerCounter++);
         SendPlayerId(connection, data.Identity.SteamId, GlobalsManager.Players[data.Identity.SteamId].VGPlayerData.PlayerID);
         
         PAM.Inst.Log.LogInfo($"Server: {data.Identity.SteamId} has joined the game");
@@ -64,54 +88,143 @@ public class PAMSocketManager : SocketManager
         PAM.Inst.Log.LogInfo($"Server: {data.Identity} is out of here");
     }
 
-    public override unsafe void OnMessage(Connection connection, NetIdentity identity, IntPtr data, int size, long messageNum,
+    public override void OnMessage(Connection connection, NetIdentity identity, IntPtr data, int size,
+        long messageNum,
         long recvTime, int channel)
     {
-        IPacketHandler GetHandler(PacketType type)
+        // Checks the size, if smaller than min logs into the terminal and returns false.
+        bool CheckSize(int _size, int minSize)
         {
-            switch (type)
+            if (_size < minSize)
             {
-                case PacketType.Damage:
-                    SendMessageToAll(Connected, data, size);
-                    break;
-                case PacketType.Position:
-                    SendMessageToAll(Connected, data, size, SendType.Unreliable);
-                    break;
-                case PacketType.Boost:
-                    SendMessageToAll(Connected, data, size, SendType.Unreliable);
-                    break;
-                default:
-                    return null;
+                PAM.Logger.LogWarning("Packet size too small");
+                return false;
             }
 
-            if (IPacketHandler.PacketHandlers.TryGetValue(type, out var handler))
-            {
-                return handler;
-            }
-
-            return null;
+            return true;
         }
-        
-        Span<byte> packetSpan = new Span<byte>((void*)data, PACKET_SIZE);
-        var packet = MemoryMarshal.Read<NetPacket>(packetSpan);
-        
-        if (packet.PacketType == PacketType.Damage && DataManager.inst.GetSettingBool("mp_linkedHealth", false))
+
+        unsafe IntPtr WriteSteamId(PacketType packetType, out int _size)
         {
-            int health = (int)packet.Data.x;
-            
-            if (GlobalsManager.LocalPlayerObj.Health >= health)
+            _writer.Write((ushort)packetType);
+            _writer.Write(identity.SteamId);
+            _writer.Write(_stream.GetBuffer(), 2, size - 2);
+
+            _size = size + 9;
+            fixed (byte* ptr = _outStream.GetBuffer())
             {
-                SendDamageAll(health, packet.SenderId);
+                return (IntPtr)ptr;
             }
+        }
+
+        if (size > MAX_PACKET_SIZE)
+        {
+            PAM.Logger.LogWarning(
+                $"Received more bytes than expected, [{size}] bytes from [{identity.SteamId}], closing connection");
+            connection.Close();
             return;
         }
-        GetHandler(packet.PacketType)?.ProcessPacket(packet.SenderId, packet.Data);
+
+        if (size < 2)
+        {
+            PAM.Logger.LogWarning($"Received too little bytes, [{size}] bytes from [{identity.SteamId}]");
+            return;
+        }
+
+        Marshal.Copy(data, _stream.GetBuffer(), 0, size);
+        _stream.Position = 0;
+        _outStream.Position = 0;
+   
+  
+        PacketType packetType = (PacketType)_reader.ReadUInt16();
+       
+        switch (packetType)
+        {
+            case PacketType.Damage:
+                if (!CheckSize(size, 6))
+                {
+                    connection.Close();
+                    return;
+                }
+
+                int health = _reader.ReadInt32();
+                if (DataManager.inst.GetSettingBool("mp_linkedHealth", false))
+                {
+                    if (GlobalsManager.LocalPlayerObj.Health >= health)
+                    {
+                        SendDamageAll(health, identity.SteamId);
+                    }
+
+                    return;
+                }
+
+            {
+                if (GlobalsManager.Players.TryGetValue(identity.SteamId, out var player))
+                {
+                    if (!player.VGPlayerData.PlayerObject.IsValidPlayer()) return;
+                    player.VGPlayerData.PlayerObject.Health = health;
+                    player.VGPlayerData.PlayerObject.PlayerHit();
+                }
+                
+                SendMessage(Connected, WriteSteamId(packetType, out int _size), _size);
+            }
+                break;
+            case PacketType.Position:
+                if (!CheckSize(size, 10))
+                {
+                    connection.Close();
+                    return;
+                }
+                PAM.Logger.LogWarning(size);
+                PAM.Logger.LogWarning($"type pos [{packetType.ToString()}]");
+                if (GlobalsManager.Players.TryGetValue(identity.SteamId, out var playerData))
+                {
+                    if (playerData.VGPlayerData.PlayerObject)
+                    {
+                        VGPlayer player = GlobalsManager.Players[identity.SteamId].VGPlayerData.PlayerObject;
+
+                        if (!player) return;
+
+                        Transform rb = player.Player_Wrapper;
+                        Vector2 pos = new Vector2(_reader.ReadSingle(), _reader.ReadSingle());
+                        PAM.Logger.LogError(pos);
+                        
+                        var rot = pos - (Vector2)rb.position;
+                        rb.position = pos;
+                        if (rot.sqrMagnitude > 0.0001f)
+                        {
+                            rot.Normalize();
+                            player.p_lastMoveX = rot.x;
+                            player.p_lastMoveY = rot.y;
+                        }
+                    }
+                }
+
+            {
+                SendMessage(Connected, WriteSteamId(packetType, out int _size), _size, SendType.Unreliable);
+            }
+                break;
+            case PacketType.Boost:
+            {
+                PAM.Logger.LogWarning(size);
+                PAM.Logger.LogWarning($"type boos [{packetType.ToString()}]");
+                if (GlobalsManager.Players.TryGetValue(identity.SteamId, out var player))
+                {
+                    player.VGPlayerData.PlayerObject?.PlayParticles(VGPlayer.ParticleTypes.Boost);
+                }
+                
+                SendMessage(Connected, WriteSteamId(packetType, out int _size), _size, SendType.Unreliable);
+            }
+                break;
+            default:
+                return;
+        }
     }
 
     #endregion
 
     #region Send Messages
-    void SendMessageToAll(HashSet<Connection> connections, IntPtr ptr, int size, SendType sendType = SendType.Reliable)
+    void SendMessage(HashSet<Connection> connections, IntPtr ptr, int size, SendType sendType = SendType.Reliable)
     {
         foreach (var connection in connections)
         {
@@ -119,75 +232,35 @@ public class PAMSocketManager : SocketManager
         }
     }
 
-    unsafe void SendMessage(NetPacket packet, SendType sendType = SendType.Reliable)
+    void SendMessage(NewPacket packet, SendType sendType = SendType.Reliable)
     {
-        Span<byte> packetSpan = stackalloc byte[PACKET_SIZE];
-        MemoryMarshal.Write(packetSpan, ref packet);
-       
-        fixed (byte* ptr = packetSpan)
-        {
-            SendMessageToAll(Connected, (IntPtr)ptr, PACKET_SIZE, sendType);
-        }
+        SendMessage(Connected, packet.GetData(out var size), size, sendType);
     }
-    unsafe void SendMessage(Connection connection, NetPacket packet, SendType sendType = SendType.Reliable)
+    void SendMessage(Connection connection, NewPacket packet, SendType sendType = SendType.Reliable)
     {
-        Span<byte> packetSpan = stackalloc byte[PACKET_SIZE];
-        MemoryMarshal.Write(packetSpan, ref packet);
-
-        fixed (byte* ptr = packetSpan)
-        {
-            connection.SendMessage((IntPtr)ptr, PACKET_SIZE, sendType);
-        }
+        connection.SendMessage(packet.GetData(out var size), size, sendType);
     }
     
     #endregion
     public void StartLevel()
     {
         GlobalsManager.HasStarted = true;
-        var packet = new NetPacket
-        {
-            PacketType = PacketType.Start,
-            SenderId = GlobalsManager.LocalPlayerId,
-        };
-    
+        var packet = new NewPacket(PacketType.Start);
         SendMessage(packet);
     }
 
     public void SendCheckpointHit(int index)
     {
-        var packet = new NetPacket(index)
-        {
-            PacketType = PacketType.Checkpoint,
-            SenderId = GlobalsManager.LocalPlayerId,
-        };
-        
+        var packet = new NewPacket(PacketType.Checkpoint);
+        packet.Write(index);
         SendMessage(packet);
-        if (IPacketHandler.PacketHandlers.TryGetValue(PacketType.Checkpoint, out var handler))
-        {
-            handler.ProcessPacket(packet.SenderId, packet.Data);
-        }
     }
 
-    public void SendRewindToCheckpoint()
+    public void SendRewindToCheckpoint(int index)
     {
-        int index = 0;
-        
-        if (DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) <= 1)
-        {
-            index = GameManager.Inst.currentCheckpointIndex;
-        }
-        
-        var packet = new NetPacket(index)
-        {
-            PacketType = PacketType.Rewind,
-            SenderId = GlobalsManager.LocalPlayerId,
-        };
+        var packet = new NewPacket(PacketType.Rewind);
+        packet.Write(index);
         SendMessage(packet);
-        
-        if (IPacketHandler.PacketHandlers.TryGetValue(PacketType.Rewind, out var handler))
-        {
-            handler.ProcessPacket(packet.SenderId, packet.Data);
-        }
     }
     
     //this function sucks
@@ -195,78 +268,95 @@ public class PAMSocketManager : SocketManager
     {
         foreach (var vgPlayerData in GlobalsManager.Players)
         {
-            var packet = new NetPacket(new Vector2(vgPlayerData.Value.VGPlayerData.PlayerID, GlobalsManager.Players.Count))
-            {
-                PacketType = PacketType.PlayerId,
-                SenderId = vgPlayerData.Key,
-            };
+            var packet = new NewPacket(PacketType.PlayerId);
+            packet.Write(vgPlayerData.Key);
+            packet.Write(vgPlayerData.Value.VGPlayerData.PlayerID);
+            packet.Write(GlobalsManager.Players.Count);
             
             SendMessage(connection, packet);
         }
 
-        var info = new NetPacket(new Vector2(id, 1))
-        {
-            PacketType = PacketType.PlayerId,
-            SenderId = steamId,
-        };
-        
+        var info = new NewPacket(PacketType.PlayerId);
+        info.Write(steamId);
+        info.Write(id);
+        info.Write(1);
         SendMessage(info);
     }
 
     public void SendNextQueueLevel(ulong id, int seed)
     {
-        var packet = new NetPacket()
-        {
-            PacketType = PacketType.NextLevel,
-            SenderId = id,
-        };
-        packet.Data.x = BitConverter.ToSingle( BitConverter.GetBytes(seed));
-        SendMessage(packet);
+        var newPacket = new NewPacket(PacketType.NextLevel);
+        newPacket.Write(id);
+        newPacket.Write(seed);
+        
+        SendMessage(newPacket);
     }
     //yes due to a mistake the host doesn't connect to the server as client 
     //so we handle his messages from here
 
     public void SendHostDamage()
     {
-        var packet = new NetPacket(GlobalsManager.LocalPlayerObj.Health)
-        {
-            PacketType = PacketType.Damage,
-            SenderId = GlobalsManager.LocalPlayerId,
-        };
+        var packet = new NewPacket(PacketType.Damage);
+        packet.Write(GlobalsManager.LocalPlayerId);
+        packet.Write(GlobalsManager.LocalPlayerObj.Health);
+        
         SendMessage(packet);
     }
     public void SendHostPosition(Vector2 pos)
     {
-        var packet = new NetPacket(pos)
-        {
-            PacketType = PacketType.Position,
-            SenderId = GlobalsManager.LocalPlayerId,
-        };
+        var packet = new NewPacket(PacketType.Position);
+        packet.Write(GlobalsManager.LocalPlayerId);
+        packet.Write(pos);
+        
         SendMessage(packet, SendType.Unreliable);
     }
 
     public void SendHostBoost()
     {
-        var packet = new NetPacket
-        {
-            PacketType = PacketType.Boost,
-            SenderId = GlobalsManager.LocalPlayerId,
-        };
+        var packet = new NewPacket(PacketType.Boost);
+        packet.Write(GlobalsManager.LocalPlayerId);
+        
         SendMessage(packet, SendType.Unreliable);
     }
 
     public void SendDamageAll(int healthPreHit, ulong hitPlayerId)
     {
-        var packet = new NetPacket(healthPreHit)
-        {
-            PacketType = PacketType.DamageAll,
-            SenderId = hitPlayerId,
-        };
+        var packet = new NewPacket(PacketType.DamageAll);
+        packet.Write(hitPlayerId);
+        packet.Write(healthPreHit);
+        
         SendMessage(packet);
         
-        if (IPacketHandler.PacketHandlers.TryGetValue(PacketType.DamageAll, out var handler))
+       
+        if (DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true))
         {
-            handler.ProcessPacket(packet.SenderId, packet.Data);
+            if (GlobalsManager.Players.TryGetValue(hitPlayerId, out var playerData))
+            {
+                string hex = VGPlayerManager.Inst.GetPlayerColorHex(playerData.VGPlayerData.PlayerID);
+                VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{playerData.Name}</color>] got hit!", 1f);
+            }
+        }
+       
+        
+        foreach (var vgPlayerData in GlobalsManager.Players)
+        {
+            VGPlayer player = vgPlayerData.Value.VGPlayerData.PlayerObject;
+            if (player.IsValidPlayer())
+            {
+                if (player.Health < healthPreHit)
+                {
+                    PAM.Inst.Log.LogWarning($"Old message");
+                    continue;
+                }
+
+                if (player.IsLocalPlayer())
+                {
+                    Player_Patch.IsDamageAll = true;
+                }
+                
+                player.Health = healthPreHit;
+                player.PlayerHit();
+            }
         }
     }
 
@@ -282,11 +372,7 @@ public class PAMSocketManager : SocketManager
 
         return false;
     }
-
-    public string GetConnectionName()
-    {
-        return "test";
-    }
+    
 }
 
 /// <summary>
@@ -295,8 +381,25 @@ public class PAMSocketManager : SocketManager
 /// </summary>
 public class PAMConnectionManager : ConnectionManager
 {
-    const int PACKET_SIZE = 24;
+    const int MAX_PACKET_SIZE = 24;
     
+    private readonly MemoryStream _stream;
+    private readonly BinaryReader _reader;
+
+
+    public PAMConnectionManager()
+    {
+        _stream = new MemoryStream(MAX_PACKET_SIZE);
+        _reader = new BinaryReader(_stream);
+        
+        _stream.SetLength(MAX_PACKET_SIZE);
+    }
+
+    ~PAMConnectionManager()
+    {
+        _reader.Dispose();
+        _stream.Dispose();
+    }
     #region ConnectionManager Overrides
     
     public override void OnConnecting(ConnectionInfo info)
@@ -324,14 +427,29 @@ public class PAMConnectionManager : ConnectionManager
         }
     }
 
-    public override unsafe void OnMessage(IntPtr data, int size, long messageNum, long recvTime, int channel)
+    public override void OnMessage(IntPtr data, int size, long messageNum, long recvTime, int channel)
     {
-        Span<byte> packetSpan = new Span<byte>((void*)data, PACKET_SIZE);
-        var packet = MemoryMarshal.Read<NetPacket>(packetSpan);
-        
-        if (IPacketHandler.PacketHandlers.TryGetValue(packet.PacketType, out var handler))
+        if (size > MAX_PACKET_SIZE)
         {
-            handler.ProcessPacket(packet.SenderId, packet.Data);
+            PAM.Logger.LogWarning(
+                "Received more bytes than expected, [{size}] bytes");
+            return;
+        }
+
+        if (size < 2)
+        {
+            PAM.Logger.LogWarning("Received too little bytes");
+            return;
+        }
+
+        Marshal.Copy(data, _stream.GetBuffer(), 0, size);
+        _stream.Position = 0;
+
+        PacketType packetType = (PacketType)_reader.ReadUInt16();
+        
+        if (PacketHandler.PacketHandlers.TryGetValue(packetType, out var handler))
+        {
+            handler.TryProcessPacket(_reader, size - 2);
         }
     }
 
@@ -339,45 +457,29 @@ public class PAMConnectionManager : ConnectionManager
 
     #region Send Messages
     
-    unsafe void SendPacket(NetPacket packet, SendType sendType = SendType.Reliable)
+    void SendPacket(NewPacket packet, SendType sendType = SendType.Reliable)
     {
-        Span<byte> packetSpan = stackalloc byte[PACKET_SIZE];
-        MemoryMarshal.Write(packetSpan, ref packet);
-
-        fixed (byte* ptr = packetSpan)
-        {
-            Connection.SendMessage((IntPtr)ptr, PACKET_SIZE, sendType);
-        }
+        Connection.SendMessage(packet.GetData(out var size), size, sendType);
     } 
   
     #endregion
     public void SendDamage(int healthPreHit)
     {
-        var packet = new NetPacket(healthPreHit)
-        {
-            PacketType = PacketType.Damage,
-            SenderId = GlobalsManager.LocalPlayerId,
-        };
+        var packet = new NewPacket(PacketType.Damage);
+        packet.Write(healthPreHit);
      
         SendPacket(packet);
     }
 
     public void SendPosition(Vector2 pos)
     {
-        var packet = new NetPacket(pos)
-        {
-            PacketType = PacketType.Position,
-            SenderId = GlobalsManager.LocalPlayerId,
-        };
+        var packet = new NewPacket(PacketType.Position);
+        packet.Write(pos);
         SendPacket(packet, SendType.Unreliable);
     }
     public void SendBoost()
     {
-        var packet = new NetPacket
-        {
-            PacketType = PacketType.Boost,
-            SenderId = GlobalsManager.LocalPlayerId,
-        };
+        var packet = new NewPacket(PacketType.Boost);
         SendPacket(packet, SendType.Unreliable);
     }
 }

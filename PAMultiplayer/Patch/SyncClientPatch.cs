@@ -44,6 +44,12 @@ public static class CheckpointHandler
             {
                 __instance.currentCheckpointIndex = tmpIndex;
                 SteamManager.Inst.Server.SendCheckpointHit(tmpIndex);
+                
+                GameManager.Inst.playingCheckpointAnimation = true;
+                VGPlayerManager.Inst.RespawnPlayers();
+                VGPlayerManager.Inst.HealPlayers();
+
+                GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation(tmpIndex));
             }
         }
         return false;
@@ -73,7 +79,26 @@ public static class RewindHandler
                    if(vgPlayerData.PlayerObject.IsValidPlayer()) //if player object exist
                        return; //dont rewind
                 }
-                SteamManager.Inst.Server?.SendRewindToCheckpoint();
+                
+                int index = 0;
+        
+                if (DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) <= 1)
+                {
+                    index = GameManager.Inst.currentCheckpointIndex;
+                }
+                
+                SteamManager.Inst.Server?.SendRewindToCheckpoint(index);
+                
+                foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+                {
+                    if (vgPlayerData.PlayerObject.IsValidPlayer())
+                    {
+                        vgPlayerData.PlayerObject.Health = 0;
+                        vgPlayerData.PlayerObject.ClearEvents();
+                        vgPlayerData.PlayerObject.PlayerDeath();
+                    }
+                }
+                GameManager.Inst.RewindToCheckpoint(index);
             });
         }
         else

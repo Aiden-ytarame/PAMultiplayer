@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
+using System.Reflection.Metadata.Ecma335;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
 using PAMultiplayer.Patch;
@@ -9,9 +10,9 @@ using UnityEngine;
 
 namespace PAMultiplayer.Packet;
 
-public interface IPacketHandler
+public abstract class PacketHandler
 {
-    public static readonly Dictionary<PacketType, IPacketHandler> PacketHandlers = new()
+    public static readonly Dictionary<PacketType, PacketHandler> PacketHandlers = new()
     {
         { PacketType.Position, new PositionPacket()},
         { PacketType.Damage, new DamagePacket()}, 
@@ -23,29 +24,53 @@ public interface IPacketHandler
         { PacketType.NextLevel, new NextLevelPacket()},
         { PacketType.DamageAll, new DamageAllPacket()}
     };
-    public void ProcessPacket(SteamId senderId, Vector2 data);
+
+   /// <summary>
+   /// Checks if there's enough bytes for the type of packet received
+   /// </summary>
+    public void TryProcessPacket(BinaryReader reader, int size)
+    {
+        if (size < DataSize)
+        {
+            PAM.Logger.LogWarning($"Packet size is too small [{size}], type [{GetType().Name}]");
+        }
+        
+        ProcessPacket(reader);
+    }
+
+    /// <summary>
+    /// Overriden method to handle the data received using a BinaryReader.
+    /// </summary>
+    /// <param name="reader"></param>
+    protected abstract void ProcessPacket(BinaryReader reader);
+    
+    /// <summary>
+    /// The amount of Bytes required by this packet for it to be handled.
+    /// </summary>
+    protected abstract int DataSize { get; }
 }
 
-public class PositionPacket : IPacketHandler
+public class PositionPacket : PacketHandler
 {
-    public void ProcessPacket(SteamId senderId, Vector2 data)
+   protected override void ProcessPacket(BinaryReader reader)
     {
-        if (senderId.IsLocalPlayer()) return;
+        SteamId steamID = reader.ReadUInt64();
+        if (steamID.IsLocalPlayer()) return;
         
-        if (GlobalsManager.Players.TryGetValue(senderId, out var playerData))
+        if (GlobalsManager.Players.TryGetValue(steamID, out var playerData))
         {
             if (playerData.VGPlayerData.PlayerObject)
             {
-                VGPlayer player = GlobalsManager.Players[senderId].VGPlayerData.PlayerObject;
+                VGPlayer player = GlobalsManager.Players[steamID].VGPlayerData.PlayerObject;
                 
                 if(!player) return;
                 
                 Transform rb = player.Player_Wrapper;
-               // Vector2 DeltaPos = rb.position - PosEnu.Current.Value;
-                //StaticManager.Players[PosEnu.Current.Key].PlayerObject.Player_Wrapper.transform.Rotate(new Vector3(0, 0, Mathf.Atan2(DeltaPos.x, DeltaPos.y)), Space.World);
-
-                var rot = data - (Vector2)rb.position;
-                rb.position = data;
+                
+                Vector2 pos = new Vector2(reader.ReadSingle(), reader.ReadSingle());
+            
+                var rot = pos - (Vector2)rb.position;
+                rb.position = pos;
                 if (rot.sqrMagnitude > 0.0001f)
                 {
                     rot.Normalize();
@@ -55,18 +80,21 @@ public class PositionPacket : IPacketHandler
             }
         }
     }
+
+    protected override int DataSize => 16;
 }
 
-public class DamagePacket : IPacketHandler
+public class DamagePacket : PacketHandler
 {
-    public void ProcessPacket(SteamId senderId, Vector2 data)
+   protected override void ProcessPacket(BinaryReader reader)
     {
-        PAM.Inst.Log.LogDebug($"Damaging player { senderId}");
+        SteamId steamID = reader.ReadUInt64();
+        PAM.Inst.Log.LogDebug($"Damaging player {steamID}");
 
-        if ( senderId.IsLocalPlayer()) return;
+        if (steamID.IsLocalPlayer()) return;
 
-        int health = (int)data.x;
-        if(GlobalsManager.Players.TryGetValue(senderId, out var player))
+        int health = reader.ReadInt32();
+        if(GlobalsManager.Players.TryGetValue(steamID, out var player))
         {
             if (!player.VGPlayerData.PlayerObject.IsValidPlayer()) return;
             player.VGPlayerData.PlayerObject.Health = health;
@@ -74,19 +102,21 @@ public class DamagePacket : IPacketHandler
         }
       
     }
+
+    protected override int DataSize => 12;
 }
 
-public class DamageAllPacket : IPacketHandler
+public class DamageAllPacket : PacketHandler
 {
-    public void ProcessPacket(SteamId senderId, Vector2 data)
-    {
-        
-        int healthPreHit = (int)data.x;
+   protected override void ProcessPacket(BinaryReader reader)
+   {
+       SteamId steamID = reader.ReadUInt64();
+       int healthPreHit = reader.ReadInt32();
         PAM.Inst.Log.LogInfo($"Damaging all players {healthPreHit}");
 
         if (DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true))
         {
-            if (GlobalsManager.Players.TryGetValue(senderId, out var playerData))
+            if (GlobalsManager.Players.TryGetValue(steamID, out var playerData))
             {
                 string hex = VGPlayerManager.Inst.GetPlayerColorHex(playerData.VGPlayerData.PlayerID);
                 VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{playerData.Name}</color>] got hit!", 1f);
@@ -115,36 +145,41 @@ public class DamageAllPacket : IPacketHandler
                 player.PlayerHit();
             }
         }
-    }
+   }
+
+    protected override int DataSize => 12;
 }
 
-public class StartPacket : IPacketHandler
+public class StartPacket : PacketHandler
 {
-    public void ProcessPacket(SteamId senderId, Vector2 data)
+   protected override void ProcessPacket(BinaryReader reader)
     {
         LobbyScreenManager.Instance?.StartLevel();
     }
+
+    protected override int DataSize => 0;
 }
 
-public class PlayerIdPacket : IPacketHandler
+public class PlayerIdPacket : PacketHandler
 {
     private static int _amountOfInfo;
 
-    public void ProcessPacket(SteamId senderId, Vector2 data)
+   protected override void ProcessPacket(BinaryReader reader)
     {
-        int id = (int)data.x;
+        SteamId steamID = reader.ReadUInt64();
+        int id = reader.ReadInt32();
         
         //will likely remove this, this is useless
-        int amount = (int)data.y;
+        int amount = reader.ReadInt32();
         
         GlobalsManager.HasLoadedBasePlayerIds = false;
         
         _amountOfInfo++;
-        PAM.Logger.LogInfo($"Player Id from [{senderId}] Received");
+        PAM.Logger.LogInfo($"Player Id from [{reader}] Received");
 
-        if (GlobalsManager.Players.TryGetValue(senderId, out var player))
+        if (GlobalsManager.Players.TryGetValue(steamID, out var player))
         {
-            if (senderId.IsLocalPlayer())
+            if (steamID.IsLocalPlayer())
                 GlobalsManager.LocalPlayerObjectId = id;
             
             player.VGPlayerData.PlayerID = id;
@@ -156,7 +191,7 @@ public class PlayerIdPacket : IPacketHandler
                 PlayerID = id,
                 ControllerID = id
             };
-            GlobalsManager.Players.Add(senderId, new PlayerData(newData, "placeHolder"));
+            GlobalsManager.Players.Add(steamID, new PlayerData(newData, "placeHolder"));
             VGPlayerManager.Inst.players.Add(newData);
 
         }
@@ -166,26 +201,32 @@ public class PlayerIdPacket : IPacketHandler
             GlobalsManager.HasLoadedBasePlayerIds = true;
         }
     }
+   
+    protected override int DataSize => 16;
 }
 
-public class CheckpointPacket : IPacketHandler
+public class CheckpointPacket : PacketHandler
 {
-    public void ProcessPacket(SteamId senderId, Vector2 data)
-    {
-        PAM.Logger.LogInfo($"Checkpoint [{(int)data.x}] Received");
+   protected override void ProcessPacket(BinaryReader reader)
+   {
+       int index = reader.ReadInt32();
+        PAM.Logger.LogInfo($"Checkpoint [{index}] Received");
         GameManager.Inst.playingCheckpointAnimation = true;
         VGPlayerManager.Inst.RespawnPlayers();
         VGPlayerManager.Inst.HealPlayers();
 
-        GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation((int)data.x));
+        GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation(index));
     }
+
+    protected override int DataSize => 4;
 }
 
-public class RewindPacket : IPacketHandler
+public class RewindPacket : PacketHandler
 {
-    public void ProcessPacket(SteamId senderId, Vector2 data)
+   protected override void ProcessPacket(BinaryReader reader)
     {
-        PAM.Logger.LogInfo($"Rewind to Checkpoint [{(int)data.x}] Received");
+        int index = reader.ReadInt32();
+        PAM.Logger.LogInfo($"Rewind to Checkpoint [{index}] Received");
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
         {
             if (vgPlayerData.PlayerObject.IsValidPlayer())
@@ -194,33 +235,39 @@ public class RewindPacket : IPacketHandler
                 vgPlayerData.PlayerObject.ClearEvents();
                 vgPlayerData.PlayerObject.PlayerDeath();
             }
-        };
-        GameManager.Inst.RewindToCheckpoint((int)data.x);
+        }
+        GameManager.Inst.RewindToCheckpoint(index);
     }
+
+    protected override int DataSize => 4;
 }
 
-public class BoostPacket : IPacketHandler
+public class BoostPacket : PacketHandler
 {
-    public void ProcessPacket(SteamId senderId, Vector2 data)
+   protected override void ProcessPacket(BinaryReader reader)
     {
-        if(senderId.IsLocalPlayer()) return;
+        SteamId steamID = reader.ReadUInt64();
+        if(steamID.IsLocalPlayer()) return;
         
-        if (GlobalsManager.Players.TryGetValue(senderId, out var player))
+        if (GlobalsManager.Players.TryGetValue(steamID, out var player))
         {
             player.VGPlayerData.PlayerObject?.PlayParticles(VGPlayer.ParticleTypes.Boost);
         }
     }
+
+    protected override int DataSize => 8;
 }
 
-public class NextLevelPacket : IPacketHandler
+public class NextLevelPacket : PacketHandler
 {
-    public void ProcessPacket(SteamId levelId, Vector2 data)
+   protected override void ProcessPacket(BinaryReader reader)
     {
-        int seed = BitConverter.ToInt32( BitConverter.GetBytes(data.x));
+        ulong levelID = reader.ReadUInt64();
+        int seed = reader.ReadInt32();
         
         PAM.Logger.LogInfo($"New random seed : {seed}");
-      
-        GlobalsManager.LevelId = levelId.ToString();
+
+        GlobalsManager.LevelId = levelID.ToString();
         SteamLobbyManager.Inst.RandSeed = seed;
         GlobalsManager.IsReloadingLobby = true;
         
@@ -236,4 +283,6 @@ public class NextLevelPacket : IPacketHandler
         PAM.Logger.LogError($"You did not have the lobby's level downloaded!, Downloading Level...");
         SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
     }
+
+    protected override int DataSize => 12;
 }

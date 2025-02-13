@@ -24,7 +24,25 @@ public static class DebugControllerPatch
                     if (GlobalsManager.IsHosting)
                     {
                         __instance.AddLog("Is host, Killing all players.");
-                        SteamManager.Inst.Server?.SendRewindToCheckpoint();
+                        
+                        foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+                        {
+                            if (vgPlayerData.PlayerObject.IsValidPlayer())
+                            {
+                                vgPlayerData.PlayerObject.Health = 0;
+                                vgPlayerData.PlayerObject.ClearEvents();
+                                vgPlayerData.PlayerObject.PlayerDeath();
+                            }
+                        }
+                        int index = 0;
+        
+                        if (DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) <= 1)
+                        {
+                            index = GameManager.Inst.currentCheckpointIndex;
+                        }
+                        
+                        GameManager.Inst.RewindToCheckpoint(index);
+                        SteamManager.Inst.Server?.SendRewindToCheckpoint(index);
                     }
                     else
                     {
@@ -225,24 +243,6 @@ public static class DebugControllerPatch
                     __instance.AddLog("Failed Kicked player from server.");
                 }));
         __instance.CommandList.Add(kickPlayerCommand);
-
-        
-        DebugCommand lobbiesCommand = new("player_list",
-            "shows all player ids. (multiplayer mod, any)",
-            new System.Action(
-                async () =>
-                {
-                    LobbyQuery query = new LobbyQuery();
-                    Lobby[] results = await query.RequestAsync();
-                    
-                    __instance.AddLog("showing available lobbies.");
-                    foreach (var result in results)
-                    {
-                        __instance.AddLog($"id [{result.Id}], host [{result.Owner.Name}]");
-                    }
-                   
-                }));
-        __instance.CommandList.Add(lobbiesCommand);
     
     }
 

@@ -132,7 +132,13 @@ namespace PAMultiplayer.Patch
             {
                 if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
                 {
-                    string text = currentLobbyMember.Name;;
+                    string text = currentLobbyMember.Name;
+                    
+                    if (LobbyScreenManager.SpecialColors.TryGetValue(currentLobbyMember.Id, out var hex))
+                    {
+                       text = $"<color=#{hex}>{currentLobbyMember.Name}";
+                    }
+                    
                     if (currentLobbyMember.Id == GlobalsManager.LocalPlayerId)
                     {
                         text = "YOU";
@@ -234,6 +240,7 @@ namespace PAMultiplayer.Patch
                 "Before time began there was The Cube...",
                 "Ready to be carried by another Nano again?",
                 "Squeezing your Nano through the internet wire...",
+                "The triangle is the simplest shape a computer can render",
                 "Meow!"
             };
             //thanks Pidge for making this public after I complained lol

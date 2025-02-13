@@ -396,6 +396,11 @@ public class GameManagerPatch
                  yield return new WaitUntil(new System.Func<bool>(() => !GlobalsManager.IsDownloading));
                  
                  var result = item.Result;
+
+                 if (result.Id == 0)
+                 {
+                     yield break; //this prob doesnt need to be here
+                 }
                  
                  VGLevel vgLevel = new VGLevel();
                  
@@ -420,10 +425,10 @@ public class GameManagerPatch
          {
              SteamLobbyManager.Inst.RandSeed = Random.seed;
              ObjectManager.inst.seed = Random.seed;
-             Test.seed = SteamLobbyManager.Inst.RandSeed;
+             RNGSync.seed = SteamLobbyManager.Inst.RandSeed;
              if(GlobalsManager.IsReloadingLobby)
              {
-                 SteamLobbyManager.Inst.CurrentLobby.SetData("LevelId", GlobalsManager.LevelId.ToString());
+                 SteamLobbyManager.Inst.CurrentLobby.SetData("LevelId", GlobalsManager.LevelId);
                  SteamLobbyManager.Inst.CurrentLobby.SetData("seed", SteamLobbyManager.Inst.RandSeed.ToString());
                  
                  List<string> levelNames = new();
@@ -459,7 +464,7 @@ public class GameManagerPatch
          }
          else
          {
-             Test.seed = SteamLobbyManager.Inst.RandSeed;
+             RNGSync.seed = SteamLobbyManager.Inst.RandSeed;
              ObjectManager.inst.seed = SteamLobbyManager.Inst.RandSeed;
          }
          
@@ -473,6 +478,12 @@ public class GameManagerPatch
              PAM.Logger.LogDebug(e);
         
              GlobalsManager.IsReloadingLobby = false;
+             
+             if (!GlobalsManager.IsHosting)
+             {
+                 SteamManager.Inst.EndClient();
+             }
+             
              SceneLoader.Inst.manager.ClearLoadingTasks();
              SceneLoader.Inst.LoadSceneGroup("Menu");
              yield break;
@@ -535,8 +546,9 @@ public class GameManagerPatch
         void FailLoad(string errorMessage)
         {
             PAM.Logger.LogError(errorMessage);
-            GlobalsManager.IsReloadingLobby = false;
             GlobalsManager.IsDownloading = false;
+            SteamManager.Inst.EndClient();
+            
             SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.Inst.LoadSceneGroup("Menu");
         }
@@ -588,16 +600,8 @@ public class GameManagerPatch
     }
 }
 
-public static class TaskExtension
-{
-    public static Il2CppSystem.Threading.Tasks.Task ToIl2Cpp(this Task task)
-    {
-        return Il2CppSystem.Threading.Tasks.Task.Run(new Action(task.Wait));
-    }
-}
-
 [HarmonyPatch(typeof(ObjectManager))]
-public static class Test
+public static class RNGSync
 {
     public static int seed;
 
@@ -611,3 +615,13 @@ public static class Test
     }
     
 }
+
+
+public static class TaskExtension
+{
+    public static Il2CppSystem.Threading.Tasks.Task ToIl2Cpp(this Task task)
+    {
+        return Il2CppSystem.Threading.Tasks.Task.Run(new Action(task.Wait));
+    }
+}
+
