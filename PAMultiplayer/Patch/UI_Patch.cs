@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
+using PAMultiplayer.Helper;
 using UnityEngine;
 using PAMultiplayer.Managers;
 using SimpleJSON;
@@ -250,6 +251,7 @@ namespace PAMultiplayer.Patch
 
     /// <summary>
     /// adds an "Update Mod" button in case a new version is available
+    /// and replaces the Player hit and Player warp settings with a multiplayer version of those settings
     /// </summary>
 
     [HarmonyPatch(typeof(SkipIntroMenu))]
@@ -299,29 +301,8 @@ namespace PAMultiplayer.Patch
                 DataManager.inst.UpdateSettingBool("PlayerWarpSFX", x != 2);
             });
             
-            GameObject togglePrefab = __instance.transform.Find("Window/Content/Settings/Right Panel/Content/Accessibility/Content/High Contrast").gameObject;
-            
-            //
-            var TranparentNanoToggle = Object.Instantiate(togglePrefab, togglePrefab.transform.parent).GetComponent<UI_Toggle>();
-            TranparentNanoToggle.transform.SetSiblingIndex(3);
-            
-            TranparentNanoToggle.Value = DataManager.inst.GetSettingBool("MpTransparentPlayer", false);
-            TranparentNanoToggle.DataID = "MpTransparentPlayer";
-            TranparentNanoToggle.ToggleLabel.text = "Transparent Nanos";
-            
-            UIStateManager.inst.RefreshTextCache(TranparentNanoToggle.ToggleLabel,"Transparent Nanos");
-            book.Pages[3].SubElements.Add(TranparentNanoToggle);
-            
-            //
-            var LinkedHealthHitPopupToggle = Object.Instantiate(togglePrefab, togglePrefab.transform.parent).GetComponent<UI_Toggle>();
-            LinkedHealthHitPopupToggle.transform.SetSiblingIndex(3);
-            
-            LinkedHealthHitPopupToggle.Value = DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true);
-            LinkedHealthHitPopupToggle.DataID = "MpLinkedHealthPopup";
-            LinkedHealthHitPopupToggle.ToggleLabel.text = "Linked Health Hit Popup";
-            
-            UIStateManager.inst.RefreshTextCache(LinkedHealthHitPopupToggle.ToggleLabel,"Linked Health Hit Popup");
-            book.Pages[3].SubElements.Add(LinkedHealthHitPopupToggle);
+            //this creates the Multiplayer tab in the settings
+            SettingsHelper.SetupMenu();
         }
 
         static IEnumerator FetchGithubReleases()

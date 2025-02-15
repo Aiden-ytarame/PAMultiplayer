@@ -50,6 +50,11 @@ public class SteamLobbyManager : MonoBehaviour
 
     private void OnChatMessage(Lobby lobby, Friend friend, string message)
     {
+        if (!DataManager.inst.GetSettingBool("MpChatEnabled", true))
+        {
+            return;
+        }
+        
         if (!GlobalsManager.Players.TryGetValue(friend.Id, out var player))
         {
             return;

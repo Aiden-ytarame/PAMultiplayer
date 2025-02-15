@@ -237,9 +237,23 @@ namespace PAMultiplayer.Patch
         static void PreSetColor(VGPlayer __instance, ref Color _col, ref Color _colTail)
         {
             if (!GlobalsManager.IsMultiplayer || !DataManager.inst.GetSettingBool("MpTransparentPlayer", false) || __instance.IsLocalPlayer()) return;
+
+            float alpha;
+            switch (DataManager.inst.GetSettingInt("MpTransparentPlayerAlpha", 0))
+            {
+                case 1:
+                    alpha = 0.50f;
+                    break;
+                case 2:
+                    alpha = 0.85f;
+                    break;
+                default:
+                    alpha = 0.35f;
+                    break;
+            }
             
-            _col.a = 0.35f;
-            _colTail.a = 0.35f;
+            _col.a = alpha;
+            _colTail.a = alpha;
         }
         
         /// <summary>
