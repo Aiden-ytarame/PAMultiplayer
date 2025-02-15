@@ -175,8 +175,7 @@ public class PAMSocketManager : SocketManager
                     connection.Close();
                     return;
                 }
-                PAM.Logger.LogWarning(size);
-                PAM.Logger.LogWarning($"type pos [{packetType.ToString()}]");
+            
                 if (GlobalsManager.Players.TryGetValue(identity.SteamId, out var playerData))
                 {
                     if (playerData.VGPlayerData.PlayerObject)
@@ -206,8 +205,6 @@ public class PAMSocketManager : SocketManager
                 break;
             case PacketType.Boost:
             {
-                PAM.Logger.LogWarning(size);
-                PAM.Logger.LogWarning($"type boos [{packetType.ToString()}]");
                 if (GlobalsManager.Players.TryGetValue(identity.SteamId, out var player))
                 {
                     player.VGPlayerData.PlayerObject?.PlayParticles(VGPlayer.ParticleTypes.Boost);
