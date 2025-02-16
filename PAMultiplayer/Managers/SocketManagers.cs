@@ -104,17 +104,14 @@ public class PAMSocketManager : SocketManager
             return true;
         }
 
-        unsafe IntPtr WriteSteamId(PacketType packetType, out int _size)
+        byte[] WriteSteamId(PacketType packetType, out int _size)
         {
             _writer.Write((ushort)packetType);
             _writer.Write(identity.SteamId);
             _writer.Write(_stream.GetBuffer(), 2, size - 2);
 
-            _size = size + 9;
-            fixed (byte* ptr = _outStream.GetBuffer())
-            {
-                return (IntPtr)ptr;
-            }
+            _size = size + 8;
+            return _stream.GetBuffer();
         }
 
         if (size > MAX_PACKET_SIZE)
@@ -186,7 +183,6 @@ public class PAMSocketManager : SocketManager
 
                         Transform rb = player.Player_Wrapper;
                         Vector2 pos = new Vector2(_reader.ReadSingle(), _reader.ReadSingle());
-                        PAM.Logger.LogError(pos);
                         
                         var rot = pos - (Vector2)rb.position;
                         rb.position = pos;
@@ -221,11 +217,11 @@ public class PAMSocketManager : SocketManager
     #endregion
 
     #region Send Messages
-    void SendMessage(HashSet<Connection> connections, IntPtr ptr, int size, SendType sendType = SendType.Reliable)
+    void SendMessage(HashSet<Connection> connections, byte[] data, int size, SendType sendType = SendType.Reliable)
     {
         foreach (var connection in connections)
         {
-            connection.SendMessage(ptr, size, sendType);
+            connection.SendMessage(data, 0, size, sendType);
         }
     }
 
@@ -235,27 +231,27 @@ public class PAMSocketManager : SocketManager
     }
     void SendMessage(Connection connection, NewPacket packet, SendType sendType = SendType.Reliable)
     {
-        connection.SendMessage(packet.GetData(out var size), size, sendType);
+        connection.SendMessage(packet.GetData(out var size), 0,size, sendType);
     }
     
     #endregion
     public void StartLevel()
     {
         GlobalsManager.HasStarted = true;
-        var packet = new NewPacket(PacketType.Start);
+        using var packet = new NewPacket(PacketType.Start);
         SendMessage(packet);
     }
 
     public void SendCheckpointHit(int index)
     {
-        var packet = new NewPacket(PacketType.Checkpoint);
+        using var packet = new NewPacket(PacketType.Checkpoint);
         packet.Write(index);
         SendMessage(packet);
     }
 
     public void SendRewindToCheckpoint(int index)
     {
-        var packet = new NewPacket(PacketType.Rewind);
+        using var packet = new NewPacket(PacketType.Rewind);
         packet.Write(index);
         SendMessage(packet);
     }
@@ -265,7 +261,7 @@ public class PAMSocketManager : SocketManager
     {
         foreach (var vgPlayerData in GlobalsManager.Players)
         {
-            var packet = new NewPacket(PacketType.PlayerId);
+            using var packet = new NewPacket(PacketType.PlayerId);
             packet.Write(vgPlayerData.Key);
             packet.Write(vgPlayerData.Value.VGPlayerData.PlayerID);
             packet.Write(GlobalsManager.Players.Count);
@@ -273,7 +269,7 @@ public class PAMSocketManager : SocketManager
             SendMessage(connection, packet);
         }
 
-        var info = new NewPacket(PacketType.PlayerId);
+        using var info = new NewPacket(PacketType.PlayerId);
         info.Write(steamId);
         info.Write(id);
         info.Write(1);
@@ -282,7 +278,7 @@ public class PAMSocketManager : SocketManager
 
     public void SendNextQueueLevel(ulong id, int seed)
     {
-        var newPacket = new NewPacket(PacketType.NextLevel);
+        using var newPacket = new NewPacket(PacketType.NextLevel);
         newPacket.Write(id);
         newPacket.Write(seed);
         
@@ -293,7 +289,7 @@ public class PAMSocketManager : SocketManager
 
     public void SendHostDamage()
     {
-        var packet = new NewPacket(PacketType.Damage);
+        using var packet = new NewPacket(PacketType.Damage);
         packet.Write(GlobalsManager.LocalPlayerId);
         packet.Write(GlobalsManager.LocalPlayerObj.Health);
         
@@ -301,7 +297,7 @@ public class PAMSocketManager : SocketManager
     }
     public void SendHostPosition(Vector2 pos)
     {
-        var packet = new NewPacket(PacketType.Position);
+        using var packet = new NewPacket(PacketType.Position);
         packet.Write(GlobalsManager.LocalPlayerId);
         packet.Write(pos);
         
@@ -310,7 +306,7 @@ public class PAMSocketManager : SocketManager
 
     public void SendHostBoost()
     {
-        var packet = new NewPacket(PacketType.Boost);
+        using var packet = new NewPacket(PacketType.Boost);
         packet.Write(GlobalsManager.LocalPlayerId);
         
         SendMessage(packet, SendType.Unreliable);
@@ -318,7 +314,7 @@ public class PAMSocketManager : SocketManager
 
     public void SendDamageAll(int healthPreHit, ulong hitPlayerId)
     {
-        var packet = new NewPacket(PacketType.DamageAll);
+        using var packet = new NewPacket(PacketType.DamageAll);
         packet.Write(hitPlayerId);
         packet.Write(healthPreHit);
         
@@ -429,7 +425,7 @@ public class PAMConnectionManager : ConnectionManager
         if (size > MAX_PACKET_SIZE)
         {
             PAM.Logger.LogWarning(
-                "Received more bytes than expected, [{size}] bytes");
+                $"Received more bytes than expected, [{size}] bytes");
             return;
         }
 
@@ -456,13 +452,13 @@ public class PAMConnectionManager : ConnectionManager
     
     void SendPacket(NewPacket packet, SendType sendType = SendType.Reliable)
     {
-        Connection.SendMessage(packet.GetData(out var size), size, sendType);
+        Connection.SendMessage(packet.GetData(out var size), 0, size, sendType);
     } 
   
     #endregion
     public void SendDamage(int healthPreHit)
     {
-        var packet = new NewPacket(PacketType.Damage);
+        using var packet = new NewPacket(PacketType.Damage);
         packet.Write(healthPreHit);
      
         SendPacket(packet);
@@ -470,13 +466,13 @@ public class PAMConnectionManager : ConnectionManager
 
     public void SendPosition(Vector2 pos)
     {
-        var packet = new NewPacket(PacketType.Position);
+        using var packet = new NewPacket(PacketType.Position);
         packet.Write(pos);
         SendPacket(packet, SendType.Unreliable);
     }
     public void SendBoost()
     {
-        var packet = new NewPacket(PacketType.Boost);
+        using var packet = new NewPacket(PacketType.Boost);
         SendPacket(packet, SendType.Unreliable);
     }
 }

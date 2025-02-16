@@ -67,26 +67,23 @@ public static class SettingsHelper
         
         button.m_OnClick = new();
         
-        button.m_OnClick.AddListener(new System.Action(() =>
-        {
-            book.ForceSwapPage("Multiplayer");
-        }));
-        
-        //no idea if this is needed lol
         var uiButton = mpSettingsTab.GetComponentInChildren<UI_Button>();
         button.m_OnClick.AddListener(new Action(() =>
         {
+            book.ForceSwapPage("Multiplayer");
             uiButton.OnClick();
         }));
         
+    
         //get 'prefabs'
         Transform prefabsParent =  book.transform.Find("Content/Audio/Content");
         _sliderPrefab = prefabsParent.Find("Menu Music").gameObject;
         _togglePrefab = prefabsParent.Find("Checkpoint SFX").gameObject;
         _labelPrefab = prefabsParent.Find("General Title").gameObject;
         _spacerPrefab = prefabsParent.Find("spacer").gameObject;
-        //add our button to the Settings page in the UI_Book in the Canvas
-        book.transform.parent.parent.parent.parent.GetComponent<UI_Book>().Pages[6].SubElements.Add(mpSettingsTab.GetComponentInChildren<UI_Button>());
+        
+        //add our button to the Settings page to the UI_Book in the Canvas
+        book.transform.parent.parent.parent.parent.GetComponent<UI_Book>().Pages[6].SubElements.Add(uiButton);
      
         //_mpPage.DefaultSelection = mpSettingsTab.GetComponentInChildren<UI_Button>().gameObject;
         SetupSettings();
@@ -101,7 +98,7 @@ public static class SettingsHelper
         InstantiateSlider("Transparent Opacity", "MpTransparentPlayerAlpha", "35%", "50%", "85%");
         InstantiateSpacer();
         
-        InstantiateLabel("<b>OTHER STUFF</b> - idk");
+        InstantiateLabel("<b>MISCELLANEOUS</b> - other settings");
         
         InstantiateToggle("Chat Enabled", "MpChatEnabled");
         InstantiateToggle("Linked Health Hit Popup", "MpLinkedHealthPopup");
@@ -119,7 +116,7 @@ public static class SettingsHelper
 
     static void InstantiateSpacer()
     {
-        var spacer = Object.Instantiate(_spacerPrefab, _settingsPanel);
+        Object.Instantiate(_spacerPrefab, _settingsPanel);
     }
     static void InstantiateToggle(string label, string dataID)
     {

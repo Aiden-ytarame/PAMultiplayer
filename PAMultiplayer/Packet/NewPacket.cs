@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace PAMultiplayer.Packet;
 
-public class NewPacket
+public class NewPacket : IDisposable
 {
     private readonly MemoryStream _stream;
     private readonly BinaryWriter _writer;
@@ -17,19 +17,11 @@ public class NewPacket
         _writer.Write((ushort)packetType);
     }
 
-    ~NewPacket()
-    {
-        _writer.Dispose();
-        _stream.Dispose();
-    }
-    
-    public unsafe IntPtr GetData(out int length)
+  
+    public byte[] GetData(out int length)
     {
         length = (int)_stream.Length;
-        fixed (byte* ptr = _stream.GetBuffer())
-        {
-            return (IntPtr)ptr;
-        }
+        return _stream.GetBuffer();
     }
     
  
@@ -42,5 +34,12 @@ public class NewPacket
     {
         _writer.Write(value.x);
         _writer.Write(value.y);
+    }
+    
+    public void Dispose()
+    {
+        _writer?.Dispose();
+        _stream?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
