@@ -111,7 +111,7 @@ public class PAMSocketManager : SocketManager
             _writer.Write(_stream.GetBuffer(), 2, size - 2);
 
             _size = size + 8;
-            return _stream.GetBuffer();
+            return _outStream.GetBuffer();
         }
 
         if (size > MAX_PACKET_SIZE)
