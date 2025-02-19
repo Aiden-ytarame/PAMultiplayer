@@ -69,7 +69,8 @@ The invite also shows the level you're hosting!
 ### Settings
 
 The mod adds a few Multiplayer specific settings you should check out in the in-game settings menu.
-A few settins that you should note are:
+
+A few settings that you should note are:
 * Player Hit SFX - Changes which players triggers the hit sound.
 * Player Hit Warp SFX - Changes which players triggers the warp effect on the song when a player is hit.
 * Transparent Nanos - Makes every player other than yourself transparent to make it easier to see yourself.
