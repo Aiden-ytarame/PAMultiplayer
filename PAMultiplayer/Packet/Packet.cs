@@ -4,12 +4,12 @@ using UnityEngine;
 
 namespace PAMultiplayer.Packet;
 
-public class NewPacket : IDisposable
+public class Packet : IDisposable
 {
     private readonly MemoryStream _stream;
     private readonly BinaryWriter _writer;
 
-    public NewPacket(PacketType packetType)
+    public Packet(PacketType packetType)
     {
         _stream = new MemoryStream();
         _writer = new BinaryWriter(_stream);

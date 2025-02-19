@@ -225,11 +225,11 @@ public class PAMSocketManager : SocketManager
         }
     }
 
-    void SendMessage(NewPacket packet, SendType sendType = SendType.Reliable)
+    void SendMessage(Packet.Packet packet, SendType sendType = SendType.Reliable)
     {
         SendMessage(Connected, packet.GetData(out var size), size, sendType);
     }
-    void SendMessage(Connection connection, NewPacket packet, SendType sendType = SendType.Reliable)
+    void SendMessage(Connection connection, Packet.Packet packet, SendType sendType = SendType.Reliable)
     {
         connection.SendMessage(packet.GetData(out var size), 0,size, sendType);
     }
@@ -238,20 +238,20 @@ public class PAMSocketManager : SocketManager
     public void StartLevel()
     {
         GlobalsManager.HasStarted = true;
-        using var packet = new NewPacket(PacketType.Start);
+        using var packet = new Packet.Packet(PacketType.Start);
         SendMessage(packet);
     }
 
     public void SendCheckpointHit(int index)
     {
-        using var packet = new NewPacket(PacketType.Checkpoint);
+        using var packet = new Packet.Packet(PacketType.Checkpoint);
         packet.Write(index);
         SendMessage(packet);
     }
 
     public void SendRewindToCheckpoint(int index)
     {
-        using var packet = new NewPacket(PacketType.Rewind);
+        using var packet = new Packet.Packet(PacketType.Rewind);
         packet.Write(index);
         SendMessage(packet);
     }
@@ -261,7 +261,7 @@ public class PAMSocketManager : SocketManager
     {
         foreach (var vgPlayerData in GlobalsManager.Players)
         {
-            using var packet = new NewPacket(PacketType.PlayerId);
+            using var packet = new Packet.Packet(PacketType.PlayerId);
             packet.Write(vgPlayerData.Key);
             packet.Write(vgPlayerData.Value.VGPlayerData.PlayerID);
             packet.Write(GlobalsManager.Players.Count);
@@ -269,7 +269,7 @@ public class PAMSocketManager : SocketManager
             SendMessage(connection, packet);
         }
 
-        using var info = new NewPacket(PacketType.PlayerId);
+        using var info = new Packet.Packet(PacketType.PlayerId);
         info.Write(steamId);
         info.Write(id);
         info.Write(1);
@@ -278,7 +278,7 @@ public class PAMSocketManager : SocketManager
 
     public void SendNextQueueLevel(ulong id, int seed)
     {
-        using var newPacket = new NewPacket(PacketType.NextLevel);
+        using var newPacket = new Packet.Packet(PacketType.NextLevel);
         newPacket.Write(id);
         newPacket.Write(seed);
         
@@ -289,7 +289,7 @@ public class PAMSocketManager : SocketManager
 
     public void SendHostDamage()
     {
-        using var packet = new NewPacket(PacketType.Damage);
+        using var packet = new Packet.Packet(PacketType.Damage);
         packet.Write(GlobalsManager.LocalPlayerId);
         packet.Write(GlobalsManager.LocalPlayerObj.Health);
         
@@ -297,7 +297,7 @@ public class PAMSocketManager : SocketManager
     }
     public void SendHostPosition(Vector2 pos)
     {
-        using var packet = new NewPacket(PacketType.Position);
+        using var packet = new Packet.Packet(PacketType.Position);
         packet.Write(GlobalsManager.LocalPlayerId);
         packet.Write(pos);
         
@@ -306,7 +306,7 @@ public class PAMSocketManager : SocketManager
 
     public void SendHostBoost()
     {
-        using var packet = new NewPacket(PacketType.Boost);
+        using var packet = new Packet.Packet(PacketType.Boost);
         packet.Write(GlobalsManager.LocalPlayerId);
         
         SendMessage(packet, SendType.Unreliable);
@@ -314,7 +314,7 @@ public class PAMSocketManager : SocketManager
 
     public void SendDamageAll(int healthPreHit, ulong hitPlayerId)
     {
-        using var packet = new NewPacket(PacketType.DamageAll);
+        using var packet = new Packet.Packet(PacketType.DamageAll);
         packet.Write(hitPlayerId);
         packet.Write(healthPreHit);
         
@@ -450,7 +450,7 @@ public class PAMConnectionManager : ConnectionManager
 
     #region Send Messages
     
-    void SendPacket(NewPacket packet, SendType sendType = SendType.Reliable)
+    void SendPacket(Packet.Packet packet, SendType sendType = SendType.Reliable)
     {
         Connection.SendMessage(packet.GetData(out var size), 0, size, sendType);
     } 
@@ -458,7 +458,7 @@ public class PAMConnectionManager : ConnectionManager
     #endregion
     public void SendDamage(int healthPreHit)
     {
-        using var packet = new NewPacket(PacketType.Damage);
+        using var packet = new Packet.Packet(PacketType.Damage);
         packet.Write(healthPreHit);
      
         SendPacket(packet);
@@ -466,13 +466,13 @@ public class PAMConnectionManager : ConnectionManager
 
     public void SendPosition(Vector2 pos)
     {
-        using var packet = new NewPacket(PacketType.Position);
+        using var packet = new Packet.Packet(PacketType.Position);
         packet.Write(pos);
         SendPacket(packet, SendType.Unreliable);
     }
     public void SendBoost()
     {
-        using var packet = new NewPacket(PacketType.Boost);
+        using var packet = new Packet.Packet(PacketType.Boost);
         SendPacket(packet, SendType.Unreliable);
     }
 }
