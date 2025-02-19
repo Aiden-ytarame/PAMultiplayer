@@ -69,8 +69,9 @@ The invite also shows the level you're hosting!
 ### Settings
 
 The mod adds a few Multiplayer specific settings you should check out in the in-game settings menu.
-* Player Hit SFX - Changes which players triggers the hit sound. Default is All Players.
-* Player Hit Warp SFX - Changes which players triggers the warp effect on the song when a player is hit. Default is Local Player Only.
+A few settins that you should note are:
+* Player Hit SFX - Changes which players triggers the hit sound.
+* Player Hit Warp SFX - Changes which players triggers the warp effect on the song when a player is hit.
 * Transparent Nanos - Makes every player other than yourself transparent to make it easier to see yourself.
 
 ### Update Popup
@@ -92,6 +93,6 @@ Pidge! for helping me and showing some of the source :)
 
 Cozm for the logo!
 
-Reimnop for some misc stuff(code that I "borrowed")
+Reimnop for some help!
 
-Vyrmax for helping me test for hours and hours a day :)
+Vyrmax for helping me test for hours and hours a day :>
