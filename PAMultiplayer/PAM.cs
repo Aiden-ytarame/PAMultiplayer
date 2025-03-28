@@ -6,6 +6,7 @@ using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
 using Il2CppInterop.Runtime.Injection;
 using PAMultiplayer.Managers;
+using PAMultiplayer.Managers.MenuManagers;
 using PAMultiplayer.Patch;
 using UnityEngine.Localization.Settings;
 
@@ -23,7 +24,7 @@ public class PAM : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "0.9.0";
+    public const string Version = "0.9.1";
 
     public override void Load()
     {
@@ -41,9 +42,13 @@ public class PAM : BasePlugin
             ClassInjector.RegisterTypeInIl2Cpp<NetworkManager>();
             ClassInjector.RegisterTypeInIl2Cpp<QueueButton>();
             ClassInjector.RegisterTypeInIl2Cpp<LobbyScreenManager>();
+            ClassInjector.RegisterTypeInIl2Cpp<LobbyCreationManager>();
+            ClassInjector.RegisterTypeInIl2Cpp<MenuSelectionManager>();
             ClassInjector.RegisterTypeInIl2Cpp<SteamManager>();
             ClassInjector.RegisterTypeInIl2Cpp<SteamLobbyManager>();
             ClassInjector.RegisterTypeInIl2Cpp<MultiplayerDiscordManager>();
+            ClassInjector.RegisterTypeInIl2Cpp<ChallengeManager>();
+            ClassInjector.RegisterTypeInIl2Cpp<VoterCell>();
             
         }
         catch (Exception e)

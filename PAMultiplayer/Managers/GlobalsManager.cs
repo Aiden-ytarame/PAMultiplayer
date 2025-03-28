@@ -37,5 +37,6 @@ namespace PAMultiplayer.Managers
         public static bool IsReloadingLobby = false;
         public static bool HasStarted = false;
         public static bool IsDownloading = false;
+        public static bool IsChallenge = false;
     }
 }

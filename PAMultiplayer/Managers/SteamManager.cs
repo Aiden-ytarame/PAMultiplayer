@@ -52,9 +52,11 @@ public class SteamManager : MonoBehaviour
         {
             SteamClient.Init(440310, false);
             SteamNetworkingUtils.InitRelayNetworkAccess();
-            SteamNetworkingUtils.ConnectionTimeout = 5000;
+            SteamNetworkingUtils.ConnectionTimeout = 5000;//honestly I dont remember why I set these here
             SteamNetworkingUtils.Timeout = 6000;
-   
+            SteamNetworkingUtils.SendRateMax = 524288;
+            SteamNetworkingUtils.SendBufferSize = 10485760; //this is set to 10mb~ due to sending audio to clients in challenge mode.
+            
             GlobalsManager.LocalPlayerId = SteamClient.SteamId;
             PAM.Inst.Log.LogInfo("Steam Initialized");
         }
@@ -62,6 +64,7 @@ public class SteamManager : MonoBehaviour
         {
             PAM.Inst.Log.LogError("failed to initialize steam");
         }
+        
     }
 
     

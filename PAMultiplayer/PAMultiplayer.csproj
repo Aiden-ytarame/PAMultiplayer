@@ -35,6 +35,10 @@
       <HintPath>lib\com.lachee.discordrpc.runtime.dll</HintPath>
     </Reference>
 			  
+    <Reference Include="Eflatun.SceneReference">
+      <HintPath>lib\Eflatun.SceneReference.dll</HintPath>
+    </Reference>
+			  
     <Reference Include="Facepunch.Steamworks.Win64">
       <HintPath>lib\Facepunch.Steamworks.Win64.dll</HintPath>
     </Reference>
@@ -66,14 +70,23 @@
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>lib\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule">
+      <HintPath>lib\UnityEngine.ParticleSystemModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.Physics2DModule">
       <HintPath>lib\UnityEngine.Physics2DModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>lib\UnityEngine.UI.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestAudioModule">
+      <HintPath>lib\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.UnityWebRequestModule">
       <HintPath>lib\UnityEngine.UnityWebRequestModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UnityWebRequestTextureModule">
+      <HintPath>lib\UnityEngine.UnityWebRequestTextureModule.dll</HintPath>
     </Reference>
   </ItemGroup>
   
@@ -86,6 +99,14 @@
       </EmbeddedResource>
       <None Remove="Assets\lobbymenuv2" />
       <EmbeddedResource Include="Assets\lobbymenuv2">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+      <None Remove="Assets\lobbysettings" />
+      <EmbeddedResource Include="Assets\lobbysettings">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+      <None Remove="Assets\challenge" />
+      <EmbeddedResource Include="Assets\challenge">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </EmbeddedResource>
     </ItemGroup>

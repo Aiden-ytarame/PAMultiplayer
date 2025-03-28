@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using HarmonyLib;
 using Newtonsoft.Json;
 using PAMultiplayer.Managers;
+using PAMultiplayer.Managers.MenuManagers;
 using Steamworks.Data;
 using UnityEngine;
 
@@ -16,7 +17,8 @@ public static class DebugControllerPatch
 
     static void PostAwake(DebugController __instance)
     {
-        DebugCommand killCommand = new("Kill_All", "Kills all players (multiplayer mod, any)", new System.Action(
+        DebugCommand killCommand = new("Kill_All", "Kills all players (multiplayer mod, any)", 
+            new Action(
             () =>
             {
                 if (GlobalsManager.IsMultiplayer)
@@ -68,7 +70,8 @@ public static class DebugControllerPatch
             }));
         __instance.CommandList.Add(killCommand);
         
-        DebugCommand disconnectCommand = new("Force_Disconnect", "Disconnects you from the lobby (multiplayer mod, any)", new System.Action(
+        DebugCommand disconnectCommand = new("Force_Disconnect", "Disconnects you from the lobby (multiplayer mod, any)", 
+            new Action(
             () =>
             {
                 __instance.AddLog("Attempting to disconnect from the lobby.");
@@ -81,7 +84,7 @@ public static class DebugControllerPatch
 
 
 
-        var chatAction = new System.Action<string>(
+        var chatAction = new Action<string>(
             message =>
             {
                 __instance.OnToggleDebug();
@@ -116,7 +119,7 @@ public static class DebugControllerPatch
         DebugCommand<string> queueCommand = new("add_queue",
             "Adds a level to the queue, the level has to be downloaded. (multiplayer mod, host)",
             "string(level_id)",
-            new System.Action<string>(
+            new Action<string>(
                 levelId =>
                 {
                     if (GlobalsManager.IsMultiplayer && !GlobalsManager.IsHosting)
@@ -148,7 +151,7 @@ public static class DebugControllerPatch
         
         DebugCommand toggleTransparencyCommand = new("toggle_transparency",
             "toggles Transparent Nanos. (multiplayer mod, any)",
-            new System.Action(
+            new Action(
                 () =>
                 {
                     if (!GlobalsManager.IsMultiplayer)
@@ -167,9 +170,9 @@ public static class DebugControllerPatch
                             continue;
                         }
 
-                        foreach (var trail in vgPlayerData.PlayerObject.Player_Trail.trail)
+                        foreach (var trail in vgPlayerData.PlayerObject.Player_Trail.Trail)
                         {
-                            trail.GetComponentInChildren<TrailRenderer>().enabled = isTransparent;
+                            trail.Render_Trail.enabled = isTransparent;
                         }
                     }
 
@@ -179,7 +182,7 @@ public static class DebugControllerPatch
         
         DebugCommand toggleLinkedHealthCommand = new("toggle_linked",
             "Toggles the modifier Linked Health. (multiplayer mod, host)",
-            new System.Action(
+            new Action(
                 () =>
                 {
                     bool isLinked = !DataManager.inst.GetSettingBool("mp_linkedHealth", false);
@@ -195,7 +198,7 @@ public static class DebugControllerPatch
         
         DebugCommand playerListCommand = new("player_list",
             "shows all player ids. (multiplayer mod, any)",
-            new System.Action(
+            new Action(
                 () =>
                 {
                     if (!GlobalsManager.IsMultiplayer)
@@ -224,7 +227,7 @@ public static class DebugControllerPatch
         DebugCommand<int> kickPlayerCommand = new("kick",
             "attempts to kick a player from the lobby. (multiplayer mod, host)",
             "int(player_id)",
-            new System.Action<int>(
+            new Action<int>(
                 playerId =>
                 {
                     if (!GlobalsManager.IsMultiplayer || !GlobalsManager.IsHosting)
@@ -243,6 +246,60 @@ public static class DebugControllerPatch
                     __instance.AddLog("Failed Kicked player from server.");
                 }));
         __instance.CommandList.Add(kickPlayerCommand);
+        
+        DebugCommand<bool> privateCommand = new("set_Lobby_Privacy",
+            "set the lobby privacy setting. (multiplayer mod, host)",
+            "bool(private)",
+            new Action<bool>(
+                isPrivate =>
+                {
+                    if (!GlobalsManager.IsMultiplayer || !GlobalsManager.IsHosting)
+                    {
+                        __instance.AddLog("Not in multiplayer or not the host.");
+                        return;
+                    }
+
+                    if (isPrivate)
+                    {
+                        SteamLobbyManager.Inst.CurrentLobby.SetPrivate();
+                        __instance.AddLog("Lobby was made private.");
+                    }
+                    else
+                    {
+                        SteamLobbyManager.Inst.CurrentLobby.SetPublic();
+                        __instance.AddLog("Lobby was made public.");
+                    }
+                   
+                }));
+        __instance.CommandList.Add(privateCommand);
+        
+        DebugCommand<int> lobbySizeCommand = new("set_lobby_size",
+            "attempts to change the lobby size. (multiplayer mod, host)\n1 - 4 players.\n2 - 8 players.\n3 - 12 players.\n4 - 16 players.",
+            "int(player_count)",
+            new Action<int>(
+                playerCount =>
+                {
+                    if (!GlobalsManager.IsMultiplayer || !GlobalsManager.IsHosting)
+                    {
+                        __instance.AddLog("Not in multiplayer or not the host.");
+                        return;
+                    }
+
+                    playerCount = Mathf.Clamp(playerCount * 4, 4, 16);
+
+                    if (SteamLobbyManager.Inst.CurrentLobby.MemberCount < playerCount)
+                    {
+                        __instance.AddLog("Tried to set lobby size to less than the lobby player count.");
+                    }
+                    else
+                    {
+                        SteamLobbyManager.Inst.CurrentLobby.MaxMembers = playerCount;
+                        LobbyCreationManager.Instance.PlayerCount = playerCount;
+                        __instance.AddLog($"Set lobby max players to [{playerCount}]");
+                    }
+                }));
+        __instance.CommandList.Add(kickPlayerCommand);
+
     
     }
 

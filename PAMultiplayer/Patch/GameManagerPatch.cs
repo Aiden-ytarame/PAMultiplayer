@@ -8,6 +8,7 @@ using Il2CppInterop.Runtime;
 using Il2CppSystems.SceneManagement;
 using Newtonsoft.Json;
 using PAMultiplayer.Managers;
+using PAMultiplayer.Managers.MenuManagers;
 using SimpleJSON;
 using Steamworks;
 using Steamworks.Data;
@@ -15,6 +16,7 @@ using Steamworks.Ugc;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
+using LobbyState = PAMultiplayer.Managers.SteamLobbyManager.LobbyState;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
@@ -42,54 +44,75 @@ public class GameManagerPatch
     {
         if (__instance.IsEditor)
             return;
-        
+
         Transform pauseUi = PauseUIManager.Inst.transform.Find("Pause Menu");
         Transform restartButton = pauseUi.Find("Restart");
         Transform skipButton = pauseUi.Find("Skip Queue Level");
-        
+
         if (!skipButton)
         {
             skipButton = Transform.Instantiate(restartButton, pauseUi);
             skipButton.name = "Skip Queue Level";
             skipButton.SetSiblingIndex(2);
             
-            UIStateManager.Inst.RefreshTextCache( skipButton.Find("Title Wrapper/Title").GetComponent<TextMeshProUGUI>(), "Skip Level");
-            UIStateManager.Inst.RefreshTextCache( skipButton.Find("Content/Text").GetComponent<TextMeshProUGUI>(), "Skips the current level in queue");
+            UIStateManager.Inst.RefreshTextCache(skipButton.Find("Title Wrapper/Title").GetComponent<TextMeshProUGUI>(),
+                "Skip Level");
+            UIStateManager.Inst.RefreshTextCache(skipButton.Find("Content/Text").GetComponent<TextMeshProUGUI>(),
+                "Skips the current level in queue");
             
-            var button = skipButton.GetComponent<MultiElementButton>();
-            button.onClick = new();
-            button.onClick.AddListener(new Action(() =>
-            {
-                PauseUIManager.Inst.CloseUI();
-                string id = GlobalsManager.Queue[0];
-                ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-                GlobalsManager.LevelId = id;
-            
-            
-                if (GlobalsManager.IsMultiplayer)
-                {
-                    GlobalsManager.IsReloadingLobby = true;
-                    SteamLobbyManager.Inst.UnloadAll();
-                }
-            
-                SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-                PAM.Logger.LogInfo("Skipping to next level in queue!");
-            }));
-
             PauseUIManager.Inst.PauseMenu.AllViews["main"].Elements.Add(skipButton.GetComponent<UI_Button>());
+            
+            restartButton.GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
+            {
+                GlobalsManager.IsReloadingLobby = true;
+            }));
         }
-        
-        skipButton.gameObject.SetActive(GlobalsManager.Queue.Count >= 2);
-        
+
+       
+
+        var button = skipButton.GetComponent<MultiElementButton>();
+        button.onClick = new();
+        button.onClick.AddListener(new Action(() =>
+        {
+            PauseUIManager.Inst.CloseUI();
+            GlobalsManager.IsReloadingLobby = true;
+            if (GlobalsManager.IsMultiplayer)
+            {
+                SteamLobbyManager.Inst.UnloadAll();
+            }
+
+            if (GlobalsManager.IsChallenge)
+            {
+                if (GlobalsManager.IsMultiplayer && GlobalsManager.IsHosting)
+                {
+                    SteamManager.Inst.Server.SendOpenChallenge();
+                }
+                SceneLoader.Inst.LoadSceneGroup("Challenge");
+                return;
+            }
+           
+            string id = GlobalsManager.Queue[0];
+            ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
+            GlobalsManager.LevelId = id;
+
+            
+
+            SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+            PAM.Logger.LogInfo("Skipping to next level in queue!");
+        }));
+
+
+        skipButton.gameObject.SetActive(GlobalsManager.Queue.Count >= 2 || GlobalsManager.IsChallenge);
+
         if (!GlobalsManager.IsMultiplayer)
         {
-           restartButton.gameObject.SetActive(true);
-           return;
+            restartButton.gameObject.SetActive(true);
+            return;
         }
 
         restartButton.gameObject.SetActive(false);
-        
-        
+
+
         if (Player_Patch.CircleMesh == null)
         {
             foreach (var mesh in Resources.FindObjectsOfTypeAll<Mesh>())
@@ -103,62 +126,62 @@ public class GameManagerPatch
                 {
                     Player_Patch.ArrowMesh = mesh;
                 }
+
                 if (mesh.name == "triangle")
                 {
                     Player_Patch.TriangleMesh = mesh;
                 }
             }
         }
-       
+
         __instance.gameObject.AddComponent<NetworkManager>();
         __instance.StartCoroutine(FetchExternalData().WrapToIl2Cpp());
-        
+
         //this is for waiting for the Objects to load before initialing the server/client
 
         if (GlobalsManager.IsHosting)
         {
-            var newTask = new TaskData
+            SceneLoader.Inst.manager.AddToLoadingTasks("Creating Lobby", Task.Run(async () =>
             {
-                Name = "Creating Lobby",
-                Task = Task.Run(async () =>
+                while (!SteamLobbyManager.Inst.InLobby)
                 {
-                    while (!SteamLobbyManager.Inst.InLobby)
-                    {
-                        await Task.Delay(100);
-                    }
-                }).ToIl2Cpp()
-            };
-            SceneLoader.Inst.manager.AddToLoadingTasks(newTask);
+                    await Task.Delay(100);
+                }
+            }).ToIl2Cpp());
         }
         else
         {
-            var newTask = new TaskData
+            SceneLoader.Inst.manager.AddToLoadingTasks("Connecting to Server", Task.Run(async () =>
             {
-                Name = "Connecting to Server",
-                Task = Task.Run(async () =>
+                while (SteamManager.Inst.Client == null || !SteamManager.Inst.Client.Connected)
                 {
-                    while (SteamManager.Inst.Client == null || !SteamManager.Inst.Client.Connected)
-                    {
-                        await Task.Delay(100);
-                    }
-                }).ToIl2Cpp()
-            };
-            SceneLoader.Inst.manager.AddToLoadingTasks(newTask);
-            var newTask2 = new TaskData
-            {
-                Name = "Waiting for Server Info",
-                Task = Task.Run(async () =>
-                {
-                    while (!GlobalsManager.HasLoadedAllInfo)
-                    {
-                        await Task.Delay(100);
-                    }
-                }).ToIl2Cpp()
-            };
-            SceneLoader.Inst.manager.AddToLoadingTasks(newTask2);
+                    await Task.Delay(100);
+                }
+            }).ToIl2Cpp());
             
+            SceneLoader.Inst.manager.AddToLoadingTasks("Waiting for Server Info", Task.Run(async () =>
+            {
+                while (!GlobalsManager.HasLoadedAllInfo)
+                {
+                    await Task.Delay(100);
+                }
+            }).ToIl2Cpp());
+
             skipButton.gameObject.SetActive(false);
         }
+    }
+
+    [HarmonyPatch(nameof(GameManager.OnDestroy))]
+    [HarmonyPostfix]
+    static void PostDestroy()
+    {
+        if (GlobalsManager.IsReloadingLobby)
+        {
+            return;
+        }
+
+        GlobalsManager.IsChallenge = false;
+        GlobalsManager.IsMultiplayer = false;
     }
 
     /// <summary>
@@ -262,7 +285,7 @@ public class GameManagerPatch
                 MultiplayerDiscordManager.Instance.SetLevelPresence(state, $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}", levelCover);
             }
         }
-        
+        GlobalsManager.IsReloadingLobby = false;
         GlobalsManager.Queue.Remove(GlobalsManager.LevelId);
         
         //setup discord presence on singleplayer
@@ -303,7 +326,6 @@ public class GameManagerPatch
         if (GlobalsManager.IsHosting)
         {
             SteamLobbyManager.Inst.CurrentLobby.SetJoinable(true);
-            SteamLobbyManager.Inst.CurrentLobby.SetPublic();
             
             if (GlobalsManager.Players.Count == 0)
             {
@@ -378,22 +400,17 @@ public class GameManagerPatch
              else
              {
                  //loading screen
-                 var newTask = new TaskData
+                 SceneLoader.Inst.manager.AddToLoadingTasks("Downloading Level", Task.Run(async () =>
                  {
-                     Name = "Downloading Level",
-                     Task = Task.Run(async () =>
+                     while (GlobalsManager.IsDownloading)
                      {
-                         while (GlobalsManager.IsDownloading)
-                         {
-                             await Task.Delay(100);
-                         }
-                     }).ToIl2Cpp()
-                 };
-                 SceneLoader.Inst.manager.AddToLoadingTasks(newTask);
+                         await Task.Delay(100);
+                     }
+                 }).ToIl2Cpp());
                  
                  var item = DownloadLevel();
                  
-                 yield return new WaitUntil(new System.Func<bool>(() => !GlobalsManager.IsDownloading));
+                 yield return new WaitUntil(new Func<bool>(() => !GlobalsManager.IsDownloading));
                  
                  var result = item.Result;
 
@@ -426,39 +443,64 @@ public class GameManagerPatch
              SteamLobbyManager.Inst.RandSeed = Random.seed;
              ObjectManager.inst.seed = Random.seed;
              RNGSync.seed = SteamLobbyManager.Inst.RandSeed;
-             if(GlobalsManager.IsReloadingLobby)
+             if (GlobalsManager.IsReloadingLobby)
              {
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LevelId", GlobalsManager.LevelId);
+                 SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", LobbyState.Lobby.ToString());
                  SteamLobbyManager.Inst.CurrentLobby.SetData("seed", SteamLobbyManager.Inst.RandSeed.ToString());
-                 
-                 List<string> levelNames = new();
-                 foreach (var id in GlobalsManager.Queue)
+
+                 if (!GlobalsManager.IsChallenge)
                  {
-                     VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-                     levelNames.Add(level.TrackName);
-                 }
-                 SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
-                 PAM.Logger.LogError(SteamLobbyManager.Inst.RandSeed);
-                 
-                 if(ulong.TryParse(GlobalsManager.LevelId, out var nextQueueId))
-                 {
-                     SteamManager.Inst.Server.SendNextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
+                     List<string> levelNames = new();
+                     foreach (var id in GlobalsManager.Queue)
+                     {
+                         VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
+                         levelNames.Add(level.TrackName);
+                     }
+
+                     SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
+                     PAM.Logger.LogError(SteamLobbyManager.Inst.RandSeed);
+
+                     if (ulong.TryParse(GlobalsManager.LevelId, out var nextQueueId))
+                     {
+                         SteamManager.Inst.Server.SendNextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
+                     }
+                     else
+                     {
+                         PAM.Logger.LogError(
+                             "tried sending Local Level with non numbered name, name too big or negative value. Skipping.");
+
+                         GlobalsManager.Queue.Remove(GlobalsManager.LevelId);
+                         string id = GlobalsManager.Queue[0];
+                         ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
+                         GlobalsManager.LevelId = id;
+
+                         GlobalsManager.IsReloadingLobby = true;
+                         SteamLobbyManager.Inst.UnloadAll();
+
+                         SceneLoader.Inst.manager.ClearLoadingTasks();
+                         SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+                         yield break;
+                     }
                  }
                  else
                  {
-                     PAM.Logger.LogError("tried sending Local Level with non numbered name, name too big or negative value. Skipping.");
                      
-                     GlobalsManager.Queue.Remove(GlobalsManager.LevelId);
-                     string id = GlobalsManager.Queue[0];
-                     ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-                     GlobalsManager.LevelId = id;
-                     
-                     GlobalsManager.IsReloadingLobby = true;
-                     SteamLobbyManager.Inst.UnloadAll();
-                    
-                     SceneLoader.Inst.manager.ClearLoadingTasks();
-                     SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-                     yield break;
+                     if (ulong.TryParse(GlobalsManager.LevelId, out var nextQueueId))
+                     {
+                         SteamManager.Inst.Server.SendNextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
+                     }
+                     else
+                     {
+                         PAM.Logger.LogError(
+                             "tried sending Local Level with non numbered name, name too big or negative value. Skipping.");
+                         
+                         GlobalsManager.IsReloadingLobby = true;
+                         SteamLobbyManager.Inst.UnloadAll();
+                         SceneLoader.Inst.manager.ClearLoadingTasks();
+                         SceneLoader.Inst.LoadSceneGroup("Challenge");
+                         yield break;
+                     }
                  }
              }
          }
@@ -483,7 +525,7 @@ public class GameManagerPatch
              {
                  SteamManager.Inst.EndClient();
              }
-             
+           
              SceneLoader.Inst.manager.ClearLoadingTasks();
              SceneLoader.Inst.LoadSceneGroup("Menu");
              yield break;
@@ -498,7 +540,8 @@ public class GameManagerPatch
              if (GlobalsManager.IsHosting)
              {
                  SteamLobbyManager.Inst.CreateLobby();
-                 yield return new WaitUntil(new System.Func<bool>(() => SteamLobbyManager.Inst.InLobby));
+                 yield return new WaitUntil(new Func<bool>(() => SteamLobbyManager.Inst.InLobby));
+                 SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", LobbyState.Lobby.ToString());
              }
              else
              {
@@ -516,7 +559,6 @@ public class GameManagerPatch
          
          DataManager.inst.gameData.beatmapData.checkpoints.Sort(comparision);
          
-         GlobalsManager.IsReloadingLobby = false;
          if (VGPlayerManager.Inst.players.Count == 0)
          {
              VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){PlayerID = 0, ControllerID = 0});
@@ -547,8 +589,7 @@ public class GameManagerPatch
         {
             PAM.Logger.LogError(errorMessage);
             GlobalsManager.IsDownloading = false;
-            SteamManager.Inst.EndClient();
-            
+           
             SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.Inst.LoadSceneGroup("Menu");
         }

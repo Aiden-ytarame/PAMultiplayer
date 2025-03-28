@@ -1,5 +1,6 @@
 using System.IO;
 using System;
+using System.Runtime.InteropServices;
 using UnityEngine;
 
 namespace PAMultiplayer.Packet;
@@ -28,12 +29,19 @@ public class Packet : IDisposable
     public void Write(ulong value) => _writer.Write(value);
     public void Write(uint value) => _writer.Write(value);
     public void Write(int value) => _writer.Write(value);
-    public void Write(float value) => _writer.Write(value);
+    public void Write(ushort value) => _writer.Write(value);
 
     public void Write(Vector2 value)
     {
         _writer.Write(value.x);
         _writer.Write(value.y);
+    }
+
+    //used to write song data
+    public void Write(ArraySegment<short> value)
+    {
+        var buffer = MemoryMarshal.Cast<short, byte>(value);
+        _writer.Write(buffer);
     }
     
     public void Dispose()

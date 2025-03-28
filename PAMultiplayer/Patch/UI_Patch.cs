@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
+using System.Reflection;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
+using Cpp2IL.Core.Extensions;
 using HarmonyLib;
-using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Helper;
 using UnityEngine;
 using PAMultiplayer.Managers;
+using PAMultiplayer.Managers.MenuManagers;
 using SimpleJSON;
-using Steamworks.Data;
 using TMPro;
 using UnityEngine.Localization.PropertyVariants;
 using UnityEngine.Localization.PropertyVariants.TrackedProperties;
@@ -38,19 +38,15 @@ namespace PAMultiplayer.Patch
             mpToggle.onValueChanged = new Toggle.ToggleEvent();
             mpToggle.onValueChanged.AddListener(new Action<bool>(_ =>
             {
-                GlobalsManager.IsHosting = true;
-                GlobalsManager.IsMultiplayer = true;
-
-                PublishedFileId id = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID;
-                if (!GlobalsManager.Queue.Contains(id.ToString()))
-                    GlobalsManager.Queue.Add(id.ToString());
-
-                ArcadeManager.Inst.CurrentArcadeLevel =
-                    ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.Queue[0]);
-
-                SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+                mpToggle.isOn = false;
+                if(LobbyCreationManager.Instance) 
+                    LobbyCreationManager.Instance.OpenMenu(false);
             }));
 
+            if (LobbyCreationManager.Instance)
+            {
+                LobbyCreationManager.Instance.FallbackUIElement = mpToggle;
+            }
             MultiElementButton playgame = __instance.transform.parent.Find("Buttons/Primary/Play").GetComponent<MultiElementButton>();
             
             //playgame.onClick = new Button.ButtonClickedEvent();
@@ -91,7 +87,7 @@ namespace PAMultiplayer.Patch
             
             //adds to the 'Song Menu' page so it plays the glitch effect on this toggle 
             Object.FindFirstObjectByType<UI_Book>().Pages[1].SubElements.Add(linkedHealthToggle.uiElement);
-
+            
         }
     }
 
@@ -103,6 +99,40 @@ namespace PAMultiplayer.Patch
         static bool PreRestartLevel()
         {
             return !GlobalsManager.IsMultiplayer;
+        }
+
+        
+        //instantiates the mp screens in the General_UI scene
+        //this, or other any class on this scene has no startup function to patch
+        [HarmonyPatch(nameof(PauseUIManager.Update))]
+        [HarmonyPostfix]
+        static void PostUpdate()
+        {
+            if (LobbyCreationManager.Instance != null)
+                return;
+
+            Transform generalUI = PauseUIManager.Inst.transform.parent;
+            
+            GameObject lobbySettingsGo;
+            GameObject selectionMenuGo;
+            using (var stream = Assembly.GetExecutingAssembly()
+                       .GetManifestResourceStream("PAMultiplayer.Assets.lobbysettings"))
+            {
+                var lobbyBundle = AssetBundle.LoadFromMemory(stream!.ReadBytes());
+                lobbySettingsGo = Object.Instantiate(lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]).Cast<GameObject>(),
+                    generalUI);
+          
+                selectionMenuGo = Object.Instantiate(lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]).Cast<GameObject>(),
+                    generalUI);
+                
+                lobbyBundle.Unload(false);
+            }
+        
+            lobbySettingsGo.name = "LobbySettings";
+            lobbySettingsGo.AddComponent<LobbyCreationManager>();
+            
+            selectionMenuGo.name = "SelectionMenu";
+            selectionMenuGo.AddComponent<MenuSelectionManager>();
         }
     }
     
@@ -152,7 +182,8 @@ namespace PAMultiplayer.Patch
                     //band-aid fix for an error here
                     try
                     {
-                        player.VGPlayerData.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
+                        //player.VGPlayerData.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
+                        player.VGPlayerData.PlayerObject?.Player_Text?.DisplayText(text, 3);
                     }
                     catch (Exception)
                     {
@@ -187,7 +218,7 @@ namespace PAMultiplayer.Patch
             
             if (GlobalsManager.IsHosting)
             {
-                SteamManager.Inst.Server.StartLevel();
+                SteamManager.Inst.Server.SendStartLevel();
             }
 
             if (LobbyScreenManager.Instance)
@@ -215,39 +246,7 @@ namespace PAMultiplayer.Patch
             return true;
         }
     }
-
-    /// <summary>
-    /// just having fun with loading screen Tips
-    /// </summary>
-    [HarmonyPatch(typeof(SceneLoader))]
-    public static class LoadingTips
-    {
-        [HarmonyPatch(nameof(SceneLoader.Start))]
-        [HarmonyPostfix]
-        static void GetterTips(ref SceneLoader __instance)
-        {
-            var customTips = new List<string>(__instance.Tips)
-            {
-                "You should try the log Fallen Kingdom!",
-                "You can always call other Nanos for help!",
-                "Git Gud",
-                "I'm in your walls.",
-                "Good Nano~",
-                "No tips for you >:)",
-                "Boykisser sent kisses!",
-                "The developer wants me to say something here.",
-                "I'm a furry. So what?",
-                "You might be a Nano but you should hydrate anyways.",
-                "Before time began there was The Cube...",
-                "Ready to be carried by another Nano again?",
-                "Squeezing your Nano through the internet wire...",
-                "The triangle is the simplest shape a computer can render",
-                "Meow!"
-            };
-            //thanks Pidge for making this public after I complained lol
-            __instance.Tips = customTips.ToArray();
-        }
-    }
+    
 
     /// <summary>
     /// adds an "Update Mod" button in case a new version is available
@@ -303,6 +302,17 @@ namespace PAMultiplayer.Patch
             
             //this creates the Multiplayer tab in the settings
             SettingsHelper.SetupMenu();
+
+
+
+            MultiElementButton button = __instance.transform.Find("Window/Content/Main Menu/pc_top-buttons/Custom Mode")
+                .GetComponent<MultiElementButton>();
+
+            button.onClick = new();
+            button.onClick.AddListener(new System.Action(() =>
+            {
+                MenuSelectionManager.Instance.OpenMenu();
+            }));
         }
 
         static IEnumerator FetchGithubReleases()

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Il2CppSystems.SceneManagement;
 using Newtonsoft.Json;
+using PAMultiplayer.Managers.MenuManagers;
+using PAMultiplayer.Patch;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -12,6 +14,13 @@ namespace PAMultiplayer.Managers;
 /// </summary>
 public class SteamLobbyManager : MonoBehaviour
 {
+    public enum LobbyState : ushort
+    {
+        Lobby,
+        Playing,
+        Challenge
+    }
+    
     public Lobby CurrentLobby;
     public bool InLobby { get; private set; }
     public static SteamLobbyManager Inst;
@@ -23,7 +32,9 @@ public class SteamLobbyManager : MonoBehaviour
     public void CreateLobby()
     {
         SteamManager.Inst.StartServer();
-        SteamMatchmaking.CreateLobbyAsync(16);
+
+        int count = LobbyCreationManager.Instance.PlayerCount;
+        SteamMatchmaking.CreateLobbyAsync(count);
     }
     private void Awake()
     {
@@ -70,7 +81,8 @@ public class SteamLobbyManager : MonoBehaviour
             message = message.Substring(0, 25);
         }
         
-        player.VGPlayerData.PlayerObject.SpeechBubble?.DisplayText(message.Replace('_',' '), 5);
+        //ADD BACK player.VGPlayerData.PlayerObject.SpeechBubble?.DisplayText(message.Replace('_',' '), 5);
+        player.VGPlayerData.PlayerObject.Player_Text.DisplayText(message.Replace('_',' '), 5);
     }
 
     private void OnOnLobbyDataChanged(Lobby lobby)
@@ -89,7 +101,6 @@ public class SteamLobbyManager : MonoBehaviour
     private void OnLobbyMemberDataChanged(Lobby lobby, Friend friend)
     {
         //data changed always means loaded
-        
         if (lobby.GetMemberData(friend, "IsLoaded") != "1") return;
 
         SetLoaded(friend.Id);
@@ -194,8 +205,12 @@ public class SteamLobbyManager : MonoBehaviour
         CurrentLobby = lobby;
         InLobby = true;
         int _playerAmount = 0;
-        
-        if (lobby.Owner.Id.IsLocalPlayer()) return;
+
+        if (lobby.Owner.Id.IsLocalPlayer())
+        {
+            AddPlayerToLoadList(lobby.Owner.Id);
+            return;
+        }
 
         foreach (var lobbyMember in lobby.Members)
         {
@@ -293,11 +308,25 @@ public class SteamLobbyManager : MonoBehaviour
         {
             PAM.Logger.LogError($"Failed to create lobby : Result [{result}]");
             lobby.Leave();
+            SceneLoader.Inst.manager.ClearLoadingTasks();
+            SceneLoader.inst.LoadSceneGroup("Menu");
+            return;
         }
         PAM.Logger.LogInfo($"Lobby Created!");
-
+        
         _loadedPlayers = new();
         InLobby = true;
+
+        if (LobbyCreationManager.Instance.IsPrivate)
+        {
+            lobby.SetPrivate();
+        }
+        else
+        {
+            lobby.SetPublic();
+        }
+      
+        
         VGLevel currentLevel = ArcadeManager.Inst.CurrentArcadeLevel;
         GlobalsManager.LevelId = currentLevel.SteamInfo != null ?  currentLevel.SteamInfo.ItemID.Value.ToString() : currentLevel.name;
         lobby.SetData("LevelId", GlobalsManager.LevelId);
@@ -327,14 +356,12 @@ public class SteamLobbyManager : MonoBehaviour
 
     private void SetLoaded(SteamId playerSteamId)
     {
-        if(_loadedPlayers.ContainsKey(playerSteamId))
-            _loadedPlayers[playerSteamId] = true;
+        _loadedPlayers[playerSteamId] = true;
     }
 
     public void HideLobby()
     {
         CurrentLobby.SetJoinable(false);
-        CurrentLobby.SetPrivate();
     }
     
     public void LeaveLobby()

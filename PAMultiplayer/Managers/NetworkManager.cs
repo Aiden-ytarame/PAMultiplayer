@@ -70,6 +70,7 @@ namespace PAMultiplayer.Managers
         private void OnDestroy()
         {
             GlobalsManager.HasStarted = false;
+            SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "0");
             
             if (GlobalsManager.IsReloadingLobby) return;
             

@@ -11,5 +11,10 @@ public enum PacketType : ushort
     Rewind,
     Boost,
     NextLevel,
-    DamageAll
+    DamageAll,
+    OpenChallenge,
+    CheckLevelId,
+    ChallengeAudioData,
+    ChallengeVote,
+    LobbyState
 }

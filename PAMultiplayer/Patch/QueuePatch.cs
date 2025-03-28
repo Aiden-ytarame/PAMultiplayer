@@ -147,7 +147,7 @@ public static class LevelEndScreenPatch
         buttonsParent.Find("Flair").gameObject.SetActive(false);
 
         MultiElementButton nextLevel = buttonsParent.Find("Continue").GetComponent<MultiElementButton>();
-        if (GlobalsManager.Queue.Count == 0 || (GlobalsManager.IsMultiplayer && !GlobalsManager.IsHosting))
+        if ((GlobalsManager.Queue.Count == 0 && !GlobalsManager.IsChallenge)|| (GlobalsManager.IsMultiplayer && !GlobalsManager.IsHosting))
         {
             __instance.DisableButton(nextLevel);
         }
@@ -163,16 +163,25 @@ public static class LevelEndScreenPatch
         nextLevel.onClick = new Button.ButtonClickedEvent();
         nextLevel.onClick.AddListener(new Action(() =>
         {
+            GlobalsManager.IsReloadingLobby = true;
+            if (GlobalsManager.IsMultiplayer)
+            {
+                SteamLobbyManager.Inst.UnloadAll();
+            }
+            
+            if (GlobalsManager.IsChallenge)
+            {
+                if (GlobalsManager.IsMultiplayer && GlobalsManager.IsHosting)
+                {
+                    SteamManager.Inst.Server.SendOpenChallenge();
+                }
+                SceneLoader.Inst.LoadSceneGroup("Challenge");
+                return;
+            }
             string id = GlobalsManager.Queue[0];
             ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
             GlobalsManager.LevelId = id;
             
-            
-            if (GlobalsManager.IsMultiplayer)
-            {
-                GlobalsManager.IsReloadingLobby = true;
-                SteamLobbyManager.Inst.UnloadAll();
-            }
             
             SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
             PAM.Logger.LogInfo("Starting next level in queue!");

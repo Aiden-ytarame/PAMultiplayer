@@ -1,13 +1,13 @@
 using System;
-using DiscordRPC.Message;
 using BepInEx;
 using DiscordRPC;
 using DiscordRPC.Logging;
-using PAMultiplayer;
-using PAMultiplayer.Managers;
+using DiscordRPC.Message;
+using PAMultiplayer.Managers.MenuManagers;
 using Steamworks;
 using UnityEngine;
 
+namespace PAMultiplayer.Managers;
 
 /// <summary>
 /// The discord manager the game uses is very finicky and broken so we use this instead.
@@ -109,14 +109,14 @@ public class MultiplayerDiscordManager : MonoBehaviour
 		presence.Assets.LargeImageKey = levelCoverUrl;
 		presence.Assets.LargeImageText = "Level Cover";
 		presence.Timestamps = new Timestamps(DateTime.UtcNow);
-
+		
 		if (GlobalsManager.IsMultiplayer)
 		{
 			string id = SteamLobbyManager.Inst.CurrentLobby.Id.ToString();
 			presence.Party = new Party()
 			{
 				ID = id + SteamLobbyManager.Inst.CurrentLobby.Owner.Id,
-				Max = 16,
+				Max = LobbyCreationManager.Instance.PlayerCount,
 				Size = SteamLobbyManager.Inst.CurrentLobby.MemberCount,
 				Privacy = Party.PrivacySetting.Public
 			};
@@ -153,6 +153,40 @@ public class MultiplayerDiscordManager : MonoBehaviour
 		//discord does not handle buttons and parties at the same time.
 		presence.Party = null;
 		presence.Secrets = null;
+		client.SetPresence(presence);
+	}
+
+	public void SetChallengePresence()
+	{
+		presence.State = "Choosing Level";
+		presence.Details = "Playing Challenge";
+
+		presence.Assets.LargeImageKey = "palogo";
+		presence.Assets.LargeImageText = "Game Logo";
+		presence.Timestamps = null;
+		presence.Buttons = Buttons;
+		presence.Party = null;
+		presence.Secrets = null;
+		
+		if (GlobalsManager.IsMultiplayer)
+		{
+			string id = SteamLobbyManager.Inst.CurrentLobby.Id.ToString();
+			presence.Party = new Party()
+			{
+				ID = id + SteamLobbyManager.Inst.CurrentLobby.Owner.Id,
+				Max = LobbyCreationManager.Instance.PlayerCount,
+				Size = SteamLobbyManager.Inst.CurrentLobby.MemberCount,
+				Privacy = Party.PrivacySetting.Public
+			};
+			presence.Secrets = new Secrets()
+			{
+				JoinSecret = id
+			};
+
+			presence.Buttons = null;
+		}
+		
+		//discord does not handle buttons and parties at the same time.
 		client.SetPresence(presence);
 	}
 }

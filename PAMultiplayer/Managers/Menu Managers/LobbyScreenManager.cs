@@ -9,8 +9,9 @@ using Newtonsoft.Json;
 using Steamworks;
 using TMPro;
 using UnityEngine;
+using LobbyState = PAMultiplayer.Managers.SteamLobbyManager.LobbyState;
 
-namespace PAMultiplayer.Managers;
+namespace PAMultiplayer.Managers.MenuManagers;
 
 /// <summary>
 /// Manages the Lobby menu that pops up on level enter
@@ -191,6 +192,7 @@ public class LobbyScreenManager : MonoBehaviour
         {
             return;
         }
+        SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", LobbyState.Playing.ToString());
         GlobalsManager.HasStarted = true;
         SteamLobbyManager.Inst.HideLobby();
         SteamLobbyManager.Inst.UnloadAll();
@@ -206,8 +208,15 @@ public class LobbyScreenManager : MonoBehaviour
             Destroy(_queueList.GetChild(i).gameObject);
         }
 
+        string queueData = SteamLobbyManager.Inst.CurrentLobby.GetData("LevelQueue");
+        if (string.IsNullOrEmpty(queueData))
+        {
+            LobbyMenu.transform.Find("Queue Title").gameObject.SetActive(false);
+            return;
+        }
+        
         List<string> queue =
-            JsonConvert.DeserializeObject<List<string>>(SteamLobbyManager.Inst.CurrentLobby.GetData("LevelQueue"));
+            JsonConvert.DeserializeObject<List<string>>(queueData);
 
         if (queue.Count == 0)
         {
