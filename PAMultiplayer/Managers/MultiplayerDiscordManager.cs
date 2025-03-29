@@ -116,7 +116,7 @@ public class MultiplayerDiscordManager : MonoBehaviour
 			presence.Party = new Party()
 			{
 				ID = id + SteamLobbyManager.Inst.CurrentLobby.Owner.Id,
-				Max = LobbyCreationManager.Instance.PlayerCount,
+				Max = SteamLobbyManager.Inst.CurrentLobby.MaxMembers,
 				Size = SteamLobbyManager.Inst.CurrentLobby.MemberCount,
 				Privacy = Party.PrivacySetting.Public
 			};
@@ -174,7 +174,7 @@ public class MultiplayerDiscordManager : MonoBehaviour
 			presence.Party = new Party()
 			{
 				ID = id + SteamLobbyManager.Inst.CurrentLobby.Owner.Id,
-				Max = LobbyCreationManager.Instance.PlayerCount,
+				Max = SteamLobbyManager.Inst.CurrentLobby.MaxMembers,
 				Size = SteamLobbyManager.Inst.CurrentLobby.MemberCount,
 				Privacy = Party.PrivacySetting.Public
 			};

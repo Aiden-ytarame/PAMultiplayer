@@ -192,9 +192,20 @@ public class LobbyScreenManager : MonoBehaviour
         {
             return;
         }
-        SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", LobbyState.Playing.ToString());
+        
+        foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+        {
+            VGPlayer player = vgPlayerData.PlayerObject;
+            if(!player) continue;
+                
+            player.StopCoroutine(player.SpawnLoop());
+            player.Spawn(); //for the spawn effect
+        }
+                
+        VGPlayerManager.inst.RespawnPlayers();
+        
+        SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)LobbyState.Playing).ToString());
         GlobalsManager.HasStarted = true;
-        SteamLobbyManager.Inst.HideLobby();
         SteamLobbyManager.Inst.UnloadAll();
         
         LobbyMenu.HideAll();

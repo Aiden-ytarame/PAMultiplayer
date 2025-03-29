@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Packet;
 using PAMultiplayer.Patch;
@@ -9,6 +10,7 @@ using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
 using MemoryStream = System.IO.MemoryStream;
+using Object = UnityEngine.Object;
 
 namespace PAMultiplayer.Managers;
 
@@ -93,18 +95,8 @@ public class PAMSocketManager : SocketManager
         long recvTime, int channel)
     {
         // Checks the size, if smaller than min logs into the terminal and returns false.
-        bool CheckSize(int _size, int minSize)
-        {
-            if (_size < minSize)
-            {
-                PAM.Logger.LogWarning("Packet size too small");
-                return false;
-            }
 
-            return true;
-        }
-
-        byte[] WriteSteamId(PacketType packetType, out int _size)
+        byte[] WriteSteamId(PacketType packetType, int originalSize, out int _size)
         {
             _writer.Write((ushort)packetType);
             _writer.Write(identity.SteamId);
@@ -134,7 +126,8 @@ public class PAMSocketManager : SocketManager
    
   
         PacketType packetType = (PacketType)_reader.ReadUInt16();
-       
+
+        //todo: separate packet handling to somewhere else
         switch (packetType)
         {
             case PacketType.Damage:
@@ -162,8 +155,8 @@ public class PAMSocketManager : SocketManager
                     player.VGPlayerData.PlayerObject.Health = health;
                     player.VGPlayerData.PlayerObject.PlayerHit();
                 }
-                
-                SendMessage(Connected, WriteSteamId(packetType, out int _size), _size);
+
+                SendMessage(Connected, WriteSteamId(packetType, size, out int _size), _size);
             }
                 break;
             case PacketType.Position:
@@ -172,7 +165,7 @@ public class PAMSocketManager : SocketManager
                     connection.Close();
                     return;
                 }
-            
+
                 if (GlobalsManager.Players.TryGetValue(identity.SteamId, out var playerData))
                 {
                     if (playerData.VGPlayerData.PlayerObject)
@@ -183,7 +176,7 @@ public class PAMSocketManager : SocketManager
 
                         Transform rb = player.Player_Wrapper;
                         Vector2 pos = new Vector2(_reader.ReadSingle(), _reader.ReadSingle());
-                        
+
                         var rot = pos - (Vector2)rb.position;
                         rb.position = pos;
                         if (rot.sqrMagnitude > 0.0001f)
@@ -196,7 +189,7 @@ public class PAMSocketManager : SocketManager
                 }
 
             {
-                SendMessage(Connected, WriteSteamId(packetType, out int _size), _size, SendType.Unreliable);
+                SendMessage(Connected, WriteSteamId(packetType, size, out int _size), _size, SendType.Unreliable);
             }
                 break;
             case PacketType.Boost:
@@ -207,67 +200,14 @@ public class PAMSocketManager : SocketManager
                     {
                         player.VGPlayerData.PlayerObject.PlayParticles(VGPlayer.ParticleTypes.Boost);
                     }
-                  
+
                 }
-                
-                SendMessage(Connected, WriteSteamId(packetType, out int _size), _size, SendType.Unreliable);
+
+                SendMessage(Connected, WriteSteamId(packetType, size, out int _size), _size, SendType.Unreliable);
             }
                 break;
             case PacketType.CheckLevelId:
-                if (!ChallengeManager.Inst)
-                {
-                    break;
-                }
-                if (!CheckSize(size, 2))
-                {
-                    connection.Close();
-                    return;
-                }
-                
-                int levelsCount = _reader.ReadUInt16();
-                PAM.Logger.LogInfo($"Client [{identity.SteamId}] has asked for [{levelsCount}] levels");
-                for (int i = 0; i < levelsCount; i++)
-                {
-
-                    ulong levelId = _reader.ReadUInt64();
-
-                    if (!ChallengeManager.Inst.GetVGLevel(levelId, out var songData))
-                    {
-                        PAM.Logger.LogFatal("client asked for level id not in the picked challenge levels");
-                        continue;
-                    }
-
-                    void SendSegment(ArraySegment<short> segment, ushort last)
-                    {
-                        Packet.Packet packet = new Packet.Packet(PacketType.ChallengeAudioData);
-                        packet.Write(levelId);
-                        packet.Write(last);
-                        packet.Write(songData.Item2);
-                        packet.Write(songData.Item3);
-                        packet.Write(segment);
-                        SendMessage(connection, packet);
-                    }
-
-                    const int separator = 131000;
-                    int offset = 0;
-                    while (true)
-                    {
-                        if (offset + separator < songData.Item1.Length)
-                        {
-                            ArraySegment<short> segment = new(songData.Item1, offset, separator);
-                            SendSegment(segment, 0);
-                            offset += separator + 1;
-                        }
-                        else
-                        {
-                            ArraySegment<short> segment = new ArraySegment<short>(songData.Item1, offset,
-                                Mathf.FloorToInt(songData.Item1.Length - offset));
-                            SendSegment(segment, 1);
-                            break;
-                        }
-                    }
-                }
-
+                HandleCheckLevelId(connection, identity, size); 
                 break;
             case PacketType.ChallengeVote:
             {
@@ -276,12 +216,16 @@ public class PAMSocketManager : SocketManager
                     connection.Close();
                     return;
                 }
+
                 ulong levelId = _reader.ReadUInt64();
                 if (ChallengeManager.Inst)
                 {
                     ChallengeManager.Inst.PlayerVote(identity.SteamId, levelId);
                 }
             }
+                break;
+            case PacketType.LobbyState:
+                HandleLobbyState(connection, identity.SteamId);
                 break;
             default:
                 return;
@@ -309,7 +253,10 @@ public class PAMSocketManager : SocketManager
     }
     
     #endregion
-    public void SendStartLevel()
+
+    #region Send Functions
+
+      public void SendStartLevel()
     {
         using var packet = new Packet.Packet(PacketType.Start);
         SendMessage(packet);
@@ -454,6 +401,117 @@ public class PAMSocketManager : SocketManager
         }
     }
 
+    #endregion
+
+    #region Packet Handling
+
+    void HandleCheckLevelId(Connection connection, NetIdentity identity, int size)
+    {
+        if (!ChallengeManager.Inst)
+        {
+            return;
+        }
+
+        if (!CheckSize(size, 2))
+        {
+            connection.Close();
+            return;
+        }
+
+        int levelsCount = _reader.ReadUInt16();
+        PAM.Logger.LogInfo($"Client [{identity.SteamId}] has asked for [{levelsCount}] levels");
+        for (int i = 0; i < levelsCount; i++)
+        {
+
+            ulong levelId = _reader.ReadUInt64();
+
+            if (!ChallengeManager.Inst.GetVGLevel(levelId, out var songData))
+            {
+                PAM.Logger.LogFatal("client asked for level id not in the picked challenge levels");
+                continue;
+            }
+
+            void SendSegment(ArraySegment<short> segment, ushort last)
+            {
+                using Packet.Packet packet = new Packet.Packet(PacketType.ChallengeAudioData);
+                packet.Write(levelId);
+                packet.Write(last);
+                packet.Write(songData.Item2);
+                packet.Write(songData.Item3);
+                packet.Write(segment);
+                SendMessage(connection, packet);
+            }
+
+            const int separator = 131000;
+            int offset = 0;
+            while (true)
+            {
+                if (offset + separator < songData.Item1.Length)
+                {
+                    ArraySegment<short> segment = new(songData.Item1, offset, separator);
+                    SendSegment(segment, 0);
+                    offset += separator + 1;
+                }
+                else
+                {
+                    ArraySegment<short> segment = new ArraySegment<short>(songData.Item1, offset,
+                        Mathf.FloorToInt(songData.Item1.Length - offset));
+                    SendSegment(segment, 1);
+                    break;
+                }
+            }
+        }
+    }
+
+    async void HandleLobbyState(Connection connection, ulong id)
+    {
+        try
+        {
+            var endScreen = Object.FindFirstObjectByType<LevelEndScreen>();
+            if (!endScreen)
+            {
+                return;
+            }
+        
+            while (GameManager.Inst.CurGameState == GameManager.GameState.Reversing)
+            {
+                await Task.Delay(200); 
+            }
+            
+
+            using Packet.Packet packet = new Packet.Packet(PacketType.LobbyState);
+            packet.Write(endScreen.Hits.Count);
+            packet.Write(GameManager.Inst.CurrentSongTime);
+            foreach (var playerDataPair in GlobalsManager.Players)
+            {
+                packet.Write(playerDataPair.Key);
+                if (playerDataPair.Value.VGPlayerData.PlayerObject)
+                {
+                    packet.Write((ushort)playerDataPair.Value.VGPlayerData.PlayerObject.Health);
+                }
+                else
+                {
+                    packet.Write((ushort)0);
+                }
+            }
+            using Packet.Packet playerPacket = new Packet.Packet(PacketType.LatePlayerLoaded);
+            playerPacket.Write(id);
+            
+            if (!VGPlayerManager.Inst.players.Contains(GlobalsManager.Players[id].VGPlayerData))
+            {
+                VGPlayerManager.Inst.players.Add(GlobalsManager.Players[id].VGPlayerData);
+            }
+            
+            SendMessage(playerPacket);
+            SendMessage(connection, packet);
+        }
+        catch (Exception e)
+        {
+            PAM.Logger.LogError(e);
+        }
+    }
+
+    #endregion
     public bool TryToKickPlayer(int id)
     {
         foreach (var connection in ConnectionWrappers)
@@ -465,6 +523,17 @@ public class PAMSocketManager : SocketManager
         }
 
         return false;
+    }
+    
+    bool CheckSize(int _size, int minSize)
+    {
+        if (_size < minSize)
+        {
+            PAM.Logger.LogWarning("Packet size too small");
+            return false;
+        }
+
+        return true;
     }
     
 }
@@ -513,9 +582,10 @@ public class PAMConnectionManager : ConnectionManager
         base.OnDisconnected(info);
         PAM.Logger.LogInfo($"Client: Disconnected Steam user {info.Identity.SteamId}.");
         
+        if(!GlobalsManager.IsMultiplayer) return;
         SteamManager.Inst.EndClient();
         SceneLoader.Inst.manager.ClearLoadingTasks();
-        SceneLoader.Inst.LoadSceneGroup("Arcade");
+        SceneLoader.Inst.LoadSceneGroup("Menu");
     }
 
     public override void OnMessage(IntPtr data, int size, long messageNum, long recvTime, int channel)
@@ -539,7 +609,7 @@ public class PAMConnectionManager : ConnectionManager
         
         PacketType packetType = (PacketType)_reader.ReadUInt16();
         
-        if (PacketHandler.PacketHandlers.TryGetValue(packetType, out var handler))
+        if (ClientPacketHandler.PacketHandlers.TryGetValue(packetType, out var handler))
         {
             handler.TryProcessPacket(_reader, size - 2);
         }
@@ -591,6 +661,12 @@ public class PAMConnectionManager : ConnectionManager
             packet.Write(unknownId);
         }
      
+        SendPacket(packet);
+    }
+
+    public void SendRequestLobbyState()
+    {
+        using var packet = new Packet.Packet(PacketType.LobbyState);
         SendPacket(packet);
     }
 }

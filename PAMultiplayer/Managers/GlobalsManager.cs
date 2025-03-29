@@ -28,15 +28,19 @@ namespace PAMultiplayer.Managers
         public static string LevelId;
         public static bool IsMultiplayer = false;
         public static bool IsHosting = false;
+        public static SteamLobbyManager.LobbyState LobbyState;
         
         public static bool HasLoadedAllInfo => HasLoadedExternalInfo && HasLoadedBasePlayerIds;
 
         public static bool HasLoadedExternalInfo;
         public static bool HasLoadedBasePlayerIds;
+        public static bool HasLoadedLobbyInfo;
         
         public static bool IsReloadingLobby = false;
         public static bool HasStarted = false;
         public static bool IsDownloading = false;
         public static bool IsChallenge = false;
+        
+        public static bool JoinedMidLevel = false;
     }
 }

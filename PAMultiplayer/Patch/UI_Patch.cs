@@ -223,19 +223,7 @@ namespace PAMultiplayer.Patch
 
             if (LobbyScreenManager.Instance)
             {
-                SteamLobbyManager.Inst.HideLobby();
                 SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "0");
-                
-                foreach (var vgPlayerData in VGPlayerManager.Inst.players)
-                {
-                    VGPlayer player = vgPlayerData.PlayerObject;
-                    if(!player) continue;
-                
-                    player.StopCoroutine(player.SpawnLoop());
-                    player.Spawn();
-                }
-                
-                VGPlayerManager.inst.RespawnPlayers();
                 
                 GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
                 
@@ -273,7 +261,7 @@ namespace PAMultiplayer.Patch
                 slider.Values = new[] { "All Players", "Local player Only", "None" };
                 slider.Value = DataManager.inst.GetSettingInt(dataId, 0);
                 slider.Label.text = label;
-
+                slider.Label.GetComponentInChildren<GameObjectLocalizer>().enabled = false;
                 slider.OnValueChanged.AddListener(setter);
                
                 UIStateManager.inst.RefreshTextCache(slider.Label, label);
@@ -309,7 +297,7 @@ namespace PAMultiplayer.Patch
                 .GetComponent<MultiElementButton>();
 
             button.onClick = new();
-            button.onClick.AddListener(new System.Action(() =>
+            button.onClick.AddListener(new Action(() =>
             {
                 MenuSelectionManager.Instance.OpenMenu();
             }));

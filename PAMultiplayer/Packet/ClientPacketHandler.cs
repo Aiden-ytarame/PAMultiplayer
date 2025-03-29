@@ -2,12 +2,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppSystems.SceneManagement;
 using PAMultiplayer.Managers;
 using PAMultiplayer.Managers.MenuManagers;
@@ -18,23 +14,25 @@ using Object = UnityEngine.Object;
 
 namespace PAMultiplayer.Packet;
 
-public abstract class PacketHandler
+public abstract class ClientPacketHandler
 {
-    public static readonly Dictionary<PacketType, PacketHandler> PacketHandlers = new()
+    public static readonly Dictionary<PacketType, ClientPacketHandler> PacketHandlers = new()
     {
-        { PacketType.Position          , new PositionPacket()},
-        { PacketType.Damage            , new DamagePacket()}, 
-        { PacketType.Start             , new StartPacket()},
-        { PacketType.PlayerId          , new PlayerIdPacket()},
-        { PacketType.Checkpoint        , new CheckpointPacket()},
-        { PacketType.Rewind            , new RewindPacket()},
-        { PacketType.Boost             , new BoostPacket()},
-        { PacketType.NextLevel         , new NextLevelPacket()},
-        { PacketType.DamageAll         , new DamageAllPacket()},
-        { PacketType.OpenChallenge     , new OpenChallengePacket()},
-        { PacketType.CheckLevelId      , new CheckLevelIdPacket()},
-        { PacketType.ChallengeAudioData, new AudioDataPacket()},
-        { PacketType.ChallengeVote     , new ChallengeVotePacket()}
+        { PacketType.Position          , new PositionClientPacket()},
+        { PacketType.Damage            , new DamageClientPacket()}, 
+        { PacketType.Start             , new StartClientPacket()},
+        { PacketType.PlayerId          , new PlayerIdClientPacket()},
+        { PacketType.Checkpoint        , new CheckpointClientPacket()},
+        { PacketType.Rewind            , new RewindClientPacket()},
+        { PacketType.Boost             , new BoostClientPacket()},
+        { PacketType.NextLevel         , new NextLevelClientPacket()},
+        { PacketType.DamageAll         , new DamageAllClientPacket()},
+        { PacketType.OpenChallenge     , new OpenChallengeClientPacket()},
+        { PacketType.CheckLevelId      , new CheckLevelIdClientPacket()},
+        { PacketType.ChallengeAudioData, new AudioDataClientPacket()},
+        { PacketType.ChallengeVote     , new ChallengeVoteClientPacket()},
+        { PacketType.LobbyState        , new LobbyStateClientPacket()},
+        { PacketType.LatePlayerLoaded  , new LatePlayerClientPacket()}
     };
 
    /// <summary>
@@ -64,7 +62,7 @@ public abstract class PacketHandler
     protected abstract int DataSize { get; }
 }
 
-public class PositionPacket : PacketHandler
+public class PositionClientPacket : ClientPacketHandler
 {
    protected override void ProcessPacket(BinaryReader reader)
     {
@@ -98,7 +96,7 @@ public class PositionPacket : PacketHandler
     protected override int DataSize => 16;
 }
 
-public class DamagePacket : PacketHandler
+public class DamageClientPacket : ClientPacketHandler
 {
    protected override void ProcessPacket(BinaryReader reader)
     {
@@ -120,7 +118,7 @@ public class DamagePacket : PacketHandler
     protected override int DataSize => 12;
 }
 
-public class DamageAllPacket : PacketHandler
+public class DamageAllClientPacket : ClientPacketHandler
 {
    protected override void ProcessPacket(BinaryReader reader)
    {
@@ -164,7 +162,7 @@ public class DamageAllPacket : PacketHandler
     protected override int DataSize => 12;
 }
 
-public class StartPacket : PacketHandler
+public class StartClientPacket : ClientPacketHandler
 {
    protected override void ProcessPacket(BinaryReader reader)
     {
@@ -182,7 +180,7 @@ public class StartPacket : PacketHandler
     protected override int DataSize => 0;
 }
 
-public class PlayerIdPacket : PacketHandler
+public class PlayerIdClientPacket : ClientPacketHandler
 {
     private static int _amountOfInfo;
 
@@ -214,8 +212,6 @@ public class PlayerIdPacket : PacketHandler
                 ControllerID = id
             };
             GlobalsManager.Players.Add(steamID, new PlayerData(newData, "placeHolder"));
-            VGPlayerManager.Inst.players.Add(newData);
-
         }
         if (_amountOfInfo >= amount)
         {
@@ -227,11 +223,16 @@ public class PlayerIdPacket : PacketHandler
     protected override int DataSize => 16;
 }
 
-public class CheckpointPacket : PacketHandler
+public class CheckpointClientPacket : ClientPacketHandler
 {
-   protected override void ProcessPacket(BinaryReader reader)
-   {
-       int index = reader.ReadInt32();
+    protected override void ProcessPacket(BinaryReader reader)
+    {
+        if (!GlobalsManager.HasLoadedLobbyInfo)
+        {
+            return;
+        }
+
+        int index = reader.ReadInt32();
         PAM.Logger.LogInfo($"Checkpoint [{index}] Received");
         GameManager.Inst.playingCheckpointAnimation = true;
         VGPlayerManager.Inst.RespawnPlayers();
@@ -243,10 +244,15 @@ public class CheckpointPacket : PacketHandler
     protected override int DataSize => 4;
 }
 
-public class RewindPacket : PacketHandler
+public class RewindClientPacket : ClientPacketHandler
 {
    protected override void ProcessPacket(BinaryReader reader)
     {
+        if (!GlobalsManager.HasLoadedLobbyInfo)
+        {
+            return;
+        }
+        
         int index = reader.ReadInt32();
         PAM.Logger.LogInfo($"Rewind to Checkpoint [{index}] Received");
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
@@ -259,12 +265,14 @@ public class RewindPacket : PacketHandler
             }
         }
         GameManager.Inst.RewindToCheckpoint(index);
+        
+        //GlobalsManager.HasLoadedLobbyInfo = true;
     }
 
     protected override int DataSize => 4;
 }
 
-public class BoostPacket : PacketHandler
+public class BoostClientPacket : ClientPacketHandler
 {
    protected override void ProcessPacket(BinaryReader reader)
     {
@@ -283,7 +291,7 @@ public class BoostPacket : PacketHandler
     protected override int DataSize => 8;
 }
 
-public class NextLevelPacket : PacketHandler
+public class NextLevelClientPacket : ClientPacketHandler
 {
    protected override void ProcessPacket(BinaryReader reader)
     {
@@ -295,7 +303,10 @@ public class NextLevelPacket : PacketHandler
         GlobalsManager.LevelId = levelID.ToString();
         SteamLobbyManager.Inst.RandSeed = seed;
         GlobalsManager.IsReloadingLobby = true;
-        
+        GlobalsManager.LobbyState = SteamLobbyManager.LobbyState.Lobby;
+        GlobalsManager.HasLoadedLobbyInfo = true;
+        SceneLoader.Inst.manager.ClearLoadingTasks();
+   
         VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId);
         if (level)
         {
@@ -312,18 +323,20 @@ public class NextLevelPacket : PacketHandler
     protected override int DataSize => 12;
 }
 
-public class OpenChallengePacket : PacketHandler
+public class OpenChallengeClientPacket : ClientPacketHandler
 {
     protected override void ProcessPacket(BinaryReader reader)
     {
+        SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "0");
         GlobalsManager.IsReloadingLobby = true;
+        SceneLoader.Inst.manager.ClearLoadingTasks();
         SceneLoader.Inst.LoadSceneGroup("Challenge");
     }
 
     protected override int DataSize => 0;
 }
 
-public class CheckLevelIdPacket : PacketHandler
+public class CheckLevelIdClientPacket : ClientPacketHandler
 {
     protected override void ProcessPacket(BinaryReader reader)
     {
@@ -375,7 +388,7 @@ public class CheckLevelIdPacket : PacketHandler
 }
 
 
-public class AudioDataPacket : PacketHandler
+public class AudioDataClientPacket : ClientPacketHandler
 {
     
     private readonly List<float> _audioDataBuffer = new(400000);
@@ -409,7 +422,7 @@ public class AudioDataPacket : PacketHandler
             return;
         }
       
-        PAM.Logger.LogError($"Got all audio data for level [{audioID}]");
+        PAM.Logger.LogInfo($"Got all audio data for level [{audioID}]");
         
         var newClip = AudioClip.Create(audioID.ToString(), _audioDataBuffer.Count / channels, channels, frequency, false);
         newClip.SetData(_audioDataBuffer.ToArray(), 0); //this to array is specially bad cuz its making 2 copies, may fix later
@@ -426,7 +439,7 @@ public class AudioDataPacket : PacketHandler
     protected override int DataSize => 18;
 }
 
-public class ChallengeVotePacket : PacketHandler
+public class ChallengeVoteClientPacket : ClientPacketHandler
 {
     protected override void ProcessPacket(BinaryReader reader)
     {
@@ -441,3 +454,68 @@ public class ChallengeVotePacket : PacketHandler
     protected override int DataSize => 8;
 }
 
+public class LobbyStateClientPacket : ClientPacketHandler
+{
+    protected override void ProcessPacket(BinaryReader reader)
+    {
+        var hitCount = reader.ReadInt32();
+        var currentTime = reader.ReadSingle();
+        
+        LevelEndScreen.ActionMoment actionMoment = new();  
+        actionMoment.position = Vector3.zero;
+        actionMoment.time = currentTime;
+        
+        var endScreen = Object.FindFirstObjectByType<LevelEndScreen>();//.Hits
+        if (endScreen == null)
+        {
+            return;
+        }
+        for (int i = 0; i < hitCount; i++)
+        {
+            endScreen.Hits.Add(actionMoment);
+        }
+        
+        if (GlobalsManager.HasLoadedLobbyInfo)
+        {
+            return;
+        }
+        GlobalsManager.HasLoadedLobbyInfo = true;
+        
+        GameManager.Inst.UnPause();
+        
+        AudioManager.Inst.CurrentAudioSource.time = currentTime;
+        VGPlayerManager.inst.RespawnPlayers();
+        
+        while (reader.BaseStream.Position + 10 <= reader.BaseStream.Length)
+        {
+            var id = reader.ReadUInt64();
+            var health = reader.ReadUInt16();
+
+            if (GlobalsManager.Players.TryGetValue(id, out var player))
+            {
+               player.VGPlayerData.PlayerObject.Health = health;
+               if (health <= 0)
+               {
+                   Object.Destroy(player.VGPlayerData.PlayerObject);
+               }
+            }
+        }
+    }
+
+    protected override int DataSize => 8;
+}
+
+public class LatePlayerClientPacket : ClientPacketHandler
+{
+    protected override void ProcessPacket(BinaryReader reader)
+    {
+        var playerId = reader.ReadUInt64();
+
+        if (!VGPlayerManager.Inst.players.Contains(GlobalsManager.Players[playerId].VGPlayerData))
+        {
+            VGPlayerManager.Inst.players.Add(GlobalsManager.Players[playerId].VGPlayerData);
+        }
+    }
+
+    protected override int DataSize => 8;
+}

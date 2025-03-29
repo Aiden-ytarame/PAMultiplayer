@@ -93,12 +93,14 @@ public class SteamManager : MonoBehaviour
 
     public void EndClient()
     {
-        Client?.Close();
-        SteamLobbyManager.Inst.LeaveLobby();
-       
         GlobalsManager.IsReloadingLobby = false;
         GlobalsManager.IsMultiplayer = false;
         GlobalsManager.IsHosting = false;
+        GlobalsManager.JoinedMidLevel = false;
+        GlobalsManager.HasLoadedLobbyInfo = true;
+        
+        SteamLobbyManager.Inst.LeaveLobby();
+        Client?.Close();
     }
     public void StartServer()
     {
@@ -111,12 +113,12 @@ public class SteamManager : MonoBehaviour
 
     public void EndServer()
     {
-        SteamLobbyManager.Inst.LeaveLobby();
-        Server?.Close();
-        
         GlobalsManager.IsReloadingLobby = false;
         GlobalsManager.IsMultiplayer = false;
         GlobalsManager.IsHosting = false;
+        
+        SteamLobbyManager.Inst.LeaveLobby();
+        Server?.Close();
     }
     
 }

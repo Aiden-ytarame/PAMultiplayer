@@ -125,6 +125,7 @@ public class ChallengeManager : MonoBehaviour
     {
         if (!GlobalsManager.IsReloadingLobby)
         {
+            MultiplayerDiscordManager.Instance.SetMenuPresence();
             GlobalsManager.IsChallenge = false;
         }
     }
@@ -147,8 +148,8 @@ public class ChallengeManager : MonoBehaviour
 
             while (true)
             {
-                var level = ArcadeLevelDataManager.Inst.ArcadeLevels[
-                    Random.RandomRange(0, ArcadeLevelDataManager.Inst.ArcadeLevels.Count)];
+                var level = ArcadeLevelDataManager.Inst.ArcadeLevels[Random.RandomRange(0, ArcadeLevelDataManager.Inst.ArcadeLevels.Count)];
+                
                 if (!_levelsToVote.Contains(level))
                 {
                     if (!GlobalsManager.IsMultiplayer)
@@ -283,44 +284,50 @@ public class ChallengeManager : MonoBehaviour
     //clients setting up server sent levels
     public async void CreateLevelEntry(ulong id, int index)
     {
-        
-        VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id.ToString());
-        if (level != null) 
+        try
         {
-            if (!_levelsToVote.Contains(level))
+            VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id.ToString());
+            if (level != null) 
             {
-                _levelsToVote.Add(level);
-                _loadedLevels[level] = 2;
+                if (!_levelsToVote.Contains(level))
+                {
+                    _levelsToVote.Add(level);
+                    _loadedLevels[level] = 2;
+                }
+
+                if (_levelsToVote.Count >= 6)
+                {
+                    CheckAllLevelsReady();
+                }
+                return;
             }
 
-            if (_levelsToVote.Count >= 6)
+            level = new()
             {
-                CheckAllLevelsReady();
+                SteamInfo = new()
+                {
+                    ItemID = id
+                }
+            };
+            
+            _levelsToVote.Add(level);
+            _loadedLevels.TryAdd(level, 0);
+            
+            var result = await SteamUGC.QueryFileAsync(id);
+            if (!result.HasValue || result.Value.Result != Result.OK)
+            {
+                return;
             }
-            return;
+
+            level.TrackName = result.Value.Title;
+            level.ArtistName = "Artist";
+            
+            StartCoroutine(GetImageFromWorkshop(level, result.Value.PreviewImageUrl).WrapToIl2Cpp());
         }
-
-        level = new()
+        catch (Exception e)
         {
-            SteamInfo = new()
-            {
-                ItemID = id
-            }
-        };
-            
-        _levelsToVote.Add(level);
-        _loadedLevels.TryAdd(level, 0);
-            
-        var result = await SteamUGC.QueryFileAsync(id);
-        if (!result.HasValue || result.Value.Result != Result.OK)
-        {
-            return;
+            PAM.Logger.LogError(e);
         }
-
-        level.TrackName = result.Value.Title;
-        level.ArtistName = "Artist";
-            
-        StartCoroutine(GetImageFromWorkshop(level, result.Value.PreviewImageUrl).WrapToIl2Cpp());
     }
     
     public bool GetVGLevel(ulong levelId, out Tuple<short[], int, int> songData)
@@ -518,7 +525,7 @@ public class ChallengeManager : MonoBehaviour
         
         if (GlobalsManager.IsHosting)
         {
-            SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", LobbyState.Challenge.ToString());
+            SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)LobbyState.Challenge).ToString());
             
             PickLevelForVoting();
             

@@ -96,6 +96,12 @@ public class SteamLobbyManager : MonoBehaviour
         {
             DataManager.inst.UpdateSettingBool("mp_linkedHealth", linkedMod);
         }
+        
+        if (ushort.TryParse(lobby.GetData("LobbyState"), out var lobbyState))
+        {
+            GlobalsManager.LobbyState = (LobbyState)lobbyState;
+        }
+        
     }
 
     private void OnLobbyMemberDataChanged(Lobby lobby, Friend friend)
@@ -182,11 +188,14 @@ public class SteamLobbyManager : MonoBehaviour
             PlayerID = nextId,
             ControllerID = nextId
         };
+        
+        string hex = VGPlayerManager.Inst.GetPlayerColorHex(newData.PlayerID);
+        VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{friend.Name}</color>] Joined", 2.5f);
 
         if(GlobalsManager.Players.TryAdd(friend.Id, new PlayerData(newData, friend.Name)))
         {
             //do not add new players if on loading screen 
-            if (GameManager.Inst && GameManager.Inst.CurGameState != GameManager.GameState.Loading)
+            if (GameManager.Inst && GameManager.Inst.CurGameState != GameManager.GameState.Loading && GlobalsManager.LobbyState != LobbyState.Playing)
             {
                 VGPlayerManager.Inst.players.Add(GlobalsManager.Players[friend.Id].VGPlayerData);
             }
@@ -195,7 +204,6 @@ public class SteamLobbyManager : MonoBehaviour
         {
             GlobalsManager.Players[friend.Id].SetName(friend.Name);
         }
-        VGPlayerManager.Inst.RespawnPlayers();
     }
 
     private void OnLobbyEntered(Lobby lobby)
@@ -230,17 +238,31 @@ public class SteamLobbyManager : MonoBehaviour
 
         GlobalsManager.HasLoadedExternalInfo = false;
         GlobalsManager.HasLoadedBasePlayerIds = false;
-
-        string levelId = lobby.GetData("LevelId");
-        if (!string.IsNullOrEmpty(levelId))
+        
+        if (ushort.TryParse(lobby.GetData("LobbyState"), out var lobbyState))
         {
-            GlobalsManager.LevelId = levelId;
+            GlobalsManager.LobbyState = (LobbyState)lobbyState;
         }
         else
         {
             CurrentLobby.Leave();
-            PAM.Logger.LogFatal("Invalid LevelId! something went very wrong.");
+            PAM.Logger.LogFatal("No lobby state specified!");
             return;
+        }
+
+        if (GlobalsManager.LobbyState != LobbyState.Challenge)
+        {
+            string levelId = lobby.GetData("LevelId");
+            if (!string.IsNullOrEmpty(levelId))
+            {
+                GlobalsManager.LevelId = levelId;
+            }
+            else
+            {
+                CurrentLobby.Leave();
+                PAM.Logger.LogFatal("Invalid LevelId! something went very wrong.");
+                return;
+            }
         }
         
         //modifiers
@@ -281,7 +303,7 @@ public class SteamLobbyManager : MonoBehaviour
         }
         else
         {
-            RandSeed = UnityEngine.Random.seed;
+            RandSeed = Random.seed;
             PAM.Logger.LogFatal("Failed to parse random seed.");
         }
         PAM.Logger.LogInfo($"SEED : {RandSeed}");
@@ -316,7 +338,7 @@ public class SteamLobbyManager : MonoBehaviour
         
         _loadedPlayers = new();
         InLobby = true;
-
+        
         if (LobbyCreationManager.Instance.IsPrivate)
         {
             lobby.SetPrivate();
@@ -325,12 +347,22 @@ public class SteamLobbyManager : MonoBehaviour
         {
             lobby.SetPublic();
         }
-      
+
+        lobby.SetJoinable(true);
         
         VGLevel currentLevel = ArcadeManager.Inst.CurrentArcadeLevel;
         GlobalsManager.LevelId = currentLevel.SteamInfo != null ?  currentLevel.SteamInfo.ItemID.Value.ToString() : currentLevel.name;
         lobby.SetData("LevelId", GlobalsManager.LevelId);
         lobby.SetData("seed", RandSeed.ToString());
+
+        if (GlobalsManager.IsChallenge)
+        {
+            lobby.SetData("LobbyState", ((ushort)LobbyState.Challenge).ToString());
+        }
+        else
+        {
+            lobby.SetData("LobbyState", ((ushort)LobbyState.Lobby).ToString());
+        }
 
         List<string> levelNames = new();
         foreach (var id in GlobalsManager.Queue)
@@ -358,16 +390,11 @@ public class SteamLobbyManager : MonoBehaviour
     {
         _loadedPlayers[playerSteamId] = true;
     }
-
-    public void HideLobby()
-    {
-        CurrentLobby.SetJoinable(false);
-    }
     
     public void LeaveLobby()
     {
-        CurrentLobby.Leave();
         InLobby = false;
+        CurrentLobby.Leave();
     }
 
     public void UnloadAll()

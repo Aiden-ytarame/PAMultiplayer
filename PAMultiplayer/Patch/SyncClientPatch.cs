@@ -66,7 +66,6 @@ public static class RewindHandler
     [HarmonyPrefix]
     static void ReplaceDeathAction(ref Il2CppSystem.Action<Vector3> _deathAction)
     {
-        
         if (!GlobalsManager.IsMultiplayer) return;
         
         if (GlobalsManager.IsHosting)
@@ -111,12 +110,24 @@ public static class RewindHandler
     }
 }
 
-internal static class PredicateExtension
+[HarmonyPatch(typeof(SteamWrapper))]
+public static class SteamWrapperPatch
 {
-    //this is here so I dont have to call ConvertDelegate manually every time. will likely re-use this in other mods
-    public static Il2CppSystem.Predicate<T> ToIL2CPP<T>(this System.Predicate<T> predicate)
+    [HarmonyPatch(nameof(SteamWrapper.SubmitArcadeLeaderboardScore))]
+    [HarmonyPrefix]
+    static bool PreSubmitArcadeLeaderboardScore()
     {
-        return DelegateSupport.ConvertDelegate<Il2CppSystem.Predicate<T>>(predicate);
+        if (!GlobalsManager.IsMultiplayer || GlobalsManager.IsHosting)
+        {
+            return true;
+        }
+
+        if (GlobalsManager.JoinedMidLevel)
+        {
+            GlobalsManager.JoinedMidLevel = false;
+            return false;
+        }
+
+        return true;
     }
 }
-

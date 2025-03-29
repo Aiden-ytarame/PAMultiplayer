@@ -16,5 +16,6 @@ public enum PacketType : ushort
     CheckLevelId,
     ChallengeAudioData,
     ChallengeVote,
-    LobbyState
+    LobbyState,
+    LatePlayerLoaded
 }

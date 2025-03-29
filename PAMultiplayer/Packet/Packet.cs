@@ -27,6 +27,7 @@ public class Packet : IDisposable
     
  
     public void Write(ulong value) => _writer.Write(value);
+    public void Write(float value) => _writer.Write(value);
     public void Write(uint value) => _writer.Write(value);
     public void Write(int value) => _writer.Write(value);
     public void Write(ushort value) => _writer.Write(value);
