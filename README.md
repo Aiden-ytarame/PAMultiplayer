@@ -32,7 +32,7 @@ Uses BepInEx.
 
 ### Host
 
-* Select any arcade level
+* Select any arcade level, or click 'Remote Challenge' after Custom Logs
 * Start the level by pressing the Mutliplayer button
 * Invite friends through Steam or Discord
 * Wait for players to join your lobby and load the level (the indicator beside their names tell you when they've loaded)
@@ -41,7 +41,7 @@ Uses BepInEx.
 
 ### Join 
 
-* Join the host's game through a Discord or Steam invite
+* Join the host's game through a Discord or Steam invite. or join a random host via the 'Join Researcher' button after Custom Logs
 * Wait for the host to start the level and have fun!
 
 ## Other Features
@@ -49,6 +49,10 @@ Uses BepInEx.
 ### Queue
 
 In Arcade now levels have a '+' button on them, pressing it queues the levels. after finishing a level click the continue button to load the next level in queue! works in Singleplayer and Multiplayer with a proper queue list in the lobby.
+
+### Challenge
+
+Play an endless mode, where after every level you vote between 6 randomly picked levels you have downloaded. also works in multiplayer!
 
 
 ### Discord Integration
