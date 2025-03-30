@@ -337,6 +337,7 @@ public class SteamLobbyManager : MonoBehaviour
         PAM.Logger.LogInfo($"Lobby Created!");
         
         _loadedPlayers = new();
+        CurrentLobby = lobby;
         InLobby = true;
         
         if (LobbyCreationManager.Instance.IsPrivate)

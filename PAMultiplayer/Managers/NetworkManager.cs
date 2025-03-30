@@ -37,7 +37,7 @@ namespace PAMultiplayer.Managers
                 if (!_pressedNameKey)
                 {
                     _pressedNameKey = true;
-                    GameManager.Inst.StartCoroutine(PauseLobbyPatch.ShowNames().WrapToIl2Cpp());
+                    StartCoroutine(PauseLobbyPatch.ShowNames().WrapToIl2Cpp());
                 }
             }
             else

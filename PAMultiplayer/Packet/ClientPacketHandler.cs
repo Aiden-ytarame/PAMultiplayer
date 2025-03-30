@@ -467,7 +467,7 @@ public class LobbyStateClientPacket : ClientPacketHandler
         actionMoment.time = currentTime;
         
         var endScreen = Object.FindFirstObjectByType<LevelEndScreen>();//.Hits
-        if (endScreen == null)
+        if (!endScreen)
         {
             return;
         }

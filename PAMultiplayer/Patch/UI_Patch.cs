@@ -164,30 +164,26 @@ namespace PAMultiplayer.Patch
                 if (GlobalsManager.Players.TryGetValue(currentLobbyMember.Id, out var player))
                 {
                     string text = currentLobbyMember.Name;
-                    
+
                     if (LobbyScreenManager.SpecialColors.TryGetValue(currentLobbyMember.Id, out var hex))
                     {
-                       text = $"<color=#{hex}>{currentLobbyMember.Name}";
+                        text = $"<color=#{hex}>{currentLobbyMember.Name}";
                     }
-                    
+
                     if (currentLobbyMember.Id == GlobalsManager.LocalPlayerId)
                     {
                         text = "YOU";
-                        if (player.VGPlayerData.PlayerObject)
+                        if (!ChallengeManager.Inst && player.VGPlayerData.PlayerObject)
                         {
                             GameManager.Inst.StartCoroutine(ShowDecay(player.VGPlayerData.PlayerObject).WrapToIl2Cpp());
                         }
                     }
-                   
+
                     //band-aid fix for an error here
-                    try
+
+                    if (player.VGPlayerData.PlayerObject && player.VGPlayerData.PlayerObject.Player_Text)
                     {
-                        //player.VGPlayerData.PlayerObject?.SpeechBubble?.DisplayText(text, 3);
-                        player.VGPlayerData.PlayerObject?.Player_Text?.DisplayText(text, 3);
-                    }
-                    catch (Exception)
-                    {
-                        // ignored
+                        player.VGPlayerData.PlayerObject.Player_Text.DisplayText(text, 3);
                     }
                 }
             }

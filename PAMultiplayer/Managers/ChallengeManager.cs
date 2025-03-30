@@ -66,16 +66,17 @@ public class ChallengeManager : MonoBehaviour
             _levelButtons.Add(cells.GetChild(i).gameObject.AddComponent<VoterCell>());
         }
         VGPlayerManager.Inst.LockPlayerAdding(false);
-
-        if (MultiplayerDiscordManager.Instance)
-        { 
-            MultiplayerDiscordManager.Instance.SetChallengePresence();  
-        }
+        
         
         if (GlobalsManager.IsMultiplayer)
         {
             StartCoroutine(InitMultiplayer().WrapToIl2Cpp());
             return;
+        }
+        
+        if (MultiplayerDiscordManager.Instance)
+        { 
+            MultiplayerDiscordManager.Instance.SetChallengePresence();  
         }
         
         PickLevelForVoting();
@@ -521,6 +522,11 @@ public class ChallengeManager : MonoBehaviour
                 yield return new WaitUntil(new Func<bool>(() => SteamManager.Inst.Client.Connected));
                 yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
             }
+        }
+        
+        if (MultiplayerDiscordManager.Instance)
+        { 
+            MultiplayerDiscordManager.Instance.SetChallengePresence();  
         }
 
         GlobalsManager.IsReloadingLobby = false;
