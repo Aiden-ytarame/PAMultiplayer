@@ -158,6 +158,10 @@ public class MultiplayerDiscordManager : MonoBehaviour
 
 	public void SetChallengePresence()
 	{
+		if (client == null || presence == null)
+		{
+			return;
+		}
 		presence.State = "Choosing Level";
 		presence.Details = "Playing Challenge";
 

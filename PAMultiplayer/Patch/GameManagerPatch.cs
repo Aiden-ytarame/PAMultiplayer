@@ -427,7 +427,7 @@ public class GameManagerPatch
                      GlobalsManager.JoinedMidLevel = true;
                      SceneLoader.Inst.manager.AddToLoadingTasks("Lobby State", Task.Run(async () =>
                      {
-                         while (!GlobalsManager.HasLoadedAllInfo)
+                         while (!GlobalsManager.HasLoadedLobbyInfo)
                          {
                              await Task.Delay(100);
                          }

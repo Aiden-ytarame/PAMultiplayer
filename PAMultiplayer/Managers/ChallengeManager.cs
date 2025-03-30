@@ -31,6 +31,7 @@ public class ChallengeManager : MonoBehaviour
     private readonly Dictionary<VGPlayer, VGLevel> _votes = new(16);
     private readonly Dictionary<ulong, Tuple<short[], int, int>> _songData = new(); //struct here crashes bepinex lmao
     
+    private bool _votingStarted = false;
     
     public delegate void OnVoteChangedSignature(VGLevel newLevel);
     public event OnVoteChangedSignature OnVoteChanged;
@@ -217,6 +218,7 @@ public class ChallengeManager : MonoBehaviour
     {
         if (_levelsToVote.Count >= 6 && CheckAllLevelsReady(false))
         {
+            _votingStarted = true;
             SteamLobbyManager.Inst.UnloadAll();
             StartVoting();
         }
@@ -626,16 +628,25 @@ public class ChallengeManager : MonoBehaviour
                     await Task.Delay(100);
                 }
             }).ToIl2Cpp()); 
-        }
-
-        
-        SceneLoader.Inst.manager.AddToLoadingTasks("Waiting other players", Task.Run(async () =>
-        {
-            while (!SteamLobbyManager.Inst.InLobby || !SteamLobbyManager.Inst.IsEveryoneLoaded)
+                
+            SceneLoader.Inst.manager.AddToLoadingTasks("Waiting other players", Task.Run(async () =>
             {
-                await Task.Delay(0);
-            }
-        }).ToIl2Cpp());
+                while (!SteamLobbyManager.Inst.InLobby || !SteamLobbyManager.Inst.IsEveryoneLoaded)
+                {
+                    await Task.Delay(0);
+                }
+            }).ToIl2Cpp());
+        }
+        else
+        {
+            SceneLoader.Inst.manager.AddToLoadingTasks("Waiting other players", Task.Run(async () =>
+            {
+                while (!_votingStarted)
+                {
+                    await Task.Delay(0);
+                }
+            }).ToIl2Cpp());
+        }
     }
     
     private bool CheckAllLevelsReady(bool setLoaded = true)

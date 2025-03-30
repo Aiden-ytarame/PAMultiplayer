@@ -329,6 +329,7 @@ public class OpenChallengeClientPacket : ClientPacketHandler
     {
         SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "0");
         GlobalsManager.IsReloadingLobby = true;
+        GlobalsManager.HasLoadedLobbyInfo = true;
         SceneLoader.Inst.manager.ClearLoadingTasks();
         SceneLoader.Inst.LoadSceneGroup("Challenge");
     }
