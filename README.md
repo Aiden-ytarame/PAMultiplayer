@@ -19,6 +19,10 @@ Uses BepInEx.
 
 * Download the latest [BepInEx 6.0.0 il2cpp for Win x64 games build](https://builds.bepinex.dev/projects/bepinex_be/704/BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.704%2B6b38cee.zip).
 * Extract the files from the BepInEx zip into your game's exe folder (this can be found by right clicking PA on your steam library and going "manage->browse local files").
+  * Note: Extract the zip contents into the PA folder like the image below, not a new folder.
+  
+<img src="https://github.com/user-attachments/assets/7d57b1cf-39cf-4441-8841-e23ad77ed3e6" width="50%">
+
 * Open the game, a terminal should show up. just wait for the game to open.
   
 > [!NOTE]\
