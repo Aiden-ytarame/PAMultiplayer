@@ -130,6 +130,16 @@ public class ChallengeManager : MonoBehaviour
             MultiplayerDiscordManager.Instance.SetMenuPresence();
             GlobalsManager.IsChallenge = false;
         }
+        
+        //attempt on fixing dupe players
+        foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+        {
+            if (vgPlayerData.PlayerObject)
+            {
+                Destroy(vgPlayerData.PlayerObject.gameObject);
+                vgPlayerData.PlayerObject = null;
+            }
+        }
     }
     #endregion
     
