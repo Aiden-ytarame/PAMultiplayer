@@ -538,7 +538,7 @@ public class ChallengeManager : MonoBehaviour
             else
             {
                 SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                yield return new WaitUntil(new Func<bool>(() => PaMNetworkManager.PamInstance.ClientReady()));
+                yield return new WaitUntil(new Func<bool>(() => Network_Test.NetworkManager.Instance.TransportActive));
                 yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
             }
         }

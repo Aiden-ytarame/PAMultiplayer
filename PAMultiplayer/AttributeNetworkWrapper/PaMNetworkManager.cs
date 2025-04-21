@@ -20,12 +20,6 @@ public class PaMNetworkManager : NetworkManager
     {
         _facepunchtransport?.Receive();
     }
-
-    public bool ClientReady()
-    {
-        return Transport.IsActive;
-    }
-    
     
     public override void OnClientConnected(ServerNetworkConnection connection)
     {

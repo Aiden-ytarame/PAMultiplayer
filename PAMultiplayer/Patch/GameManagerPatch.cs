@@ -145,7 +145,7 @@ public class GameManagerPatch
         {
             SceneLoader.Inst.manager.AddToLoadingTasks("Connecting to Server", Task.Run(async () =>
             {
-                while (PaMNetworkManager.PamInstance == null || !PaMNetworkManager.PamInstance.ClientReady())
+                while (PaMNetworkManager.PamInstance == null || !Network_Test.NetworkManager.Instance.TransportActive)
                 {
                     await Task.Delay(100);
                 }
@@ -398,13 +398,13 @@ public class GameManagerPatch
             }
 
             List<ulong> playerIds = new();
-            List<ushort> healths = new();
+            List<short> healths = new();
             foreach (var playerDataPair in GlobalsManager.Players)
             {
                 playerIds.Add(playerDataPair.Key);
                 if (playerDataPair.Value.VGPlayerData.PlayerObject)
                 {
-                    healths.Add((ushort)playerDataPair.Value.VGPlayerData.PlayerObject.Health);
+                    healths.Add((short)playerDataPair.Value.VGPlayerData.PlayerObject.Health);
                 }
                 else
                 {
@@ -436,7 +436,7 @@ public class GameManagerPatch
     
     [ClientRpc]
     public static void Client_LobbyState(ClientNetworkConnection conn, int hitCount, float currentTime,
-        List<ulong> playerIds, Span<ushort> healths) //weird types is cuz they already have writers, ill fix later
+        List<ulong> playerIds, Span<short> healths) //weird types is cuz they already have writers, ill fix later
     {
         LevelEndScreen.ActionMoment actionMoment = new();  
         actionMoment.position = Vector3.zero;
@@ -510,7 +510,7 @@ public class GameManagerPatch
              else
              {
                  SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                 yield return new WaitUntil(new Func<bool>(() => PaMNetworkManager.PamInstance.ClientReady()));
+                 yield return new WaitUntil(new Func<bool>(() => Network_Test.NetworkManager.Instance.TransportActive));
                  yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
                  
                  if (GlobalsManager.LobbyState == LobbyState.Challenge)
