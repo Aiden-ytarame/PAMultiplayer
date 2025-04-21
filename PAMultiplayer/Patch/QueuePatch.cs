@@ -173,7 +173,7 @@ public static class LevelEndScreenPatch
             {
                 if (GlobalsManager.IsMultiplayer && GlobalsManager.IsHosting)
                 {
-                    SteamManager.Inst.Server.SendOpenChallenge();
+                    GameManagerPatch.Multi_OpenChallenge();
                 }
                 SceneLoader.Inst.LoadSceneGroup("Challenge");
                 return;

@@ -4,6 +4,7 @@ using System.Reflection;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Cpp2IL.Core.Extensions;
 using HarmonyLib;
+using Network_Test.Core.Rpc;
 using PAMultiplayer.Helper;
 using UnityEngine;
 using PAMultiplayer.Managers;
@@ -214,7 +215,7 @@ namespace PAMultiplayer.Patch
             
             if (GlobalsManager.IsHosting)
             {
-                SteamManager.Inst.Server.SendStartLevel();
+                Multi_StartLevel();
             }
 
             if (LobbyScreenManager.Instance)
@@ -228,6 +229,20 @@ namespace PAMultiplayer.Patch
             }
             CameraDB.Inst.SetUIVolumeWeightOut(0.2f);
             return true;
+        }
+        
+        [MultiRpc]
+        public static void Multi_StartLevel()
+        {
+            if (LobbyScreenManager.Instance)
+            {
+                LobbyScreenManager.Instance.StartLevel();
+            }
+
+            if (ChallengeManager.Inst)
+            {
+                ChallengeManager.Inst.StartVoting_Client();
+            }
         }
     }
     

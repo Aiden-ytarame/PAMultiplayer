@@ -1,9 +1,10 @@
 using System;
 using HarmonyLib;
+using PAMultiplayer.AttributeNetworkWrapper;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
-
+using WrapperNetworkManager = Network_Test.NetworkManager;
 namespace PAMultiplayer.Managers;
 
 /// <summary>
@@ -12,8 +13,6 @@ namespace PAMultiplayer.Managers;
 public class SteamManager : MonoBehaviour
 {
     public static SteamManager Inst { get; private set; }
-    public PAMSocketManager Server;
-    public PAMConnectionManager Client;
 
     private void Awake()
     {
@@ -87,8 +86,10 @@ public class SteamManager : MonoBehaviour
     public void StartClient(SteamId targetSteamId)
     {
         PAM.Logger.LogInfo($"Starting client. Connection to [{targetSteamId}]");
+        PaMNetworkManager netManager = new PaMNetworkManager();
+        netManager.Init(new FacepunchSocketsTransport());
         
-        Client = SteamNetworkingSockets.ConnectRelay<PAMConnectionManager>(targetSteamId);
+        netManager.ConnectToServer(targetSteamId.ToString());
     }
 
     public void EndClient()
@@ -100,15 +101,14 @@ public class SteamManager : MonoBehaviour
         GlobalsManager.HasLoadedLobbyInfo = true;
         
         SteamLobbyManager.Inst.LeaveLobby();
-        Client?.Close();
+        WrapperNetworkManager.Instance?.Disconnect();
     }
     public void StartServer()
     {
         PAM.Logger.LogInfo("Starting Server.");
-        Server = SteamNetworkingSockets.CreateRelaySocket<PAMSocketManager>();
-        
-        //if the server port doesn't change it fails to create a socket
-        //why? don't ask me man
+        PaMNetworkManager netManager = new PaMNetworkManager();
+        netManager.Init(new FacepunchSocketsTransport());
+        netManager.StartServer();
     }
 
     public void EndServer()
@@ -118,7 +118,7 @@ public class SteamManager : MonoBehaviour
         GlobalsManager.IsHosting = false;
         
         SteamLobbyManager.Inst.LeaveLobby();
-        Server?.Close();
+        WrapperNetworkManager.Instance.EndServer();
     }
     
 }

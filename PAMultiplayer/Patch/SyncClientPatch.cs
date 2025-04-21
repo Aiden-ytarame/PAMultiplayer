@@ -1,6 +1,7 @@
 using System;
 using HarmonyLib;
 using Il2CppInterop.Runtime;
+using Network_Test.Core.Rpc;
 using PAMultiplayer.Managers;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -43,7 +44,7 @@ public static class CheckpointHandler
             if (tmpIndex != -1)
             {
                 __instance.currentCheckpointIndex = tmpIndex;
-                SteamManager.Inst.Server.SendCheckpointHit(tmpIndex);
+                Multi_CheckpointHit(tmpIndex);
                 
                 GameManager.Inst.playingCheckpointAnimation = true;
                 VGPlayerManager.Inst.RespawnPlayers();
@@ -53,6 +54,17 @@ public static class CheckpointHandler
             }
         }
         return false;
+    }
+
+    [MultiRpc]
+    public static void Multi_CheckpointHit(int index)
+    {
+        PAM.Logger.LogInfo($"Checkpoint [{index}] Received");
+        GameManager.Inst.playingCheckpointAnimation = true;
+        VGPlayerManager.Inst.RespawnPlayers();
+        VGPlayerManager.Inst.HealPlayers();
+
+        GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation(index));
     }
 }
 
@@ -86,7 +98,7 @@ public static class RewindHandler
                     index = GameManager.Inst.currentCheckpointIndex;
                 }
                 
-                SteamManager.Inst.Server?.SendRewindToCheckpoint(index);
+                Multi_RewindToCheckpoint(index);
                 
                 foreach (var vgPlayerData in VGPlayerManager.Inst.players)
                 {
@@ -107,6 +119,27 @@ public static class RewindHandler
                 //clients do nothing on death, just wait for the server message.
             });
         }
+    }
+
+    [MultiRpc]
+    public static void Multi_RewindToCheckpoint(int index)
+    {
+        if (!GlobalsManager.HasLoadedLobbyInfo)
+        {
+            return;
+        }
+        
+        PAM.Logger.LogInfo($"Rewind to Checkpoint [{index}] Received");
+        foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+        {
+            if (vgPlayerData.PlayerObject.IsValidPlayer())
+            {
+                vgPlayerData.PlayerObject.Health = 0;
+                vgPlayerData.PlayerObject.ClearEvents();
+                vgPlayerData.PlayerObject.PlayerDeath();
+            }
+        }
+        GameManager.Inst.RewindToCheckpoint(index);
     }
 }
 
