@@ -1,7 +1,10 @@
 ﻿using BepInEx.Unity.IL2CPP.UnityEngine;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
+using AttributeNetworkWrapper.Core;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Rewired;
+using Steamworks;
 using UnityEngine;
 using KeyCode = BepInEx.Unity.IL2CPP.UnityEngine.KeyCode;
 
@@ -16,7 +19,8 @@ namespace PAMultiplayer.Managers
     public class NetworkManager : MonoBehaviour
     {
         private bool _pressedNameKey;
-
+        PaMNetworkManager _paMNetworkManager;
+        
         void Update()
         {
             if (GlobalsManager.Players.TryGetValue(GlobalsManager.LocalPlayerId, out var playerData))
@@ -25,9 +29,9 @@ namespace PAMultiplayer.Managers
                 {
                     var v2 = playerData.VGPlayerData.PlayerObject.Player_Wrapper.position;
                     if (GlobalsManager.IsHosting)
-                        SteamManager.Inst.Server?.SendHostPosition(v2);
+                        Multi_PlayerPos(GlobalsManager.LocalPlayerId, v2);
                     else
-                        SteamManager.Inst.Client?.SendPosition(v2);
+                        Server_PlayerPos(null, v2);
                 }
             }
             
@@ -46,11 +50,57 @@ namespace PAMultiplayer.Managers
             }
 
             TryToGetController();
+
+            if (_paMNetworkManager == null)
+            {
+                _paMNetworkManager = (PaMNetworkManager)AttributeNetworkWrapper.NetworkManager.Instance;
+            }
             
-            SteamManager.Inst.Server?.Receive();
-            SteamManager.Inst.Client?.Receive();
+            _paMNetworkManager?.Receive();
         }
 
+        [ServerRpc(SendType.Unreliable)]
+        public static void Server_PlayerPos(ClientNetworkConnection conn,Vector2 pos)
+        {
+            if(!conn.TryGetSteamId(out SteamId steamID))
+            {
+                return;
+            }
+            SetPlayerPos(steamID, pos);
+            Multi_PlayerPos(steamID, pos);
+        }
+        
+        [MultiRpc(SendType.Unreliable)]
+        public static void Multi_PlayerPos(SteamId id,Vector2 pos)
+        {
+            SetPlayerPos(id, pos);
+        }
+
+        static void SetPlayerPos(SteamId steamID, Vector2 pos)
+        {
+            if (steamID.IsLocalPlayer()) return;
+        
+            if (GlobalsManager.Players.TryGetValue(steamID, out var playerData))
+            {
+                if (playerData.VGPlayerData.PlayerObject)
+                {
+                    VGPlayer player = GlobalsManager.Players[steamID].VGPlayerData.PlayerObject;
+                
+                    if(!player) return;
+                
+                    Transform rb = player.Player_Wrapper;
+            
+                    var rot = pos - (Vector2)rb.position;
+                    rb.position = pos;
+                    if (rot.sqrMagnitude > 0.0001f)
+                    {
+                        rot.Normalize();
+                        player.p_lastMoveX = rot.x;
+                        player.p_lastMoveY = rot.y;
+                    }
+                }
+            }
+        }
         void TryToGetController()
         {
             for (int i = 0; i < ReInput.controllers.controllerCount; i++)

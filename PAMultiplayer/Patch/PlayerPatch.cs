@@ -1,7 +1,10 @@
 ﻿using System;
 using HarmonyLib;
+using AttributeNetworkWrapper.Core;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
 using Rewired;
+using Steamworks;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -10,16 +13,23 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch(typeof(VGPlayer))]
 public class Player_Patch
 {
+    
     [HarmonyPatch(nameof(VGPlayer.OnChildTriggerEnter))]
     [HarmonyPatch(nameof(VGPlayer.OnChildTriggerStay))]
     [HarmonyPrefix]
-    static bool PreCollision(ref VGPlayer __instance)
+    static bool PreCollision(VGPlayer __instance, Collider2D _other)
     {
-        if (!GlobalsManager.IsMultiplayer) return true;
+        if (GlobalsManager.IsMultiplayer)
+        {
+            if (!__instance.IsLocalPlayer())
+                return false;
+        }
 
-        if (__instance.IsLocalPlayer())
-            return true;
-            
+        if (__instance.CheckForObjectCollision(_other))
+        {
+            __instance.PlayerHit();
+        }
+        
         return false; //only collide if is local player
     }
 
@@ -71,18 +81,19 @@ public class Player_Patch
                 {
                     if (!IsDamageAll)
                     {
-                        SteamManager.Inst.Server.SendDamageAll(player.Health, GlobalsManager.LocalPlayerId);
+                        DamageAll(player.Health, GlobalsManager.LocalPlayerId);
+                        Multi_DamageAll(player.Health, GlobalsManager.LocalPlayerId);
                         return false;
                     }
 
                 }
                 else
-                    SteamManager.Inst.Server.SendHostDamage();
+                    Multi_PlayerDamaged(GlobalsManager.LocalPlayerId, player.Health);
             }
             else
             {
                 if (!DataManager.inst.GetSettingBool("mp_linkedHealth", false) || !IsDamageAll)
-                    SteamManager.Inst.Client.SendDamage(player.Health);
+                    Server_PlayerDamaged(null, player.Health);
             }
 
             IsDamageAll = false;
@@ -133,6 +144,88 @@ public class Player_Patch
         return false;
     }
 
+    [ServerRpc]
+    public static void Server_PlayerDamaged(ClientNetworkConnection conn, int healthPreHit)
+    {
+        if(!conn.TryGetSteamId(out SteamId steamID))
+        {
+            return;
+        }
+        
+        if (DataManager.inst.GetSettingBool("mp_linkedHealth", false))
+        {
+            if (GlobalsManager.LocalPlayerObj.Health >= healthPreHit)
+            {
+                DamageAll(healthPreHit, steamID);
+                Multi_DamageAll(healthPreHit, steamID);
+            }
+            return;
+        }
+        
+        if(GlobalsManager.Players.TryGetValue(steamID, out var player))
+        {
+            if (!player.VGPlayerData.PlayerObject.IsValidPlayer()) return;
+            player.VGPlayerData.PlayerObject.Health = healthPreHit;
+            player.VGPlayerData.PlayerObject.PlayerHit();
+        }
+        
+        Multi_PlayerDamaged(steamID, healthPreHit);
+    }
+    [MultiRpc]
+    public static void Multi_PlayerDamaged(SteamId steamID, int healthPreHit)
+    {
+        PAM.Inst.Log.LogDebug($"Damaging player {steamID}");
+
+        if (steamID.IsLocalPlayer()) return;
+        
+        if(GlobalsManager.Players.TryGetValue(steamID, out var player))
+        {
+            if (!player.VGPlayerData.PlayerObject.IsValidPlayer()) return;
+            player.VGPlayerData.PlayerObject.Health = healthPreHit;
+            player.VGPlayerData.PlayerObject.PlayerHit();
+        }
+    }
+
+    [MultiRpc]
+    public static void Multi_DamageAll(int healthPreHit, SteamId playerHit)
+    {
+        DamageAll(healthPreHit, playerHit);
+    }
+    static void DamageAll(int healthPreHit, ulong hitPlayerId)
+    {
+        if (DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true))
+        {
+            if (GlobalsManager.Players.TryGetValue(hitPlayerId, out var playerData))
+            {
+                string hex = VGPlayerManager.Inst.GetPlayerColorHex(playerData.VGPlayerData.PlayerID);
+                VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{playerData.Name}</color>] got hit!", 1f);
+            }
+        }
+       
+        
+        foreach (var vgPlayerData in GlobalsManager.Players)
+        {
+            VGPlayer player = vgPlayerData.Value.VGPlayerData.PlayerObject;
+            if (player.IsValidPlayer())
+            {
+                if (player.Health < healthPreHit)
+                {
+                    PAM.Inst.Log.LogWarning($"Old message");
+                    continue;
+                }
+
+                if (player.IsLocalPlayer())
+                {
+                    IsDamageAll = true;
+                }
+                
+                player.Health = healthPreHit;
+                player.PlayerHit();
+            }
+        }
+    }
+
+    
     /// <summary>
     /// this gives a null exception if ran without a valid playerId
     /// or that's my guess lol, whatever it is this fixes it
@@ -173,11 +266,11 @@ public class Player_Patch
                 {
                     if (GlobalsManager.IsHosting)
                     {
-                        SteamManager.Inst.Server.SendHostBoost();
+                        Multi_PlayerBoost(GlobalsManager.LocalPlayerId);
                     }
                     else
                     {
-                        SteamManager.Inst.Client.SendBoost();
+                        Server_PlayerBoost(null);
                     }
                 }
                 ps = Object.Instantiate(__instance.PS_Boost, __instance.Player_Wrapper.position, rot);
@@ -215,7 +308,42 @@ public class Player_Patch
         return false;
     }
 
+    [ServerRpc(SendType.Unreliable)]
+    public static void Server_PlayerBoost(ClientNetworkConnection conn)
+    {
+        if (!conn.TryGetSteamId(out SteamId steamID))
+        {
+            return;
+        }
         
+        if (GlobalsManager.Players.TryGetValue(steamID, out var player))
+        {
+            if (player.VGPlayerData.PlayerObject && !player.VGPlayerData.PlayerObject.isDead)
+            {
+                player.VGPlayerData.PlayerObject.PlayParticles(VGPlayer.ParticleTypes.Boost);
+            }
+        }
+        
+        Multi_PlayerBoost(steamID);
+    }
+      
+    [MultiRpc(SendType.Unreliable)]
+    public static void Multi_PlayerBoost(SteamId steamID)
+    {
+        if (steamID.IsLocalPlayer())
+        {
+            return;
+        }
+        
+        if (GlobalsManager.Players.TryGetValue(steamID, out var player))
+        {
+            if (player.VGPlayerData.PlayerObject && !player.VGPlayerData.PlayerObject.isDead)
+            {
+                player.VGPlayerData.PlayerObject.PlayParticles(VGPlayer.ParticleTypes.Boost);
+            }
+        }
+    }
+    
     //for changing the player's shape.
     public static Mesh CircleMesh;
     public static Mesh ArrowMesh;

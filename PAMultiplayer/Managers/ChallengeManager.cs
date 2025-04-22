@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppSystems.SceneManagement;
+using AttributeNetworkWrapper.Core;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Steamworks;
 using TMPro;
@@ -285,9 +287,15 @@ public class ChallengeManager : MonoBehaviour
 
         if (GlobalsManager.IsMultiplayer)
         {
-            SteamManager.Inst.Server.SendChallengeVoteWinner(level.SteamInfo.ItemID);
+           Multi_VoteWinner(level.SteamInfo.ItemID);
         }
       
+    }
+
+    [MultiRpc]
+    public static void Multi_VoteWinner(ulong level)
+    {
+        Inst.SetVoteWinner(level);
     }
     
     #endregion
@@ -529,7 +537,7 @@ public class ChallengeManager : MonoBehaviour
             else
             {
                 SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                yield return new WaitUntil(new Func<bool>(() => SteamManager.Inst.Client.Connected));
+                yield return new WaitUntil(new Func<bool>(() => AttributeNetworkWrapper.NetworkManager.Instance.TransportActive));
                 yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
             }
         }
@@ -557,9 +565,11 @@ public class ChallengeManager : MonoBehaviour
             
             var timer = new Stopwatch();
             timer.Start();
-          
+
+            List<ulong> ids = new();
             foreach (var vgLevel in _levelsToVote)
             {
+                ids.Add(vgLevel.SteamInfo.ItemID);
                 StartCoroutine(GetSongData(vgLevel).WrapToIl2Cpp());
             }
             
@@ -568,7 +578,7 @@ public class ChallengeManager : MonoBehaviour
             timer.Stop();
             PAM.Logger.LogDebug($"took {timer.ElapsedMilliseconds}ms to get level data");
           
-            SteamManager.Inst.Server.SendCheckForLevelId(_levelsToVote);
+            Multi_CheckLevelIds(ids);
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
         }
         else
@@ -579,10 +589,126 @@ public class ChallengeManager : MonoBehaviour
         yield return new WaitUntil(new Func<bool>(() => SteamLobbyManager.Inst.IsEveryoneLoaded));
         yield return null;
         SteamLobbyManager.Inst.UnloadAll();
-        SteamManager.Inst.Server.SendStartLevel();
+        PauseLobbyPatch.Multi_StartLevel();
         StartVoting();
     }
 
+    [MultiRpc]
+    public static async void Multi_CheckLevelIds(List<ulong> levelIds)
+    {
+        try
+        {
+            List<ulong> unknownLevelIds = new();
+            for (var i = 0; i < levelIds.Count; i++)
+            {
+                ulong levelId = levelIds[i];
+                bool hasLevel = false;
+                do
+                {
+                    if (ArcadeLevelDataManager.Inst.GetLocalCustomLevel(levelId.ToString()))
+                    {
+                        hasLevel = true;
+                        break;
+                    }
+
+                    await Task.Delay(500);
+                } while (SteamWorkshopFacepunch.inst.isLoadingLevels);
+
+                if (!hasLevel)
+                {
+                    unknownLevelIds.Add(levelId);
+                }
+                Inst.CreateLevelEntry(levelId, i);
+            }
+            
+            PAM.Logger.LogInfo($"requesting audio of [{unknownLevelIds.Count}] levels");
+            Server_UnknownLevelIds(null, unknownLevelIds);
+        }
+        catch (Exception _)
+        {
+            
+        }
+    }
+
+    [ServerRpc]
+    public static void Server_UnknownLevelIds(ClientNetworkConnection conn, List<ulong> levelIds)
+    {
+        if (!Inst)
+        {
+            return;
+        }
+
+        foreach (var levelId in levelIds)
+        {
+
+            if (!Inst.GetVGLevel(levelId, out var songData))
+            {
+                PAM.Logger.LogFatal("client asked for level id not in the picked challenge levels");
+                continue;
+            }
+
+            PAM.Logger.LogInfo($"Client [{conn.Address}] has asked for [{levelIds.Count}] levels");
+
+            const int separator = 131000;
+            int offset = 0;
+            while (true)
+            {
+                if (offset + separator < songData.Item1.Length)
+                {
+                    ArraySegment<short> segment = new(songData.Item1, offset, separator);
+                    Client_AudioData(conn, levelId, songData.Item2, songData.Item3, segment, false);
+                    offset += separator + 1;
+                }
+                else
+                {
+                    ArraySegment<short> segment = new ArraySegment<short>(songData.Item1, offset,
+                        Mathf.FloorToInt(songData.Item1.Length - offset));
+                    Client_AudioData(conn, levelId, songData.Item2, songData.Item3, segment, true);
+                    break;
+                }
+            }
+        }
+    }
+
+    private static readonly List<float> AudioDataBuffer = new(400000);
+    private static ulong _lastId;
+    
+    [ClientRpc]
+    public static void Client_AudioData(ClientNetworkConnection conn, ulong audioID, int frequency, int channels, Span<short> songData, bool last)
+    {
+        PAM.Logger.LogInfo("Received audio data");
+    
+        if (audioID != _lastId)
+        {
+            _lastId = audioID;
+            AudioDataBuffer.Clear();
+        }
+        
+        foreach (var f in songData)
+        {
+            AudioDataBuffer.Add((float)f / short.MaxValue); //add range doesnt work, and ToArray may allocate a lot of memory
+        }
+
+        if (!last)
+        {
+            return;
+        }
+      
+        PAM.Logger.LogInfo($"Got all audio data for level [{audioID}]");
+        
+        var newClip = AudioClip.Create(audioID.ToString(), AudioDataBuffer.Count / channels, channels, frequency, false);
+        newClip.SetData(AudioDataBuffer.ToArray(), 0); //this to array is specially bad cuz its making 2 copies, may fix later
+        newClip.LoadAudioData();
+        
+        AudioDataBuffer.Clear();
+
+        if (Inst)
+        {
+            Inst.SetLevelSong(audioID, newClip);
+        }
+    }
+    
+    
     void SpawnPlayers_Multiplayer()
     {
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
@@ -610,7 +736,7 @@ public class ChallengeManager : MonoBehaviour
             }
             VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, new Action<int, Vector3>((_,_2) => {}), new Action<Vector3>((_) => {}),new Action<Vector3>((_) => {}), 3);
         }
-        else if (SteamManager.Inst.Client.Connected)
+        else
         {
             foreach (var vgPlayerData in GlobalsManager.Players)
             {
@@ -760,7 +886,7 @@ public class VoterCell : MonoBehaviour
             return;
         }
         
-        SteamManager.Inst.Client.SendChallengeVote(Level.SteamInfo.ItemID);
+        Server_LevelVoted(null, Level.SteamInfo.ItemID);
     }
 
     private void OnTriggerExit2D(Collider2D other)
@@ -794,5 +920,19 @@ public class VoterCell : MonoBehaviour
         _ghostUIElement.Stutter(false);
         Color color = selected ? new Color(1f, 0.815f, 0f) : Color.white;
         _border.color = color;
+    }
+
+    [ServerRpc]
+    public static void Server_LevelVoted(ClientNetworkConnection conn, ulong level)
+    {
+        if (!conn.TryGetSteamId(out SteamId id))
+        {
+            return;
+        }
+        
+        if (ChallengeManager.Inst)
+        {
+            ChallengeManager.Inst.PlayerVote(id, level);  
+        }
     }
 }

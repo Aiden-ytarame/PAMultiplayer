@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using HarmonyLib;
 using Newtonsoft.Json;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
 using PAMultiplayer.Managers.MenuManagers;
-using Steamworks.Data;
 using UnityEngine;
 
 namespace PAMultiplayer.Patch;
@@ -44,7 +44,7 @@ public static class DebugControllerPatch
                         }
                         
                         GameManager.Inst.RewindToCheckpoint(index);
-                        SteamManager.Inst.Server?.SendRewindToCheckpoint(index);
+                        RewindHandler.Multi_RewindToCheckpoint(index);
                     }
                     else
                     {
@@ -210,7 +210,7 @@ public static class DebugControllerPatch
                     __instance.AddLog("Showing all players.");
                     if (GlobalsManager.IsHosting)
                     {
-                        foreach (var player in SteamManager.Inst.Server.ConnectionWrappers)
+                        foreach (var player in PaMNetworkManager.PamInstance.ConnectionWrappers)
                         {
                             __instance.AddLog($"ID [{player.Value}], Name [{GlobalsManager.Players[player.Key.ConnectionId].Name}]");
                         }
@@ -235,15 +235,9 @@ public static class DebugControllerPatch
                         __instance.AddLog("Not in multiplayer or not the host. not kicking player.");
                         return;
                     }
-
-
-                    if (SteamManager.Inst.Server.TryToKickPlayer(playerId))
-                    {
-                        __instance.AddLog("Kicked player from server.");
-                        return;
-                    }
-
-                    __instance.AddLog("Failed Kicked player from server.");
+                    
+                    PaMNetworkManager.PamInstance.KickClient(playerId);
+                    __instance.AddLog("Attempting to kick player from server.");
                 }));
         __instance.CommandList.Add(kickPlayerCommand);
         

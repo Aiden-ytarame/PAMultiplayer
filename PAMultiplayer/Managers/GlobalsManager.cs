@@ -22,6 +22,7 @@ namespace PAMultiplayer.Managers
         public static SteamId LocalPlayerId;
         public static int LocalPlayerObjectId;
         public static readonly Dictionary<SteamId, PlayerData> Players = new();
+        public static readonly Dictionary<int, SteamId> ConnIdToSteamId = new();
         
         public static List<string> Queue = new();
         

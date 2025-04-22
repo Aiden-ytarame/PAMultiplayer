@@ -6,7 +6,9 @@ using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using Il2CppInterop.Runtime;
 using Il2CppSystems.SceneManagement;
+using AttributeNetworkWrapper.Core;
 using Newtonsoft.Json;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
 using PAMultiplayer.Managers.MenuManagers;
 using SimpleJSON;
@@ -74,7 +76,7 @@ public class GameManagerPatch
             {
                 if (GlobalsManager.IsMultiplayer && GlobalsManager.IsHosting)
                 {
-                    SteamManager.Inst.Server.SendOpenChallenge();
+                    Multi_OpenChallenge();
                 }
                 SceneLoader.Inst.LoadSceneGroup("Challenge");
                 return;
@@ -142,7 +144,7 @@ public class GameManagerPatch
         {
             SceneLoader.Inst.manager.AddToLoadingTasks("Connecting to Server", Task.Run(async () =>
             {
-                while (SteamManager.Inst.Client == null || !SteamManager.Inst.Client.Connected)
+                while (PaMNetworkManager.PamInstance == null || !AttributeNetworkWrapper.NetworkManager.Instance.TransportActive)
                 {
                     await Task.Delay(100);
                 }
@@ -347,7 +349,7 @@ public class GameManagerPatch
             }
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
         }
-        else if (SteamManager.Inst.Client.Connected)
+        else if (AttributeNetworkWrapper.NetworkManager.Instance != null)
         {
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
             foreach (var vgPlayerData in GlobalsManager.Players)
@@ -362,7 +364,7 @@ public class GameManagerPatch
             }
             else
             {
-                SteamManager.Inst.Client.SendRequestLobbyState();
+                Server_RequestLobbyState(null);
             }
         }
         else
@@ -378,7 +380,112 @@ public class GameManagerPatch
             setupLevelPresence("Playing Multiplayer!");
         }
     }
+
+    public async static void Server_RequestLobbyState(ClientNetworkConnection conn)
+    {
+        try
+        {
+            var endScreen = Object.FindFirstObjectByType<LevelEndScreen>();
+            if (!endScreen)
+            {
+                return;
+            }
+
+            while (GameManager.Inst.CurGameState == GameManager.GameState.Reversing)
+            {
+                await Task.Delay(200);
+            }
+
+            List<ulong> playerIds = new();
+            List<short> healths = new();
+            foreach (var playerDataPair in GlobalsManager.Players)
+            {
+                playerIds.Add(playerDataPair.Key);
+                if (playerDataPair.Value.VGPlayerData.PlayerObject)
+                {
+                    healths.Add((short)playerDataPair.Value.VGPlayerData.PlayerObject.Health);
+                }
+                else
+                {
+                    healths.Add(0);
+                }
+            }
+
+            Client_LobbyState(conn, endScreen.Hits.Count, GameManager.Inst.CurrentSongTime, playerIds,
+                healths.ToArray());
+
+            if (!conn.TryGetSteamId(out SteamId id))
+            {
+                return;
+            }
+
+            if (!VGPlayerManager.Inst.players.Contains(GlobalsManager.Players[id].VGPlayerData))
+            {
+                VGPlayerManager.Inst.players.Add(GlobalsManager.Players[id].VGPlayerData);
+            }
+
+            Multi_LatePlayerJoin(id);
+        }
+        catch (Exception e)
+        {
+            PAM.Logger.LogError(e);
+        }
+    }
+
     
+    [ClientRpc]
+    public static void Client_LobbyState(ClientNetworkConnection conn, int hitCount, float currentTime,
+        List<ulong> playerIds, Span<short> healths) //weird types is cuz they already have writers, ill fix later
+    {
+        LevelEndScreen.ActionMoment actionMoment = new();  
+        actionMoment.position = Vector3.zero;
+        actionMoment.time = currentTime;
+        
+        var endScreen = Object.FindFirstObjectByType<LevelEndScreen>();//.Hits
+        if (!endScreen)
+        {
+            return;
+        }
+        for (int i = 0; i < hitCount; i++)
+        {
+            endScreen.Hits.Add(actionMoment);
+        }
+        
+        if (GlobalsManager.HasLoadedLobbyInfo)
+        {
+            return;
+        }
+        GlobalsManager.HasLoadedLobbyInfo = true;
+        
+        GameManager.Inst.UnPause();
+        
+        AudioManager.Inst.CurrentAudioSource.time = currentTime;
+        VGPlayerManager.inst.RespawnPlayers();
+        
+        for (var i = 0; i < playerIds.Count; i++)
+        {
+            var id = playerIds[i];
+            var health = healths[i];
+
+            if (GlobalsManager.Players.TryGetValue(id, out var player))
+            {
+                player.VGPlayerData.PlayerObject.Health = health;
+                if (health <= 0)
+                {
+                    Object.Destroy(player.VGPlayerData.PlayerObject);
+                }
+            }
+        }
+    }
+
+    [MultiRpc]
+    public static void Multi_LatePlayerJoin(SteamId playerId)
+    {
+        if (!VGPlayerManager.Inst.players.Contains(GlobalsManager.Players[playerId].VGPlayerData))
+        {
+            VGPlayerManager.Inst.players.Add(GlobalsManager.Players[playerId].VGPlayerData);
+        }
+    }
     /// <summary>
     /// download the levels if not downloaded
     /// and wait for the loading screen to end (game doesnt do that by default)
@@ -402,7 +509,7 @@ public class GameManagerPatch
              else
              {
                  SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                 yield return new WaitUntil(new Func<bool>(() => SteamManager.Inst.Client.Connected));
+                 yield return new WaitUntil(new Func<bool>(() => AttributeNetworkWrapper.NetworkManager.Instance.TransportActive));
                  yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
                  
                  if (GlobalsManager.LobbyState == LobbyState.Challenge)
@@ -525,7 +632,7 @@ public class GameManagerPatch
 
                      if (ulong.TryParse(GlobalsManager.LevelId, out var nextQueueId))
                      {
-                         SteamManager.Inst.Server.SendNextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
+                         Multi_NextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
                      }
                      else
                      {
@@ -550,7 +657,7 @@ public class GameManagerPatch
                      PAM.Logger.LogError(SteamLobbyManager.Inst.RandSeed);
                      if (ulong.TryParse(GlobalsManager.LevelId, out var nextQueueId))
                      {
-                         SteamManager.Inst.Server.SendNextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
+                        Multi_NextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
                      }
                      else
                      {
@@ -616,7 +723,40 @@ public class GameManagerPatch
          gm.PlayGame();
     }
 
-    
+    [MultiRpc]
+    public static void Multi_NextQueueLevel(ulong levelID, int seed)
+    {
+        PAM.Logger.LogInfo($"New random seed : {seed}");
+
+        GlobalsManager.LevelId = levelID.ToString();
+        SteamLobbyManager.Inst.RandSeed = seed;
+        GlobalsManager.IsReloadingLobby = true;
+        GlobalsManager.LobbyState = SteamLobbyManager.LobbyState.Lobby;
+        GlobalsManager.HasLoadedLobbyInfo = true;
+        SceneLoader.Inst.manager.ClearLoadingTasks();
+   
+        VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId);
+        if (level)
+        {
+            ArcadeManager.Inst.CurrentArcadeLevel = level;
+            SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+            return;
+        }
+
+        GlobalsManager.IsDownloading = true;
+        PAM.Logger.LogError($"You did not have the lobby's level downloaded!, Downloading Level...");
+        SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+    }
+
+    [MultiRpc]
+    public static void Multi_OpenChallenge()
+    {
+        SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "0");
+        GlobalsManager.IsReloadingLobby = true;
+        GlobalsManager.HasLoadedLobbyInfo = true;
+        SceneLoader.Inst.manager.ClearLoadingTasks();
+        SceneLoader.Inst.LoadSceneGroup("Challenge");
+    }
     static void InitSteamInfo(ref VGLevel _level, PublishedFileId _id, string _folder, Item _item)
     {
         if (string.IsNullOrEmpty(_folder)) return;
