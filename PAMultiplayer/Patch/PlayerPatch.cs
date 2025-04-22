@@ -1,8 +1,7 @@
 ﻿using System;
 using HarmonyLib;
-using Network_Test.Core;
-using Network_Test.Core.Rpc;
-using PAMultiplayer.AttributeNetworkWrapper;
+using AttributeNetworkWrapper.Core;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
 using Rewired;
 using Steamworks;

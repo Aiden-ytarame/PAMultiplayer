@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using HarmonyLib;
 using Newtonsoft.Json;
-using PAMultiplayer.AttributeNetworkWrapper;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
 using PAMultiplayer.Managers.MenuManagers;
-using Steamworks.Data;
 using UnityEngine;
 
 namespace PAMultiplayer.Patch;

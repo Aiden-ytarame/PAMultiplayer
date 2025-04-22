@@ -1,12 +1,11 @@
 using System.Collections.Generic;
 using Il2CppSystems.SceneManagement;
-using Network_Test.Core;
-using Network_Test.Core.Rpc;
+using AttributeNetworkWrapper.Core;
 using PAMultiplayer.Managers;
 using Steamworks;
-using NetworkManager = Network_Test.NetworkManager;
+using NetworkManager = AttributeNetworkWrapper.NetworkManager;
 
-namespace PAMultiplayer.AttributeNetworkWrapper;
+namespace PAMultiplayer.AttributeNetworkWrapperOverrides;
 
 public class PaMNetworkManager : NetworkManager
 {
@@ -65,27 +64,30 @@ public class PaMNetworkManager : NetworkManager
         
         foreach (var keyValuePair in GlobalsManager.Players)
         {
-            RegisterPlayerId(connection, keyValuePair.Key, keyValuePair.Value.VGPlayerData.PlayerID, GlobalsManager.Players.Count);
+            Client_RegisterPlayerId(connection, keyValuePair.Key, keyValuePair.Value.VGPlayerData.PlayerID, GlobalsManager.Players.Count);
         }
         
         SteamId steamId = ulong.Parse(connection.Address);
         int id = GlobalsManager.Players[steamId].VGPlayerData.PlayerID;
         GlobalsManager.ConnIdToSteamId.Add(connection.ConnectionId, steamId);
         
-        RegisterJoinedPlayerId(steamId, id);
+        Multi_RegisterJoinedPlayerId(steamId, id);
         
+        PAM.Logger.LogInfo($"Player {connection.Address} joined game server.");
     }
 
     public override void OnServerClientDisconnected(ClientNetworkConnection connection)
     {
         base.OnServerClientDisconnected(connection);
         GlobalsManager.ConnIdToSteamId.Remove(connection.ConnectionId);
+        
+        PAM.Logger.LogInfo($"Player {connection.Address} left game server.");
     }
     
     private static int _amountOfInfo;
 
     [ClientRpc]
-    public static void RegisterPlayerId(ClientNetworkConnection conn, SteamId steamID, int id, int amount)
+    public static void Client_RegisterPlayerId(ClientNetworkConnection conn, SteamId steamID, int id, int amount)
     {
         GlobalsManager.HasLoadedBasePlayerIds = false;
         
@@ -117,11 +119,9 @@ public class PaMNetworkManager : NetworkManager
     }
     
     [MultiRpc]
-    public static void RegisterJoinedPlayerId(SteamId steamID, int id)
+    public static void Multi_RegisterJoinedPlayerId(SteamId steamID, int id)
     {
-        GlobalsManager.HasLoadedBasePlayerIds = false;
-        
-        PAM.Logger.LogInfo($"Player Id from [{id}] Received");
+        PAM.Logger.LogInfo($"Multi Player Id from [{id}] Received");
 
         if (GlobalsManager.Players.TryGetValue(steamID, out var player))
         {

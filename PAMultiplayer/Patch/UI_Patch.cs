@@ -4,7 +4,7 @@ using System.Reflection;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Cpp2IL.Core.Extensions;
 using HarmonyLib;
-using Network_Test.Core.Rpc;
+using AttributeNetworkWrapper.Core;
 using PAMultiplayer.Helper;
 using UnityEngine;
 using PAMultiplayer.Managers;

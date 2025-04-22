@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Network_Test.Core;
+using AttributeNetworkWrapper.Core;
 using PAMultiplayer.Managers;
 using Steamworks;
 using UnityEngine;
 
-namespace PAMultiplayer.AttributeNetworkWrapper;
+namespace PAMultiplayer.AttributeNetworkWrapperOverrides;
 
 public static class AttrWrapperExtension
 {

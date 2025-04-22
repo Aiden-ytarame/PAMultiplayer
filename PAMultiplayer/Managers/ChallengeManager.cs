@@ -7,9 +7,8 @@ using System.Threading.Tasks;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppSystems.SceneManagement;
-using Network_Test.Core;
-using Network_Test.Core.Rpc;
-using PAMultiplayer.AttributeNetworkWrapper;
+using AttributeNetworkWrapper.Core;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Steamworks;
 using TMPro;
@@ -538,7 +537,7 @@ public class ChallengeManager : MonoBehaviour
             else
             {
                 SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                yield return new WaitUntil(new Func<bool>(() => Network_Test.NetworkManager.Instance.TransportActive));
+                yield return new WaitUntil(new Func<bool>(() => AttributeNetworkWrapper.NetworkManager.Instance.TransportActive));
                 yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
             }
         }

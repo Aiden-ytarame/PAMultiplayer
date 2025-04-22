@@ -1,8 +1,7 @@
 ﻿using BepInEx.Unity.IL2CPP.UnityEngine;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
-using Network_Test.Core;
-using Network_Test.Core.Rpc;
-using PAMultiplayer.AttributeNetworkWrapper;
+using AttributeNetworkWrapper.Core;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Rewired;
 using Steamworks;
@@ -54,7 +53,7 @@ namespace PAMultiplayer.Managers
 
             if (_paMNetworkManager == null)
             {
-                _paMNetworkManager = (PaMNetworkManager)Network_Test.NetworkManager.Instance;
+                _paMNetworkManager = (PaMNetworkManager)AttributeNetworkWrapper.NetworkManager.Instance;
             }
             
             _paMNetworkManager?.Receive();

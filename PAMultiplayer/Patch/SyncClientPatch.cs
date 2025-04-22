@@ -1,7 +1,7 @@
 using System;
 using HarmonyLib;
 using Il2CppInterop.Runtime;
-using Network_Test.Core.Rpc;
+using AttributeNetworkWrapper.Core;
 using PAMultiplayer.Managers;
 using UnityEngine;
 using Random = UnityEngine.Random;

@@ -1,10 +1,10 @@
 using System;
 using HarmonyLib;
-using PAMultiplayer.AttributeNetworkWrapper;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
-using WrapperNetworkManager = Network_Test.NetworkManager;
+using WrapperNetworkManager = AttributeNetworkWrapper.NetworkManager;
 namespace PAMultiplayer.Managers;
 
 /// <summary>

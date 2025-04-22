@@ -1,13 +1,12 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
-using Network_Test;
-using Network_Test.Core;
+using AttributeNetworkWrapper.Core;
 using Steamworks;
 using Steamworks.Data;
-using SendType = Network_Test.Core.Rpc.SendType;
+using SendType = AttributeNetworkWrapper.Core.SendType;
 
-namespace PAMultiplayer.AttributeNetworkWrapper;
+namespace PAMultiplayer.AttributeNetworkWrapperOverrides;
 
 public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionManager
 {
@@ -23,7 +22,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     Dictionary<int, Connection> _idToConnection = new();
     public readonly Dictionary<ConnectionWrapper, int> ConnectionWrappers = new();
     
-    private byte[] _buffer = new byte[1024];
+    protected static byte[] _buffer = new byte[1024];
 
     int GetNextConnectionId()
     {
@@ -50,7 +49,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
 
     void AssureBufferSpace(int size)
     {
-        if (_buffer.Length <= size || size <= 0)
+        if (_buffer.Length >= size || size <= 0)
         {
             return;
         }
@@ -154,7 +153,11 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     }
 
     //SocketManager (server)
-    public void OnConnecting(Connection connection, ConnectionInfo info){ }
+    public void OnConnecting(Connection connection, ConnectionInfo info)
+    {
+        connection.Accept();
+        PAM.Logger.LogInfo($"Player {info.Identity.SteamId} is connecting to game server.");
+    }
 
     public void OnConnected(Connection connection, ConnectionInfo info)
     {
@@ -168,6 +171,8 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
 
     public void OnDisconnected(Connection connection, ConnectionInfo info)
     {
+        connection.Close();
+        
         int id = -1;
         foreach (var keyValuePair in _idToConnection)
         {

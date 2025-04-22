@@ -6,10 +6,9 @@ using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using Il2CppInterop.Runtime;
 using Il2CppSystems.SceneManagement;
-using Network_Test.Core;
-using Network_Test.Core.Rpc;
+using AttributeNetworkWrapper.Core;
 using Newtonsoft.Json;
-using PAMultiplayer.AttributeNetworkWrapper;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
 using PAMultiplayer.Managers.MenuManagers;
 using SimpleJSON;
@@ -145,7 +144,7 @@ public class GameManagerPatch
         {
             SceneLoader.Inst.manager.AddToLoadingTasks("Connecting to Server", Task.Run(async () =>
             {
-                while (PaMNetworkManager.PamInstance == null || !Network_Test.NetworkManager.Instance.TransportActive)
+                while (PaMNetworkManager.PamInstance == null || !AttributeNetworkWrapper.NetworkManager.Instance.TransportActive)
                 {
                     await Task.Delay(100);
                 }
@@ -350,7 +349,7 @@ public class GameManagerPatch
             }
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
         }
-        else if (Network_Test.NetworkManager.Instance != null)
+        else if (AttributeNetworkWrapper.NetworkManager.Instance != null)
         {
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
             foreach (var vgPlayerData in GlobalsManager.Players)
@@ -510,7 +509,7 @@ public class GameManagerPatch
              else
              {
                  SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                 yield return new WaitUntil(new Func<bool>(() => Network_Test.NetworkManager.Instance.TransportActive));
+                 yield return new WaitUntil(new Func<bool>(() => AttributeNetworkWrapper.NetworkManager.Instance.TransportActive));
                  yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
                  
                  if (GlobalsManager.LobbyState == LobbyState.Challenge)
