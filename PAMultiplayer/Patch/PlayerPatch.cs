@@ -13,16 +13,23 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch(typeof(VGPlayer))]
 public class Player_Patch
 {
+    
     [HarmonyPatch(nameof(VGPlayer.OnChildTriggerEnter))]
     [HarmonyPatch(nameof(VGPlayer.OnChildTriggerStay))]
     [HarmonyPrefix]
-    static bool PreCollision(ref VGPlayer __instance)
+    static bool PreCollision(VGPlayer __instance, Collider2D _other)
     {
-        if (!GlobalsManager.IsMultiplayer) return true;
+        if (GlobalsManager.IsMultiplayer)
+        {
+            if (!__instance.IsLocalPlayer())
+                return false;
+        }
 
-        if (__instance.IsLocalPlayer())
-            return true;
-            
+        if (__instance.CheckForObjectCollision(_other))
+        {
+            __instance.PlayerHit();
+        }
+        
         return false; //only collide if is local player
     }
 

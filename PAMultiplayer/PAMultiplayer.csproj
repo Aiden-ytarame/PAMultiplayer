@@ -17,7 +17,7 @@
     <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
-	   <PackageReference Include="AttributeNetworkWrapper.Fody" Version="1.0.4" />
+	   <PackageReference Include="AttributeNetworkWrapper.Fody" Version="1.0.0" />
 	   <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />
 	  <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
 	  <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
