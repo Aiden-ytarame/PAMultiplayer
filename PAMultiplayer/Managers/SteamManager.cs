@@ -132,7 +132,7 @@ public class SystemManagerPatch
     [HarmonyPostfix]
     static void AddSteamManager(ref SystemManager __instance)
     {
-        PAM.Logger.LogError("Adding Steam Stuff");
+        PAM.Logger.LogInfo("Adding Steam Stuff");
         __instance.gameObject.AddComponent<SteamManager>();
         __instance.gameObject.AddComponent<SteamLobbyManager>();
     }

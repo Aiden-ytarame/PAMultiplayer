@@ -24,21 +24,12 @@ public class PAM : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "1.0.1";
+    public const string Version = "1.0.3";
 
     public override void Load()
     {
         try
         {
-            ClassInjector.RegisterTypeInIl2Cpp<TablePostprocessor>(new RegisterTypeOptions
-            {
-                Interfaces = new Il2CppInterfaceCollection(new[] { typeof(ITablePostprocessor) })
-            });
-            var postprocessor = new TablePostprocessor();
-            var provider = new ITablePostprocessor(postprocessor.Pointer);
-        
-            LocalizationSettings.StringDatabase.TablePostprocessor = provider;
-            
             ClassInjector.RegisterTypeInIl2Cpp<NetworkManager>();
             ClassInjector.RegisterTypeInIl2Cpp<QueueButton>();
             ClassInjector.RegisterTypeInIl2Cpp<LobbyScreenManager>();

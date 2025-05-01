@@ -317,8 +317,10 @@ namespace PAMultiplayer.Patch
             }));
         }
 
-        const string updateStr = "<sprite name=info> Update Multiplayer";
-        static bool isUpdating;
+        const string UpdateStr = "<sprite name=info> Update Multiplayer";
+        const string RestartStr = "<sprite name=info> Restart the game";
+        static bool _isUpdating;
+        static bool _updated;
         static IEnumerator FetchGithubReleases()
         {
             UnityWebRequest request =
@@ -355,31 +357,27 @@ namespace PAMultiplayer.Patch
             
             TextMeshProUGUI updateText = updateMod.GetComponentInChildren<TextMeshProUGUI>();
             
-            updateText.text = updateStr;
-            UIStateManager.Inst.RefreshTextCache(updateText, updateStr);
+            string updText = _updated ? RestartStr : UpdateStr;
+            updateText.text = updText;
+            UIStateManager.Inst.RefreshTextCache(updateText, updText);
             
             var button = updateMod.GetComponent<MultiElementButton>();
             button.onClick = new Button.ButtonClickedEvent();
             button.onClick.AddListener(new Action(() =>
             {
-                if (isUpdating)
+                if (_isUpdating || _updated)
                 {
                     return;
                 }
-                isUpdating = true;
+                _isUpdating = true;
                 
                 const string downloadingStr = "<sprite name=info> Updating Multiplayer...";
                 updateText.text = downloadingStr;
                 UIStateManager.Inst.RefreshTextCache(updateText, downloadingStr);
                 
                 DataManager.inst.StartCoroutine(DownloadGithubRelease(updateText).WrapToIl2Cpp());
-                //Application.OpenURL("https://github.com/Aiden-ytarame/PAMultiplayer/releases/latest");
             }));
             
-            
-           // updateMod.GetComponentInChildren<GameObjectLocalizer>().TrackedObjects._items[0]
-                //.GetTrackedProperty<LocalizedStringProperty>("m_text").LocalizedString
-               // .SetReference("Localization", "ui.multiplayer.update");
             
             //stupid workaround to getting the wrong canvas
             GameObject.Find("Canvas/Window").transform.parent.GetComponent<UI_Book>().Pages[0].SubElements
@@ -405,7 +403,7 @@ namespace PAMultiplayer.Patch
             
             try
             {
-                File.Move(fullPath, Path.GetDirectoryName(fullPath) + "\\PAMultiplayerOld", true);
+                File.Move(fullPath, Path.GetDirectoryName(fullPath) + "\\PAMultiplayerOld.dll", true);
             }
             catch (Exception e)
             {
@@ -414,20 +412,33 @@ namespace PAMultiplayer.Patch
                 Fail();
                 yield break;
             }
-          
-            File.WriteAllBytes(fullPath, downloadRequest.downloadHandler.data); //async throws here due to bepinex
+
+            try
+            {
+                File.WriteAllBytesAsync(fullPath, downloadRequest.downloadHandler.data); //async throws everytime due to bepinex
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
             
             downloadRequest.Dispose();
-            Application.Quit();
+            
+            _updated = true;
+            if (button)
+            {
+                button.text = RestartStr;
+                UIStateManager.Inst.RefreshTextCache(button, RestartStr);
+            }
             yield break;
 
             void Fail()
             {
-                isUpdating = false;
+                _isUpdating = false;
                 if (button)
                 {
-                    button.text = updateStr;
-                    UIStateManager.Inst.RefreshTextCache(button, updateStr);
+                    button.text = UpdateStr;
+                    UIStateManager.Inst.RefreshTextCache(button, UpdateStr);
                 }
             }
         }
