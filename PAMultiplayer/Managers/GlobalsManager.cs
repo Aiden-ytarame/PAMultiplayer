@@ -15,6 +15,7 @@ namespace PAMultiplayer.Managers
     }
     /// <summary>
     /// Holds global variables like Local player steamId and Player list
+    /// Most of this could be moved to PamNetworkManager, but we're too far in ig
     /// </summary>
     public static class GlobalsManager
     {

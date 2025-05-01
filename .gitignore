@@ -1,6 +1,7 @@
 lib/
 Bin/
 obj/
+**/costura**/
 .vs/
 .md
 *.bak

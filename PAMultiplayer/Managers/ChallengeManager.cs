@@ -624,9 +624,9 @@ public class ChallengeManager : MonoBehaviour
             PAM.Logger.LogInfo($"requesting audio of [{unknownLevelIds.Count}] levels");
             Server_UnknownLevelIds(null, unknownLevelIds);
         }
-        catch (Exception _)
+        catch (Exception)
         {
-            
+            // ignored
         }
     }
 
@@ -637,6 +637,8 @@ public class ChallengeManager : MonoBehaviour
         {
             return;
         }
+                                                                                     
+        PAM.Logger.LogInfo($"Client [{conn.Address}] has asked for [{levelIds.Count}] levels");
 
         foreach (var levelId in levelIds)
         {
@@ -646,8 +648,6 @@ public class ChallengeManager : MonoBehaviour
                 PAM.Logger.LogFatal("client asked for level id not in the picked challenge levels");
                 continue;
             }
-
-            PAM.Logger.LogInfo($"Client [{conn.Address}] has asked for [{levelIds.Count}] levels");
 
             const int separator = 131000;
             int offset = 0;

@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections;
+using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Cpp2IL.Core.Extensions;
 using HarmonyLib;
 using AttributeNetworkWrapper.Core;
+using BepInEx;
 using PAMultiplayer.Helper;
 using UnityEngine;
 using PAMultiplayer.Managers;
@@ -314,21 +317,26 @@ namespace PAMultiplayer.Patch
             }));
         }
 
+        const string updateStr = "<sprite name=info> Update Multiplayer";
+        static bool isUpdating;
         static IEnumerator FetchGithubReleases()
         {
             UnityWebRequest request =
                 UnityWebRequest.Get("https://api.github.com/repos/Aiden-ytarame/PAMultiplayer/releases/latest");
-
+            
             yield return request.SendWebRequest();
 
             if (request.result != UnityWebRequest.Result.Success)
             {
                 PAM.Logger.LogError("Failed to fetch Github Release, oof");
+                request.Dispose();
                 yield break;
             }
 
             JSONNode latestRelease = JSON.Parse(request.downloadHandler.text);
 
+            request.Dispose();
+            
             bool isLatest = Version.Parse(latestRelease["tag_name"].Value.Substring(1)).CompareTo(Version.Parse(PAM.Version)) <= 0;
 
             if (isLatest)
@@ -345,21 +353,83 @@ namespace PAMultiplayer.Patch
             updateMod.name = "Update MP";
             updateMod.SetActive(true);
             
+            TextMeshProUGUI updateText = updateMod.GetComponentInChildren<TextMeshProUGUI>();
+            
+            updateText.text = updateStr;
+            UIStateManager.Inst.RefreshTextCache(updateText, updateStr);
+            
             var button = updateMod.GetComponent<MultiElementButton>();
-        
             button.onClick = new Button.ButtonClickedEvent();
             button.onClick.AddListener(new Action(() =>
             {
-                Application.OpenURL("https://github.com/Aiden-ytarame/PAMultiplayer/releases/latest");
+                if (isUpdating)
+                {
+                    return;
+                }
+                isUpdating = true;
+                
+                const string downloadingStr = "<sprite name=info> Updating Multiplayer...";
+                updateText.text = downloadingStr;
+                UIStateManager.Inst.RefreshTextCache(updateText, downloadingStr);
+                
+                DataManager.inst.StartCoroutine(DownloadGithubRelease(updateText).WrapToIl2Cpp());
+                //Application.OpenURL("https://github.com/Aiden-ytarame/PAMultiplayer/releases/latest");
             }));
-
-            updateMod.GetComponentInChildren<GameObjectLocalizer>().TrackedObjects._items[0]
-                .GetTrackedProperty<LocalizedStringProperty>("m_text").LocalizedString
-                .SetReference("Localization", "ui.multiplayer.update");
+            
+            
+           // updateMod.GetComponentInChildren<GameObjectLocalizer>().TrackedObjects._items[0]
+                //.GetTrackedProperty<LocalizedStringProperty>("m_text").LocalizedString
+               // .SetReference("Localization", "ui.multiplayer.update");
             
             //stupid workaround to getting the wrong canvas
             GameObject.Find("Canvas/Window").transform.parent.GetComponent<UI_Book>().Pages[0].SubElements
                 .Add(updateMod.GetComponent<UI_Button>());
+        }
+
+        static IEnumerator DownloadGithubRelease(TextMeshProUGUI button)
+        {
+            UnityWebRequest downloadRequest =
+                UnityWebRequest.Get("https://github.com/Aiden-ytarame/PAMultiplayer/releases/latest/download/PAMultiplayer.dll");
+          
+            yield return downloadRequest.SendWebRequest();
+            
+            if (downloadRequest.result != UnityWebRequest.Result.Success)
+            {
+                PAM.Logger.LogError("Failed to download Github Release, oof");
+                PAM.Logger.LogError(downloadRequest.error);
+                Fail();
+                yield break;
+            }
+
+            string fullPath = Assembly.GetExecutingAssembly().Location;
+            
+            try
+            {
+                File.Move(fullPath, Path.GetDirectoryName(fullPath) + "\\PAMultiplayerOld", true);
+            }
+            catch (Exception e)
+            {
+                PAM.Logger.LogError(e);
+                downloadRequest.Dispose();
+                Fail();
+                yield break;
+            }
+          
+            File.WriteAllBytes(fullPath, downloadRequest.downloadHandler.data); //async throws here due to bepinex
+            
+            downloadRequest.Dispose();
+            Application.Quit();
+            yield break;
+
+            void Fail()
+            {
+                isUpdating = false;
+                if (button)
+                {
+                    button.text = updateStr;
+                    UIStateManager.Inst.RefreshTextCache(button, updateStr);
+                }
+            }
         }
     }
     /// <summary>

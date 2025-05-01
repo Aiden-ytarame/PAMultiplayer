@@ -381,6 +381,7 @@ public class GameManagerPatch
         }
     }
 
+    [ServerRpc]
     public async static void Server_RequestLobbyState(ClientNetworkConnection conn)
     {
         try
@@ -807,12 +808,29 @@ public class GameManagerPatch
         }
         PAM.Logger.LogInfo($"Downloading [{level.Title}] created by [{level.Owner.Name}]");
 
+       
         if (string.IsNullOrEmpty(level.Directory))
         {
             await level.Subscribe();
-            await level.DownloadAsync();
+            
+            for (int i = 0; i < 3; i++)
+            {
+                if (await level.DownloadAsync())
+                {
+                    break;
+                }
+                
+                PAM.Logger.LogWarning($"Failed to to download level, retrying.. [{i+1}/3]");
+                await Task.Delay(1000);
+            }
         }
 
+        if(!level.IsInstalled) 
+        {
+            FailLoad("Failed to download level");
+            return new Item();
+        }
+        
         GlobalsManager.IsDownloading = false;
         
         return level;

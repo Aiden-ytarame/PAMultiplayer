@@ -12,8 +12,8 @@ public class PaMNetworkManager : NetworkManager
     FacepunchSocketsTransport _facepunchtransport;
     public static PaMNetworkManager PamInstance { get; private set; }
 
-    public Dictionary<FacepunchSocketsTransport.ConnectionWrapper, int> ConnectionWrappers =>
-        _facepunchtransport.ConnectionWrappers;
+    public Dictionary<ulong, int> SteamIdToNetId =>
+        _facepunchtransport.SteamIdToNetId;
     
     public void Receive()
     {

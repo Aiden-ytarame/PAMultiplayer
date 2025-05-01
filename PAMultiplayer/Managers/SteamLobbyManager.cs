@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using Il2CppSystems.SceneManagement;
 using Newtonsoft.Json;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers.MenuManagers;
 using PAMultiplayer.Patch;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace PAMultiplayer.Managers;
 
@@ -48,8 +50,8 @@ public class SteamLobbyManager : MonoBehaviour
         
         SteamMatchmaking.OnLobbyCreated += OnLobbyCreated;
         SteamMatchmaking.OnLobbyEntered += OnLobbyEntered;
-        SteamMatchmaking.OnLobbyMemberJoined += OnLobbyMemberJoined;
         
+        SteamMatchmaking.OnLobbyMemberJoined += OnLobbyMemberJoined;
         SteamMatchmaking.OnLobbyMemberDisconnected += OnLobbyMemberDisconnected;
         SteamMatchmaking.OnLobbyMemberLeave += OnLobbyMemberDisconnected;
         
@@ -135,22 +137,38 @@ public class SteamLobbyManager : MonoBehaviour
         if (GlobalsManager.Players.TryGetValue(friend.Id, out var player))
         {
             string hex = VGPlayerManager.Inst.GetPlayerColorHex(player.VGPlayerData.PlayerID);
+            if (hex == "#FFFFFF")
+            {
+                hex = "FFFFFF";
+            }
             VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{friend.Name}</color>] Disconnected", 2.5f);
             
             VGPlayerManager.Inst.players.Remove(player.VGPlayerData);
             GlobalsManager.Players.Remove(friend.Id);
             
             VGPlayer playerObj = player.VGPlayerData.PlayerObject;
+
+            if (playerObj)
+            {
+                playerObj.DeathEvent?.Invoke(playerObj.Player_Wrapper.position);
+                playerObj.ClearEvents();
+                playerObj.PlayerDeath(0);
+            }
+
+
+            if (!GlobalsManager.IsHosting)
+            {
+                return;
+            }
             
-            if (!playerObj) return;
-            
-            playerObj.DeathEvent?.Invoke(playerObj.Player_Wrapper.position);
-            playerObj.ClearEvents();
-            playerObj.PlayerDeath(0);
+            if (PaMNetworkManager.PamInstance.SteamIdToNetId.TryGetValue(friend.Id, out var netId))
+            {
+                PaMNetworkManager.PamInstance.KickClient(netId);
+            }
         }
-        
     }
 
+   
     private void OnLobbyMemberJoined(Lobby lobby, Friend friend)
     {
         PAM.Logger.LogInfo($"Member Joined : [{friend.Name}]");
@@ -190,6 +208,11 @@ public class SteamLobbyManager : MonoBehaviour
         };
         
         string hex = VGPlayerManager.Inst.GetPlayerColorHex(newData.PlayerID);
+        if (hex == "#FFFFFF")
+        {
+            hex = "FFFFFF";
+        }
+        
         VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{friend.Name}</color>] Joined", 2.5f);
 
         if(GlobalsManager.Players.TryAdd(friend.Id, new PlayerData(newData, friend.Name)))

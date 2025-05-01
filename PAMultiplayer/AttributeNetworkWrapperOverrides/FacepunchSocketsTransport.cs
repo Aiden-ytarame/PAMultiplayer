@@ -10,17 +10,11 @@ namespace PAMultiplayer.AttributeNetworkWrapperOverrides;
 
 public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionManager
 {
-    public struct ConnectionWrapper(Connection connection, ulong connectionId)
-    {
-        public Connection Connection = connection;
-        public ulong ConnectionId = connectionId;
-    }
-    
     private SocketManager server;
     private ConnectionManager client;
     
     Dictionary<int, Connection> _idToConnection = new();
-    public readonly Dictionary<ConnectionWrapper, int> ConnectionWrappers = new();
+    public readonly Dictionary<ulong, int> SteamIdToNetId = new();
     
     protected static byte[] _buffer = new byte[1024];
 
@@ -164,7 +158,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
         int id = GetNextConnectionId();
         
         _idToConnection.Add(id, connection);
-        ConnectionWrappers.Add(new ConnectionWrapper(connection, info.Identity.SteamId), id);
+        SteamIdToNetId.Add(info.Identity.SteamId, id);
         
         OnServerClientConnected?.Invoke(new ClientNetworkConnection(id, info.Identity.SteamId.ToString()));
     }
@@ -172,30 +166,16 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     public void OnDisconnected(Connection connection, ConnectionInfo info)
     {
         connection.Close();
-        
-        int id = -1;
-        foreach (var keyValuePair in _idToConnection)
-        {
-            if (keyValuePair.Value == connection)
-            {
-                id = keyValuePair.Key;
-                break;
-            }
-        }
 
-        foreach (var keyValuePair in ConnectionWrappers)
+        if (!SteamIdToNetId.TryGetValue(info.Identity.SteamId, out var id))
         {
-            if (keyValuePair.Key.Connection == connection)
-            {
-                ConnectionWrappers.Remove(keyValuePair.Key);
-                break;
-            }
+            return;
         }
-        if (id != -1)
-        {
-            _idToConnection.Remove(id);
-            OnServerClientDisconnected?.Invoke(new ClientNetworkConnection(id, info.Identity.SteamId.ToString()));
-        }
+        
+        _idToConnection.Remove(id);
+        SteamIdToNetId.Remove(info.Identity.SteamId);
+        OnServerClientDisconnected?.Invoke(new ClientNetworkConnection(id, info.Identity.SteamId.ToString()));
+
     }
 
     public void OnMessage(Connection connection, NetIdentity identity, IntPtr data, int size, long messageNum, long recvTime,

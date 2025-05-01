@@ -105,7 +105,7 @@ public class LobbyScreenManager : MonoBehaviour
         LobbyMenu.ShowBase();
         LobbyMenu.SwapView("main");
         CameraDB.Inst.SetUIVolumeWeightIn(0.2f);
-
+      
         if (GlobalsManager.IsHosting)
         {
             ResumeButton.Select();
@@ -114,7 +114,6 @@ public class LobbyScreenManager : MonoBehaviour
         {
             QuitButton.Select();
         }
-
     }
     private void OnDestroy()
     {

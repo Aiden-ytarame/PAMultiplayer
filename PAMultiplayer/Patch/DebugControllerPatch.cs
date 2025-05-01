@@ -210,9 +210,9 @@ public static class DebugControllerPatch
                     __instance.AddLog("Showing all players.");
                     if (GlobalsManager.IsHosting)
                     {
-                        foreach (var player in PaMNetworkManager.PamInstance.ConnectionWrappers)
+                        foreach (var player in PaMNetworkManager.PamInstance.SteamIdToNetId)
                         {
-                            __instance.AddLog($"ID [{player.Value}], Name [{GlobalsManager.Players[player.Key.ConnectionId].Name}]");
+                            __instance.AddLog($"ID [{player.Value}], Name [{GlobalsManager.Players[player.Key].Name}]");
                         }
                         return;
                     }
@@ -241,12 +241,18 @@ public static class DebugControllerPatch
                 }));
         __instance.CommandList.Add(kickPlayerCommand);
         
-        DebugCommand<bool> privateCommand = new("set_Lobby_Privacy",
+        DebugCommand<string> privateCommand = new("set_Lobby_Privacy",
             "set the lobby privacy setting. (multiplayer mod, host)",
             "bool(private)",
-            new Action<bool>(
-                isPrivate =>
+            new Action<string>(
+                isPrivateStr =>
                 {
+                    if (!bool.TryParse(isPrivateStr.ToLower(), out bool isPrivate))
+                    {
+                        __instance.AddLog("Invalid parameter, pass \"true\" or \"false\".");
+                        return;
+                    }
+                    
                     if (!GlobalsManager.IsMultiplayer || !GlobalsManager.IsHosting)
                     {
                         __instance.AddLog("Not in multiplayer or not the host.");
@@ -268,7 +274,7 @@ public static class DebugControllerPatch
         __instance.CommandList.Add(privateCommand);
         
         DebugCommand<int> lobbySizeCommand = new("set_lobby_size",
-            "attempts to change the lobby size. (multiplayer mod, host)\n1 - 4 players.\n2 - 8 players.\n3 - 12 players.\n4 - 16 players.",
+            "attempts to change the lobby size. (multiplayer mod, host) | 1 - 4 players. | 2 - 8 players. | 3 - 12 players. | 4 - 16 players.",
             "int(player_count)",
             new Action<int>(
                 playerCount =>
@@ -292,7 +298,7 @@ public static class DebugControllerPatch
                         __instance.AddLog($"Set lobby max players to [{playerCount}]");
                     }
                 }));
-        __instance.CommandList.Add(kickPlayerCommand);
+        __instance.CommandList.Add(lobbySizeCommand);
 
     
     }

@@ -18,8 +18,11 @@
   </PropertyGroup>
   <ItemGroup>
 	   <PackageReference Include="AttributeNetworkWrapper.Fody" Version="1.0.0" />
-	   <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />
+	   <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.704" IncludeAssets="all" />
 	  <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+	  <PackageReference Include="Costura.Fody" Version="6.0.0">
+	    <PrivateAssets>all</PrivateAssets>
+	  </PackageReference>
 	  <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
   </ItemGroup>
 	
@@ -93,6 +96,11 @@
   </ItemGroup>
   
     <ItemGroup>
+      <EmbeddedResource Include="costuraX64\steam_api64.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </EmbeddedResource>
+      <EmbeddedResource Include="lib\costura64\steam_api64.dll" />
+      <None Include="lib\Facepunch.Steamworks.Win64.dll" />
       <None Remove="Assets\lobby menu" />
       <EmbeddedResource Remove="lib\costura64\**" />
       <None Remove="Assets\queue assets" />
@@ -111,15 +119,25 @@
       <EmbeddedResource Include="Assets\challenge">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </EmbeddedResource>
+      <None Remove="lib\costuraX64\steam_api64.dll" />
+      <EmbeddedResource Remove="costuraX64\**" />
+      <None Remove="costuraX64\**" />
+      <None Remove="costura32\steam_api64.dll" />
+      <EmbeddedResource Include="costura-win-x86\steam_api64.dll" />
+      <EmbeddedResource Remove="costura-win-x86\**" />
+      <None Remove="costura-win-x86\**" />
+      <None Remove="costura-win-x64\Facepunch.Steamworks.Win64.dll" />
+      <None Remove="costura64\steam_api64.dll" />
+      <EmbeddedResource Include="costura-win-x64\steam_api64.dll" />
     </ItemGroup>
 	
     <ItemGroup>
-      <None Remove="lib\Facepunch.Steamworks.Win64.dll" />
-      <Content Include="lib\Facepunch.Steamworks.Win64.dll" />
+      <Compile Remove="costuraX64\**" />
+      <Compile Remove="costura-win-x86\**" />
     </ItemGroup>
-  
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-      <Exec Command="xcopy /q /Y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Project Arrhythmia\BepInEx\plugins\PAMultiplayer&quot; &gt; nul&#xA;&#xA;xcopy /q /Y &quot;$(TargetDir)AttributeNetworkWrapper.dll&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Project Arrhythmia\BepInEx\plugins\PAMultiplayer&quot; &gt; nul" />
-    </Target>
-  
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy /q /Y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Project Arrhythmia\BepInEx\plugins\PAMultiplayer&quot; &gt; nul&#xA;" />
+  </Target>
+
 </Project>

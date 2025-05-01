@@ -14,23 +14,22 @@ namespace PAMultiplayer.Patch;
 public class Player_Patch
 {
     
-    [HarmonyPatch(nameof(VGPlayer.OnChildTriggerEnter))]
-    [HarmonyPatch(nameof(VGPlayer.OnChildTriggerStay))]
+    [HarmonyPatch(nameof(VGPlayer.CheckForObjectCollision))]
     [HarmonyPrefix]
-    static bool PreCollision(VGPlayer __instance, Collider2D _other)
+    static bool PreCollision(VGPlayer __instance, Collider2D _other, ref bool __result)
     {
-        if (GlobalsManager.IsMultiplayer)
+        if (!GlobalsManager.IsMultiplayer)
         {
-            if (!__instance.IsLocalPlayer())
-                return false;
+            return true;
         }
 
-        if (__instance.CheckForObjectCollision(_other))
+        if (!__instance.IsLocalPlayer())
         {
-            __instance.PlayerHit();
+            __result = false;
+            return false;
         }
-        
-        return false; //only collide if is local player
+
+        return true; //only collide if is local player
     }
 
 
@@ -198,6 +197,10 @@ public class Player_Patch
             if (GlobalsManager.Players.TryGetValue(hitPlayerId, out var playerData))
             {
                 string hex = VGPlayerManager.Inst.GetPlayerColorHex(playerData.VGPlayerData.PlayerID);
+                if (hex == "#FFFFFF")
+                {
+                    hex = "FFFFFF";
+                }
                 VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{playerData.Name}</color>] got hit!", 1f);
             }
         }

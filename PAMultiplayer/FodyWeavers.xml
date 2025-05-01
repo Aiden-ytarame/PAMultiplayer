@@ -1,3 +1,17 @@
 ﻿<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">
   <AttributeNetworkWrapper />
+  <Costura CreateTemporaryAssemblies="true">
+    <IncludeAssemblies>
+      DiscordRPC
+      AttributeNetworkWrapper
+      Newtonsoft.Json
+    </IncludeAssemblies>
+    <Unmanaged64Assemblies>
+      Facepunch.Steamworks.Win64
+    </Unmanaged64Assemblies>
+    <PreloadOrder>
+      steam_api64
+      Facepunch.Steamworks.Win64
+    </PreloadOrder>
+  </Costura>
 </Weavers>
