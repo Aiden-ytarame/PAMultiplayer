@@ -29,6 +29,7 @@ Uses BepInEx.
 > The first time you open the game after every game update, it'll take a while to open.
 
 * Close the game and download the [PAMultiplayer.dll](https://github.com/Aiden-ytarame/PAMultiplayer/releases/latest/download/PAMultiplayer.dll) from latest release of the Multiplayer mod.
+  * Your browser might block the download due to it being a .dll, click "Download Unverified File"
 * In your game's folder there will be a new folder called "bepinex". Put PAMultiplayer.dll inside the generated **/bepinex/plugins/** folder.
 * Open the game and enjoy!
 
