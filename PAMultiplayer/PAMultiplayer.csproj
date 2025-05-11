@@ -15,6 +15,7 @@
     </RestoreAdditionalProjectSources>
     <RootNamespace>PAMultiplayer</RootNamespace>
     <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
+    <MpPluginFolder>C:\Program Files (x86)\Steam\steamapps\common\Project Arrhythmia\BepInEx\plugins\PAMultiplayer</MpPluginFolder>
   </PropertyGroup>
   <ItemGroup>
 	   <PackageReference Include="AttributeNetworkWrapper.Fody" Version="1.0.0" />
@@ -137,7 +138,11 @@
     </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy /q /Y &quot;$(TargetPath)&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\Project Arrhythmia\BepInEx\plugins\PAMultiplayer&quot; &gt; nul&#xA;" />
+    <Exec Command="xcopy /q /Y &quot;$(TargetPath)&quot; &quot;$(MpPluginFolder)&quot; &gt; nul" />
   </Target>
 
+
+  <Target Name="Hash" AfterTargets="PostBuild">
+    <Exec Command="powershell -Command &quot;[System.IO.File]::WriteAllLines('$(MpPluginFolder)/ReleaseHash.sha256', (Get-FileHash $(TargetPath)).Hash)  &quot;" />
+  </Target>
 </Project>

@@ -1,6 +1,7 @@
 using System;
 using Il2CppSystems.SceneManagement;
 using Steamworks.Data;
+using TMPro;
 using UnityEngine;
 
 namespace PAMultiplayer.Managers.MenuManagers;
@@ -9,6 +10,7 @@ public class MenuSelectionManager : MonoBehaviour
 {
     public static MenuSelectionManager Instance { get; private set; }
     public UI_Menu Menu;
+    private TextMeshProUGUI LobbyCount;
     private void Awake()
     {
         if(Instance != null)
@@ -47,6 +49,8 @@ public class MenuSelectionManager : MonoBehaviour
             }
 
         }));
+
+        LobbyCount = buttons.GetChild(1).FindChild("QueueIcon/Text").GetComponent<TextMeshProUGUI>();
         
         buttons.GetChild(2).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
         {
@@ -83,12 +87,41 @@ public class MenuSelectionManager : MonoBehaviour
         }));
     }
     
-    public void OpenMenu()
+    public async void OpenMenu()
     {
-        GeneralUILoader.Inst?.EnterSaveUI?.Invoke();
-        Menu.ShowBase();
-        Menu.SwapView("main");
-        Menu.AllViews["main"].PossibleFirstButtons[0].Select();
-        CameraDB.Inst.SetUIVolumeWeightIn(0.2f);
+        try
+        {
+            GeneralUILoader.Inst?.EnterSaveUI?.Invoke();
+            Menu.ShowBase();
+            Menu.SwapView("main");
+            Menu.AllViews["main"].PossibleFirstButtons[0].Select();
+            CameraDB.Inst.SetUIVolumeWeightIn(0.2f);
+            
+            LobbyCount.text = "...";
+            UIStateManager.Inst.RefreshTextCache(LobbyCount, "...");
+            
+            LobbyQuery query = new LobbyQuery();
+            var lobbies = await query.WithMaxResults(10).RequestAsync();
+
+            if (!LobbyCount)
+            {
+                return;
+            }
+            
+            if (lobbies != null)
+            {
+                LobbyCount.text = lobbies.Length.ToString();
+                UIStateManager.Inst.RefreshTextCache(LobbyCount, lobbies.Length.ToString());
+            }
+            else
+            {
+                LobbyCount.text = "0";
+                UIStateManager.Inst.RefreshTextCache(LobbyCount, "0");
+            }
+        }
+        catch (Exception e)
+        {
+            PAM.Logger.LogError(e);
+        }
     }
 }

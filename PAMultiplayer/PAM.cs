@@ -8,7 +8,6 @@ using Il2CppInterop.Runtime.Injection;
 using PAMultiplayer.Managers;
 using PAMultiplayer.Managers.MenuManagers;
 using PAMultiplayer.Patch;
-using UnityEngine.Localization.Settings;
 
 
 namespace PAMultiplayer;
@@ -24,7 +23,7 @@ public class PAM : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "1.0.3";
+    public const string Version = "1.0.4";
 
     public override void Load()
     {
@@ -46,7 +45,7 @@ public class PAM : BasePlugin
         {
             Console.WriteLine(e);
         }
-
+   
         //patch all
         Inst = this;
         harmony = new Harmony(Guid);
@@ -56,8 +55,7 @@ public class PAM : BasePlugin
             .GetMethod("MoveNext");
         var prefix = new HarmonyMethod(typeof(GameManagerPatch).GetMethod("OverrideLoadGame"));
         harmony.Patch(loadGameMoveNext, prefix);
-
-
+        
         Log.LogInfo($"Plugin {Guid} is loaded!");
     }
 }

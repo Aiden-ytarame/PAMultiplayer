@@ -3,6 +3,8 @@ using System.Collections;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Runtime.Intrinsics.Arm;
+using System.Security.Cryptography;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Cpp2IL.Core.Extensions;
 using HarmonyLib;
@@ -319,6 +321,7 @@ namespace PAMultiplayer.Patch
 
         const string UpdateStr = "<sprite name=info> Update Multiplayer";
         const string RestartStr = "<sprite name=info> Restart the game";
+        private const string FailedStr = "<sprite name=info> Failed";
         static bool _isUpdating;
         static bool _updated;
         static IEnumerator FetchGithubReleases()
@@ -386,44 +389,87 @@ namespace PAMultiplayer.Patch
 
         static IEnumerator DownloadGithubRelease(TextMeshProUGUI button)
         {
+            string hash;
+            
+            UnityWebRequest hashRequest =
+                UnityWebRequest.Get("https://github.com/Aiden-ytarame/PAMultiplayer/releases/latest/download/ReleaseHash.sha256");
+            try
+            {
+                yield return hashRequest.SendWebRequest();
+            
+                if (hashRequest.result != UnityWebRequest.Result.Success)
+                {
+                    PAM.Logger.LogError("Failed to download Github Release, oof");
+                    PAM.Logger.LogError(hashRequest.error); ;
+                    Fail();
+                    yield break;
+                }
+
+                hash = hashRequest.downloadHandler.text.Trim();
+            }
+            finally
+            {
+                hashRequest.Dispose();
+            }
+            
             UnityWebRequest downloadRequest =
                 UnityWebRequest.Get("https://github.com/Aiden-ytarame/PAMultiplayer/releases/latest/download/PAMultiplayer.dll");
-          
-            yield return downloadRequest.SendWebRequest();
-            
-            if (downloadRequest.result != UnityWebRequest.Result.Success)
-            {
-                PAM.Logger.LogError("Failed to download Github Release, oof");
-                PAM.Logger.LogError(downloadRequest.error);
-                Fail();
-                yield break;
-            }
-
-            string fullPath = Assembly.GetExecutingAssembly().Location;
-            
             try
             {
-                File.Move(fullPath, Path.GetDirectoryName(fullPath) + "\\PAMultiplayerOld.dll", true);
-            }
-            catch (Exception e)
-            {
-                PAM.Logger.LogError(e);
-                downloadRequest.Dispose();
-                Fail();
-                yield break;
-            }
+                yield return downloadRequest.SendWebRequest();
+            
+                if (downloadRequest.result != UnityWebRequest.Result.Success)
+                {
+                    PAM.Logger.LogError("Failed to download Github Release, oof");
+                    PAM.Logger.LogError(downloadRequest.error);
+                    Fail();
+                    yield break;
+                }
 
-            try
-            {
-                File.WriteAllBytesAsync(fullPath, downloadRequest.downloadHandler.data); //async throws everytime due to bepinex
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
+                string fileHash;
             
-            downloadRequest.Dispose();
+                using (SHA256 sha256 = SHA256.Create())
+                {
+                    byte[] bytes = sha256.ComputeHash(downloadRequest.downloadHandler.data);
+                    fileHash = BitConverter.ToString(bytes).Replace("-","");
+                }
+
+                if (fileHash != hash)
+                {
+                    PAM.Logger.LogError("Release Hash Mismatch!");
+                    PAM.Logger.LogError(hash);
+                    PAM.Logger.LogError(fileHash);
+                    Fail();
+                    yield break;
+                }
             
+                string fullPath = Assembly.GetExecutingAssembly().Location;
+            
+                try
+                {
+                    File.Move(fullPath, Path.GetDirectoryName(fullPath) + "\\PAMultiplayerOld.dll", true);
+                }
+                catch (Exception e)
+                {
+                    PAM.Logger.LogError(e);
+                    Fail();
+                    yield break;
+                }
+
+                try
+                {
+                    File.WriteAllBytesAsync(Path.GetDirectoryName(fullPath) + "\\PAMultiplayer.dll", downloadRequest.downloadHandler.data); //async throws everytime due to bepinex
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+            }
+            finally
+            {
+                downloadRequest.Dispose();  
+            }
+         
             _updated = true;
             if (button)
             {
@@ -437,8 +483,8 @@ namespace PAMultiplayer.Patch
                 _isUpdating = false;
                 if (button)
                 {
-                    button.text = UpdateStr;
-                    UIStateManager.Inst.RefreshTextCache(button, UpdateStr);
+                    button.text = FailedStr;
+                    UIStateManager.Inst.RefreshTextCache(button,  FailedStr);
                 }
             }
         }

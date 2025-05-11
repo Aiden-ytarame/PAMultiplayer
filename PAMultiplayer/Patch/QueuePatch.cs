@@ -26,7 +26,7 @@ public static class ArcadeMenuPatch
         
     [HarmonyPatch(nameof(ArcadeMenu.Start))]
     [HarmonyPostfix]
-    static void PostSTart(ArcadeMenu __instance)
+    static void PostStart(ArcadeMenu __instance)
     {
         GameObject QueueIconPrefab;
         _queueButtons.Clear();
