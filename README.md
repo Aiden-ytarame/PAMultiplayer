@@ -84,9 +84,9 @@ A few settings that you should note are:
 * Player Hit Warp SFX - Changes which players triggers the warp effect on the song when a player is hit.
 * Transparent Nanos - Makes every player other than yourself transparent to make it easier to see yourself.
 
-### Update Popup
+### Update Button
 
-When a new Multiplayer update is available a "Update Multiplayer" button will appear in the main menu!
+When a new Multiplayer update is available a "Update Multiplayer" button will appear in the main menu, clicking it will automatically update the mod.
 
 ## Building
 To build the mod from source, make a "lib" folder where the csproj is and put get all the assemblies required from the interop folder bepinex generates with the exception of 3 assemblies. For these exception you can either use the ones available in any Multiplayer release, or:
