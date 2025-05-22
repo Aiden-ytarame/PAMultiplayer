@@ -56,7 +56,7 @@ public class SteamLobbyManager : MonoBehaviour
         SteamMatchmaking.OnLobbyMemberLeave += OnLobbyMemberDisconnected;
         
         SteamMatchmaking.OnLobbyMemberDataChanged += OnLobbyMemberDataChanged;
-        SteamMatchmaking.OnLobbyDataChanged += OnOnLobbyDataChanged;
+        SteamMatchmaking.OnLobbyDataChanged += OnLobbyDataChanged;
         
         SteamMatchmaking.OnChatMessage += OnChatMessage;
     }
@@ -87,7 +87,7 @@ public class SteamLobbyManager : MonoBehaviour
         player.VGPlayerData.PlayerObject.Player_Text.DisplayText(message.Replace('_',' '), 5);
     }
 
-    private void OnOnLobbyDataChanged(Lobby lobby)
+    private void OnLobbyDataChanged(Lobby lobby)
     {
         if (LobbyScreenManager.Instance)
         {
@@ -184,7 +184,7 @@ public class SteamLobbyManager : MonoBehaviour
             MultiplayerDiscordManager.Instance.UpdatePartySize(lobby.MemberCount);
 
         HashSet<int> usedIds = new();
-        int nextId = 0;
+        int nextId = 1;
         foreach (var player in GlobalsManager.Players)
         {
             usedIds.Add(player.Value.VGPlayerData.PlayerID);

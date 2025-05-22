@@ -102,6 +102,7 @@ public static class SettingsHelper
         
         InstantiateToggle("Chat Enabled", "MpChatEnabled");
         InstantiateToggle("Linked Health Hit Popup", "MpLinkedHealthPopup");
+        InstantiateToggle("Allow hidden workshop levels", "MpAllowNonPublicLevels");
         InstantiateSpacer();
     }
 

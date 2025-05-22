@@ -610,6 +610,69 @@ public class GameManagerPatch
          
          if (GlobalsManager.IsHosting)
          {
+             bool skipLevel = true;
+             if (ulong.TryParse(GlobalsManager.LevelId, out var nextQueueId))
+             {
+                 var result = SteamUGC.QueryFileAsync(nextQueueId);
+
+                 while (!result.IsCompleted)
+                 {
+                     yield return new WaitForUpdate();
+                 }
+                         
+                 var levelItem = result.Result;
+                 bool allowHiddenLevel = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false);
+                 
+                 if (levelItem.HasValue && levelItem.Value.Result == Result.OK)
+                 {
+                     //not public, friends only or private means unlisted which is allowed.
+                     if (levelItem.Value.IsPublic || allowHiddenLevel || (!levelItem.Value.IsFriendsOnly && !levelItem.Value.IsPrivate))
+                     {
+                         skipLevel = false;
+                     }
+                 }
+                 else if (allowHiddenLevel)
+                 {
+                     skipLevel = false;
+                 }
+             }
+             
+             if (skipLevel)
+             {
+                 PAM.Logger.LogError(
+                     "tried playing local or non public level while [Allow hidden levels] is disabled");
+
+                 GlobalsManager.IsReloadingLobby = true;
+                 SteamLobbyManager.Inst.UnloadAll();
+             
+                 SceneLoader.Inst.manager.ClearLoadingTasks();
+                 yield return new WaitForSeconds(1); //without this, the loading screen breaks
+                 
+                 if (GlobalsManager.IsChallenge)
+                 {
+                     Multi_OpenChallenge();
+                     SceneLoader.Inst.LoadSceneGroup("Challenge");
+                 }
+                 else
+                 {
+                     GlobalsManager.Queue.Remove(GlobalsManager.LevelId);
+
+                     if (GlobalsManager.Queue.Count == 0)
+                     {
+                         SceneLoader.Inst.LoadSceneGroup("Arcade");
+                         SteamManager.Inst.EndServer();
+                         yield break;
+                     }
+                     
+                     string id = GlobalsManager.Queue[0];
+                     ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
+                     GlobalsManager.LevelId = id;
+                 }
+                 
+                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+                 yield break;
+             }
+             
              SteamLobbyManager.Inst.RandSeed = Random.seed;
              ObjectManager.inst.seed = Random.seed;
              RNGSync.seed = SteamLobbyManager.Inst.RandSeed;
@@ -629,49 +692,10 @@ public class GameManagerPatch
                      }
 
                      SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
-                     PAM.Logger.LogError(SteamLobbyManager.Inst.RandSeed);
-
-                     if (ulong.TryParse(GlobalsManager.LevelId, out var nextQueueId))
-                     {
-                         Multi_NextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
-                     }
-                     else
-                     {
-                         PAM.Logger.LogError(
-                             "tried sending Local Level with non numbered name, name too big or negative value. Skipping.");
-
-                         GlobalsManager.Queue.Remove(GlobalsManager.LevelId);
-                         string id = GlobalsManager.Queue[0];
-                         ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-                         GlobalsManager.LevelId = id;
-
-                         GlobalsManager.IsReloadingLobby = true;
-                         SteamLobbyManager.Inst.UnloadAll();
-
-                         SceneLoader.Inst.manager.ClearLoadingTasks();
-                         SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-                         yield break;
-                     }
                  }
-                 else
-                 {
-                     PAM.Logger.LogError(SteamLobbyManager.Inst.RandSeed);
-                     if (ulong.TryParse(GlobalsManager.LevelId, out var nextQueueId))
-                     {
-                        Multi_NextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
-                     }
-                     else
-                     {
-                         PAM.Logger.LogError(
-                             "tried sending Local Level with non numbered name, name too big or negative value. Skipping.");
-                         
-                         GlobalsManager.IsReloadingLobby = true;
-                         SteamLobbyManager.Inst.UnloadAll();
-                         SceneLoader.Inst.manager.ClearLoadingTasks();
-                         SceneLoader.Inst.LoadSceneGroup("Challenge");
-                         yield break;
-                     }
-                 }
+
+                 PAM.Logger.LogError(SteamLobbyManager.Inst.RandSeed);
+                 Multi_NextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
              }
          }
          else
@@ -732,23 +756,30 @@ public class GameManagerPatch
         GlobalsManager.LevelId = levelID.ToString();
         SteamLobbyManager.Inst.RandSeed = seed;
         GlobalsManager.IsReloadingLobby = true;
-        GlobalsManager.LobbyState = SteamLobbyManager.LobbyState.Lobby;
+        GlobalsManager.LobbyState = LobbyState.Lobby;
         GlobalsManager.HasLoadedLobbyInfo = true;
+        
+        DataManager.inst.StartCoroutine(NextQueueLevelIEnu(levelID, seed).WrapToIl2Cpp()); //task crashes game here 
+    }
+
+    static IEnumerator NextQueueLevelIEnu(ulong levelID, int seed)
+    {
         SceneLoader.Inst.manager.ClearLoadingTasks();
-   
+        yield return new WaitForSeconds(1);
+        
         VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId);
         if (level)
         {
             ArcadeManager.Inst.CurrentArcadeLevel = level;
             SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-            return;
+            yield break;
         }
 
         GlobalsManager.IsDownloading = true;
         PAM.Logger.LogError($"You did not have the lobby's level downloaded!, Downloading Level...");
         SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
     }
-
+    
     [MultiRpc]
     public static void Multi_OpenChallenge()
     {

@@ -160,6 +160,8 @@ public class ChallengeManager : MonoBehaviour
                 return;
             }
 
+            bool allowNonPublicLevels = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false);
+            PAM.Logger.LogError($"Allow private shit [{allowNonPublicLevels}]");
             while (true)
             {
                 var level = ArcadeLevelDataManager.Inst.ArcadeLevels[Random.RandomRange(0, ArcadeLevelDataManager.Inst.ArcadeLevels.Count)];
@@ -178,6 +180,12 @@ public class ChallengeManager : MonoBehaviour
                             continue;
                         }
 
+                        //not public, friends only or private means unlisted which is allowed.
+                        if (!result.Value.IsPublic && !allowNonPublicLevels && !result.Value.IsFriendsOnly && !result.Value.IsPrivate)
+                        {
+                            continue;
+                        }
+                       
                         _levelsToVote.Add(level);
                     }
                 }
@@ -337,6 +345,16 @@ public class ChallengeManager : MonoBehaviour
             var result = await SteamUGC.QueryFileAsync(id);
             if (!result.HasValue || result.Value.Result != Result.OK)
             {
+                PAM.Logger.LogError($"Failed to get workshop data for level id [{id}]");
+                GlobalsManager.IsReloadingLobby = false;
+             
+                if (!GlobalsManager.IsHosting)
+                {
+                    SteamManager.Inst.EndClient();
+                }
+           
+                SceneLoader.Inst.manager.ClearLoadingTasks();
+                SceneLoader.Inst.LoadSceneGroup("Menu");
                 return;
             }
 
@@ -366,6 +384,7 @@ public class ChallengeManager : MonoBehaviour
         {
             PAM.Logger.LogError(www.error);
             level.AlbumArt = null;
+            _loadedLevels[level]++;
             yield break;
         }
         
@@ -708,7 +727,6 @@ public class ChallengeManager : MonoBehaviour
         }
     }
     
-    
     void SpawnPlayers_Multiplayer()
     {
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
@@ -720,20 +738,24 @@ public class ChallengeManager : MonoBehaviour
 
         if (GlobalsManager.IsHosting)
         {
-            if (GlobalsManager.Players.Count == 0)
+            bool hasZero = false;
+            foreach (var keyValuePair in GlobalsManager.Players)
+            {
+                VGPlayerManager.Inst.players.Add(keyValuePair.Value.VGPlayerData);
+                if (keyValuePair.Value.VGPlayerData.PlayerID == 0)
+                {
+                    hasZero = true;
+                }
+            }
+            
+            if (!hasZero)
             {
                 //player 0 is never added, so we add it here
                 var newData = new VGPlayerManager.VGPlayerData() { PlayerID = 0, ControllerID = 0 };
                 VGPlayerManager.Inst.players.Add(newData);
                 GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayerId, new PlayerData(newData, SteamClient.Name));
             }
-            else
-            {
-                foreach (var vgPlayerData in GlobalsManager.Players)
-                {
-                    VGPlayerManager.Inst.players.Add(vgPlayerData.Value.VGPlayerData);
-                }
-            }
+          
             VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, new Action<int, Vector3>((_,_2) => {}), new Action<Vector3>((_) => {}),new Action<Vector3>((_) => {}), 3);
         }
         else

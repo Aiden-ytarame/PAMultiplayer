@@ -24,7 +24,8 @@ public static class SaveSettingsPatch
             TransparentPlayer = DataManager.inst.GetSettingBool("MpTransparentPlayer", true),
             TransparentPlayerAlpha = DataManager.inst.GetSettingInt("MpTransparentPlayerAlpha", 0),
             LinkedHealthPopup = DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true),
-            ChatEnabled = DataManager.inst.GetSettingBool("MpChatEnabled", true)
+            ChatEnabled = DataManager.inst.GetSettingBool("MpChatEnabled", true), 
+            AllowNonPublicLevels = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false)
         };
         
         string json = JsonSerializer.Serialize(settings);
@@ -50,6 +51,8 @@ public static class SaveSettingsPatch
         DataManager.inst.UpdateSettingInt("MpTransparentPlayerAlpha", settings.TransparentPlayerAlpha);
         DataManager.inst.UpdateSettingBool("MpLinkedHealthPopup", settings.LinkedHealthPopup);
         DataManager.inst.UpdateSettingBool("MpChatEnabled", settings.ChatEnabled);
+        DataManager.inst.UpdateSettingBool("MpAllowNonPublicLevels", settings.AllowNonPublicLevels);
+        
     }
 }
 
@@ -62,4 +65,5 @@ public class MultiplayerSettings
     public int TransparentPlayerAlpha { get; set; }
     public bool LinkedHealthPopup { get; set; } = true;
     public bool ChatEnabled { get; set; } = true;
+    public bool AllowNonPublicLevels { get; set; } = false;
 }
