@@ -257,14 +257,15 @@ namespace PAMultiplayer.Patch
     /// and replaces the Player hit and Player warp settings with a multiplayer version of those settings
     /// </summary>
 
-    [HarmonyPatch(typeof(SkipIntroMenu))]
+    [HarmonyPatch(typeof(ShowChangeLog))]
     public static class UpdateModButton
     {
-        [HarmonyPatch(nameof(SkipIntroMenu.Start))]
-        [HarmonyPostfix]
-        static void PostStart(SkipIntroMenu __instance)
+        [HarmonyPatch(nameof(ShowChangeLog.Start))]
+        [HarmonyPrefix]
+        static bool PostStart(ShowChangeLog __instance)
         {
-            UI_Book book = __instance.transform.Find("Window/Content/Settings/Right Panel").GetComponent<UI_Book>();
+            PAM.Logger.LogError("SKIP INTRO");
+            UI_Book book = __instance.transform.parent.parent.parent.Find("Settings/Right Panel").GetComponent<UI_Book>();
             
             void instantiateSlider(GameObject prefab, Transform parent, string label, string dataId, Action<float> setter)
             {
@@ -284,7 +285,7 @@ namespace PAMultiplayer.Patch
                 book.Pages[1].SubElements.Add(slider);
             }
             
-            __instance.StartCoroutine(FetchGithubReleases().WrapToIl2Cpp());
+            __instance.StartCoroutine(FetchGithubReleases(__instance.gameObject).WrapToIl2Cpp());
             
             GameObject sliderPrefab = book.transform.Find("Content/Audio/Content/Menu Music").gameObject;
             Transform audioParent = sliderPrefab.transform.parent;
@@ -307,9 +308,7 @@ namespace PAMultiplayer.Patch
             //this creates the Multiplayer tab in the settings
             SettingsHelper.SetupMenu();
 
-
-
-            MultiElementButton button = __instance.transform.Find("Window/Content/Main Menu/pc_top-buttons/Custom Mode")
+            MultiElementButton button = __instance.transform.parent.parent.Find("pc_top-buttons/Custom Mode")
                 .GetComponent<MultiElementButton>();
 
             button.onClick = new();
@@ -317,6 +316,13 @@ namespace PAMultiplayer.Patch
             {
                 MenuSelectionManager.Instance.OpenMenu();
             }));
+            
+            if (!SingletonBase<SettingsManager>.Inst.ShowChangeLog())
+            {
+                __instance.gameObject.SetActive(false);
+            }
+
+            return false;
         }
 
         const string UpdateStr = "<sprite name=info> Update Multiplayer";
@@ -324,7 +330,7 @@ namespace PAMultiplayer.Patch
         private const string FailedStr = "<sprite name=info> Failed";
         static bool _isUpdating;
         static bool _updated;
-        static IEnumerator FetchGithubReleases()
+        static IEnumerator FetchGithubReleases(GameObject changeLog)
         {
             UnityWebRequest request =
                 UnityWebRequest.Get("https://api.github.com/repos/Aiden-ytarame/PAMultiplayer/releases/latest");
@@ -352,9 +358,7 @@ namespace PAMultiplayer.Patch
 
             PAM.Logger.LogWarning("New Mp Version Available!");
             
-            Transform buttons = GameObject.Find("Canvas/Window/Content/Main Menu/Buttons 3").transform;
-            
-            GameObject updateMod = Object.Instantiate(buttons.Find("Changelog"), buttons).gameObject;
+            GameObject updateMod = Object.Instantiate(changeLog, changeLog.transform.parent).gameObject;
             updateMod.name = "Update MP";
             updateMod.SetActive(true);
             

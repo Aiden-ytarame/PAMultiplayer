@@ -23,7 +23,7 @@ public class PAM : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "1.0.5";
+    public const string Version = "1.0.6";
 
     public override void Load()
     {
@@ -43,7 +43,7 @@ public class PAM : BasePlugin
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Log.LogError(e);
         }
    
         //patch all
