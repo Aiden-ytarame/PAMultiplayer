@@ -80,8 +80,13 @@ public class ChallengeManager : MonoBehaviour
         { 
             MultiplayerDiscordManager.Instance.SetChallengePresence();  
         }
-        
-        PickLevelForVoting();
+
+        StartCoroutine(PostAwake().WrapToIl2Cpp());
+    }
+
+    IEnumerator PostAwake()
+    {
+        yield return PickLevelForVoting();
       
         VGLevel level = _levelsToVote[0];
         if (!level)
@@ -117,7 +122,6 @@ public class ChallengeManager : MonoBehaviour
             skip.gameObject.SetActive(false);
         }
     }
-
     private void Start()
     {
         LSEffectsManager.Inst.UpdateChroma(0.1f);
@@ -147,59 +151,89 @@ public class ChallengeManager : MonoBehaviour
     
     #region Voting
 
-    async void PickLevelForVoting()
+    IEnumerator PickLevelForVoting()
     {
-        try
+        if (ArcadeLevelDataManager.Inst.ArcadeLevels.Count < 6)
         {
-            if (ArcadeLevelDataManager.Inst.ArcadeLevels.Count < 6)
-            {
-                PAM.Logger.LogError(
-                    $"Not enough levels loaded or downloaded, minimum [6], loaded [{ArcadeLevelDataManager.Inst.ArcadeLevels.Count}]");
-                SceneLoader.Inst.manager.ClearLoadingTasks();
-                SceneLoader.Inst.LoadSceneGroup("Menu");
-                return;
-            }
+            PAM.Logger.LogError(
+                $"Not enough levels loaded or downloaded, minimum [6], loaded [{ArcadeLevelDataManager.Inst.ArcadeLevels.Count}]");
+            SceneLoader.Inst.manager.ClearLoadingTasks();
+            SceneLoader.Inst.LoadSceneGroup("Menu");
+            yield break;
+        }
 
-            bool allowNonPublicLevels = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false);
-            PAM.Logger.LogError($"Allow private shit [{allowNonPublicLevels}]");
-            while (true)
+        bool allowNonPublicLevels = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false);
+        PAM.Logger.LogError($"Allow private shit [{allowNonPublicLevels}]");
+        while (true)
+        {
+            var level = ArcadeLevelDataManager.Inst.ArcadeLevels[
+                Random.RandomRange(0, ArcadeLevelDataManager.Inst.ArcadeLevels.Count)];
+
+            if (!_levelsToVote.Contains(level))
             {
-                var level = ArcadeLevelDataManager.Inst.ArcadeLevels[Random.RandomRange(0, ArcadeLevelDataManager.Inst.ArcadeLevels.Count)];
-                
-                if (!_levelsToVote.Contains(level))
+                if (!GlobalsManager.IsMultiplayer)
                 {
-                    if (!GlobalsManager.IsMultiplayer)
+                    if (!level.LevelMusic) //this can mean the user is using the mod LessRam
                     {
-                        _levelsToVote.Add(level);
-                    }
-                    else if (level.SteamInfo != null)
-                    {
-                        var result = await SteamUGC.QueryFileAsync(level.SteamInfo.ItemID);
-                        if (!result.HasValue || result.Value.Result != Result.OK)
+                        level = ArcadeLevelDataManager.Inst
+                            .GetLocalCustomLevel(level.name); //this triggers song load if thats the case
+                        
+                        int counter = 0;
+                        while (!level.LevelMusic)
+                        {
+                            yield return new WaitForUpdate();
+                            counter++;
+                            if (counter > 316) //too long has passed, no song yet. this is bad;
+                            {
+                                break;
+                            }
+                        }
+
+                        if (counter > 316)
                         {
                             continue;
                         }
-
-                        //not public, friends only or private means unlisted which is allowed.
-                        if (!result.Value.IsPublic && !allowNonPublicLevels && !result.Value.IsFriendsOnly && !result.Value.IsPrivate)
-                        {
-                            continue;
-                        }
-                       
-                        _levelsToVote.Add(level);
                     }
-                }
 
-                if (_levelsToVote.Count >= 6)
+                    _levelsToVote.Add(level);
+                }
+                else if (level.SteamInfo != null)
                 {
-                    break;
+                    var task = SteamUGC.QueryFileAsync(level.SteamInfo.ItemID);
+                    while (!task.IsCompleted)
+                    {
+                        yield return new WaitForUpdate();
+                    }
+                    
+                    var result = task.Result;
+                    if (!result.HasValue || result.Value.Result != Result.OK)
+                    {
+                        continue;
+                    }
+
+                    //not public, friends only or private means unlisted which is allowed.
+                    if (!result.Value.IsPublic && !allowNonPublicLevels && !result.Value.IsFriendsOnly &&
+                        !result.Value.IsPrivate)
+                    {
+                        continue;
+                    }
+
+                    if (!level.LevelMusic) //this can mean the user is using the mod LessRam
+                    {
+                        level = ArcadeLevelDataManager.Inst
+                            .GetLocalCustomLevel(level.name); //this triggers song load if thats the case
+                    }
+
+                    _levelsToVote.Add(level);
                 }
             }
+
+            if (_levelsToVote.Count >= 6)
+            {
+                break;
+            }
         }
-        catch (Exception e)
-        {
-            PAM.Logger.LogError(e);
-        }
+
     }
 
     VGLevel PickLevel()
@@ -489,7 +523,11 @@ public class ChallengeManager : MonoBehaviour
           
             button.SetLevelData(level);  
             button.Show();
-            AudioManager.Inst.PlayMusic(level.LevelMusic);
+            
+            if (level.LevelMusic)
+            {
+                AudioManager.Inst.PlayMusic(level.LevelMusic);
+            }
             
             if (level.LevelMusic.length > 5)
             {
@@ -572,9 +610,9 @@ public class ChallengeManager : MonoBehaviour
         {
             SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)LobbyState.Challenge).ToString());
             
-            PickLevelForVoting();
+            yield return PickLevelForVoting();
             
-            yield return new WaitUntil(new Func<bool>(() => _levelsToVote.Count >= 6));
+           // yield return new WaitUntil(new Func<bool>(() => _levelsToVote.Count >= 6));
             
             Transform skip = PauseUIManager.Inst.transform.Find("Pause Menu")?.Find("Skip Queue Level");
             if (skip)

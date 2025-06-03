@@ -365,7 +365,7 @@ public class SteamLobbyManager : MonoBehaviour
         
         if (LobbyCreationManager.Instance.IsPrivate)
         {
-            lobby.SetPrivate();
+            lobby.SetFriendsOnly();
         }
         else
         {

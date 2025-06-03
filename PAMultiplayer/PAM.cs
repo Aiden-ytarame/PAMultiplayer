@@ -23,7 +23,7 @@ public class PAM : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "1.0.6";
+    public const string Version = "1.0.7";
 
     public override void Load()
     {
@@ -56,6 +56,6 @@ public class PAM : BasePlugin
         var prefix = new HarmonyMethod(typeof(GameManagerPatch).GetMethod("OverrideLoadGame"));
         harmony.Patch(loadGameMoveNext, prefix);
         
-        Log.LogInfo($"Plugin {Guid} is loaded!");
+        Log.LogInfo($"Multiplayer has loaded!");
     }
 }

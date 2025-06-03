@@ -76,6 +76,9 @@
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>lib\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>lib\UnityEngine.ImageConversionModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.ParticleSystemModule">
       <HintPath>lib\UnityEngine.ParticleSystemModule.dll</HintPath>
     </Reference>
@@ -98,7 +101,6 @@
   
     <ItemGroup>
       <EmbeddedResource Include="lib\costura64\steam_api64.dll" />
-      <None Include="lib\Facepunch.Steamworks.Win64.dll" />
       <EmbeddedResource Remove="lib\costura64\**" />
       <None Remove="Assets\queue assets" />
       <EmbeddedResource Include="Assets\queue assets">

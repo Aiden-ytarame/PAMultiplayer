@@ -361,8 +361,8 @@ public class Player_Patch
     {
         void SetPlayerMesh(VGPlayer player, Mesh mesh)
         {
-            Transform playerWrapper = player.Player_Wrapper.transform;
-                
+            Transform playerWrapper = player.transform.GetChild(2);
+            
             playerWrapper.Find("core").GetComponent<MeshFilter>().mesh = mesh;
             playerWrapper.Find("zen-marker").GetComponent<MeshFilter>().mesh = mesh; //is this needed?
             playerWrapper.Find("boost").GetComponent<MeshFilter>().mesh = mesh;
@@ -377,7 +377,7 @@ public class Player_Patch
                 trail.Render_Trail.enabled = false;
             }
         }
-         
+        
         if (__instance.PlayerID < 4)
         {
             return;

@@ -261,7 +261,7 @@ public static class DebugControllerPatch
 
                     if (isPrivate)
                     {
-                        SteamLobbyManager.Inst.CurrentLobby.SetPrivate();
+                        SteamLobbyManager.Inst.CurrentLobby.SetFriendsOnly();
                         __instance.AddLog("Lobby was made private.");
                     }
                     else

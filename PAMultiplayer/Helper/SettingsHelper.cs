@@ -45,7 +45,7 @@ public static class SettingsHelper
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
         
-       LocalizationSettings.StringDatabase.GetTable("General UI").AddEntry("mp", "Multiplayer");
+       LocalizationSettings.StringDatabase.GetTable("General UI").AddEntry("mp", $"Multiplayer {PAM.Version}");
         _mpPage = new()
         {
             _ID = "Multiplayer",
