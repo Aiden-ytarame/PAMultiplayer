@@ -651,40 +651,39 @@ public class ChallengeManager : MonoBehaviour
     }
 
     [MultiRpc]
-    public static async void Multi_CheckLevelIds(List<ulong> levelIds)
+    public static void Multi_CheckLevelIds(List<ulong> levelIds)
     {
-        try
+        Inst?.StartCoroutine(CheckLevelIds(levelIds).WrapToIl2Cpp());
+    }
+
+    static IEnumerator CheckLevelIds(List<ulong> levelIds)
+    {
+        List<ulong> unknownLevelIds = new();
+        for (var i = 0; i < levelIds.Count; i++)
         {
-            List<ulong> unknownLevelIds = new();
-            for (var i = 0; i < levelIds.Count; i++)
+            ulong levelId = levelIds[i];
+            bool hasLevel = false;
+            do
             {
-                ulong levelId = levelIds[i];
-                bool hasLevel = false;
-                do
+                if (ArcadeLevelDataManager.Inst.GetLocalCustomLevel(levelId.ToString()))
                 {
-                    if (ArcadeLevelDataManager.Inst.GetLocalCustomLevel(levelId.ToString()))
-                    {
-                        hasLevel = true;
-                        break;
-                    }
-
-                    await Task.Delay(500);
-                } while (SteamWorkshopFacepunch.inst.isLoadingLevels);
-
-                if (!hasLevel)
-                {
-                    unknownLevelIds.Add(levelId);
+                    hasLevel = true;
+                    break;
                 }
-                Inst.CreateLevelEntry(levelId, i);
+
+                yield return new WaitForSeconds(0.5f);
+            } while (SteamWorkshopFacepunch.inst.isLoadingLevels);
+
+            if (!hasLevel)
+            {
+                unknownLevelIds.Add(levelId);
             }
-            
-            PAM.Logger.LogInfo($"requesting audio of [{unknownLevelIds.Count}] levels");
-            Server_UnknownLevelIds(null, unknownLevelIds);
+
+            Inst.CreateLevelEntry(levelId, i);
         }
-        catch (Exception)
-        {
-            // ignored
-        }
+
+        PAM.Logger.LogInfo($"requesting audio of [{unknownLevelIds.Count}] levels");
+        Server_UnknownLevelIds(null, unknownLevelIds);
     }
 
     [ServerRpc]

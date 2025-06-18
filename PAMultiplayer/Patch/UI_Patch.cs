@@ -285,7 +285,7 @@ namespace PAMultiplayer.Patch
                 book.Pages[1].SubElements.Add(slider);
             }
             
-            __instance.StartCoroutine(FetchGithubReleases(__instance.gameObject).WrapToIl2Cpp());
+            SystemManager.inst.StartCoroutine(FetchGithubReleases(__instance.gameObject).WrapToIl2Cpp());
             
             GameObject sliderPrefab = book.transform.Find("Content/Audio/Content/Menu Music").gameObject;
             Transform audioParent = sliderPrefab.transform.parent;
@@ -361,7 +361,7 @@ namespace PAMultiplayer.Patch
             GameObject updateMod = Object.Instantiate(changeLog, changeLog.transform.parent).gameObject;
             updateMod.name = "Update MP";
             updateMod.SetActive(true);
-            
+            updateMod.GetComponent<ShowChangeLog>().enabled = false;
             TextMeshProUGUI updateText = updateMod.GetComponentInChildren<TextMeshProUGUI>();
             
             string updText = _updated ? RestartStr : UpdateStr;
