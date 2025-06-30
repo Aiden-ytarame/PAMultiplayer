@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
@@ -23,6 +24,8 @@ namespace PAMultiplayer.Managers;
 public class ChallengeManager : MonoBehaviour
 {
     public static ChallengeManager Inst { get; private set; }
+    public static readonly List<string> RecentLevels = new();
+    
     public Transform playersParent;
     public int ColorID { get; private set; }
     public DataManager.BeatmapTheme ChallengeTheme { get; private set; }
@@ -162,78 +165,124 @@ public class ChallengeManager : MonoBehaviour
             yield break;
         }
 
-        bool allowNonPublicLevels = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false);
-        PAM.Logger.LogError($"Allow private shit [{allowNonPublicLevels}]");
-        while (true)
+        int roundsToNotRepeat = DataManager.inst.GetSettingEnum("MpNoRepeat", 0);
+        if (roundsToNotRepeat != 4)
         {
-            var level = ArcadeLevelDataManager.Inst.ArcadeLevels[
-                Random.RandomRange(0, ArcadeLevelDataManager.Inst.ArcadeLevels.Count)];
-
-            if (!_levelsToVote.Contains(level))
+            roundsToNotRepeat *= 6;
+            if (RecentLevels.Count > roundsToNotRepeat)
             {
-                if (!GlobalsManager.IsMultiplayer)
+                RecentLevels.RemoveRange(0, RecentLevels.Count - roundsToNotRepeat);
+            }
+        }
+
+        if (RecentLevels.Count + 6 >= ArcadeLevelDataManager.Inst.ArcadeLevels.Count)
+        {
+            PAM.Logger.LogInfo("Clearing out recent level list due to being full");
+            RecentLevels.Clear();
+        }
+
+        List<VGLevel> nonRepeatLevels;
+        if (RecentLevels.Count > 0)
+        {
+            nonRepeatLevels = new(ArcadeLevelDataManager.Inst.ArcadeLevels.Count - RecentLevels.Count);
+            HashSet<string> comparer = new(RecentLevels);
+
+            foreach (var arcadeLevel in ArcadeLevelDataManager.Inst.ArcadeLevels)
+            {
+                if (!comparer.Contains(arcadeLevel.name))
                 {
-                    if (!level.LevelMusic) //this can mean the user is using the mod LessRam
+                    nonRepeatLevels.Add(arcadeLevel);
+                }
+            }
+        }
+        else
+        {
+            nonRepeatLevels = new(ArcadeLevelDataManager.Inst.ArcadeLevels.ToArray());
+        }
+        
+        PAM.Logger.LogInfo($"[{RecentLevels.Count}] levels blacklisted");
+        bool allowNonPublicLevels = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false);
+        
+        for (int i = 0; i < 24; i++)
+        {
+            var level = nonRepeatLevels[Random.RandomRange(0, nonRepeatLevels.Count)];
+
+            if (_levelsToVote.Contains(level))
+            {
+                nonRepeatLevels.Remove(level);
+                continue;
+            }
+
+            if (!GlobalsManager.IsMultiplayer)
+            {
+                if (!level.LevelMusic) //this can mean the user is using the mod LessRam
+                {
+                    level = ArcadeLevelDataManager.Inst
+                        .GetLocalCustomLevel(level.name); //this triggers song load if thats the case
+
+                    for (int j = 0; j < 316; j++)
                     {
-                        level = ArcadeLevelDataManager.Inst
-                            .GetLocalCustomLevel(level.name); //this triggers song load if thats the case
-                        
-                        int counter = 0;
-                        while (!level.LevelMusic)
+                        if (!level.LevelMusic)
                         {
                             yield return new WaitForUpdate();
-                            counter++;
-                            if (counter > 316) //too long has passed, no song yet. this is bad;
-                            {
-                                break;
-                            }
-                        }
-
-                        if (counter > 316)
-                        {
-                            continue;
                         }
                     }
 
-                    _levelsToVote.Add(level);
+                    if (!level.LevelMusic) //too long has passed, no song yet. this is bad;
+                    {
+                        continue;
+                    }
                 }
-                else if (level.SteamInfo != null)
+
+                RecentLevels.Add(level.name);
+                _levelsToVote.Add(level);
+                nonRepeatLevels.Remove(level);
+            }
+            else if (level.SteamInfo != null)
+            {
+                var task = SteamUGC.QueryFileAsync(level.SteamInfo.ItemID);
+                while (!task.IsCompleted)
                 {
-                    var task = SteamUGC.QueryFileAsync(level.SteamInfo.ItemID);
-                    while (!task.IsCompleted)
-                    {
-                        yield return new WaitForUpdate();
-                    }
-                    
-                    var result = task.Result;
-                    if (!result.HasValue || result.Value.Result != Result.OK)
-                    {
-                        continue;
-                    }
-
-                    //not public, friends only or private means unlisted which is allowed.
-                    if (!result.Value.IsPublic && !allowNonPublicLevels && !result.Value.IsFriendsOnly &&
-                        !result.Value.IsPrivate)
-                    {
-                        continue;
-                    }
-
-                    if (!level.LevelMusic) //this can mean the user is using the mod LessRam
-                    {
-                        level = ArcadeLevelDataManager.Inst
-                            .GetLocalCustomLevel(level.name); //this triggers song load if thats the case
-                    }
-
-                    _levelsToVote.Add(level);
+                    yield return new WaitForUpdate();
                 }
+
+                var result = task.Result;
+                if (!result.HasValue || result.Value.Result != Result.OK)
+                {
+                    continue;
+                }
+
+                //not public, friends only or private means unlisted which is allowed.
+                if (!result.Value.IsPublic && !allowNonPublicLevels && !result.Value.IsFriendsOnly &&
+                    !result.Value.IsPrivate)
+                {
+                    continue;
+                }
+
+                if (!level.LevelMusic) //this can mean the user is using the mod LessRam
+                {
+                    level = ArcadeLevelDataManager.Inst
+                        .GetLocalCustomLevel(level.name); //this triggers song load if thats the case
+                }
+
+                RecentLevels.Add(level.name);
+                _levelsToVote.Add(level);
+                nonRepeatLevels.Remove(level);
             }
 
             if (_levelsToVote.Count >= 6)
             {
-                break;
+                yield break;
             }
         }
 
+
+
+
+        PAM.Logger.LogError(
+            "Not enough levels found in too many attempts");
+        SceneLoader.Inst.manager.ClearLoadingTasks();
+        SceneLoader.Inst.LoadSceneGroup("Menu");
     }
 
     VGLevel PickLevel()

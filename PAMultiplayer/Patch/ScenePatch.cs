@@ -90,14 +90,17 @@ public static class LoadingTipsPatch
             SceneManager.add_sceneLoaded(new Action<Scene, LoadSceneMode>((scene, _) =>
             {
                 //just in-casse
-                if (GlobalsManager.IsMultiplayer)
+                if (scene.name == "Arcade" || scene.name == "Menu")
                 {
-                    if (scene.name == "Arcade" || scene.name == "Menu")
+                    ChallengeManager.RecentLevels.Clear();
+                    
+                    if (GlobalsManager.IsMultiplayer)
                     {
                         SteamManager.Inst.EndServer();
                         SteamManager.Inst.EndClient();
                     }
                 }
+             
                 if (scene.name != "Challenge")
                     return;
 

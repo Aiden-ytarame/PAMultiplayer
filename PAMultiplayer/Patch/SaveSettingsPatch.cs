@@ -23,6 +23,7 @@ public static class SaveSettingsPatch
             PlayerHitSFX = DataManager.inst.GetSettingInt("MpPlayerSFX", 0),
             TransparentPlayer = DataManager.inst.GetSettingBool("MpTransparentPlayer", true),
             TransparentPlayerAlpha = DataManager.inst.GetSettingInt("MpTransparentPlayerAlpha", 0),
+            NoRepeat = DataManager.inst.GetSettingInt("MpNoRepeat", 0),
             LinkedHealthPopup = DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true),
             ChatEnabled = DataManager.inst.GetSettingBool("MpChatEnabled", true), 
             AllowNonPublicLevels = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false)
@@ -49,6 +50,7 @@ public static class SaveSettingsPatch
         DataManager.inst.UpdateSettingInt("MpPlayerSFX", settings.PlayerHitSFX);
         DataManager.inst.UpdateSettingBool("MpTransparentPlayer", settings.TransparentPlayer);
         DataManager.inst.UpdateSettingInt("MpTransparentPlayerAlpha", settings.TransparentPlayerAlpha);
+        DataManager.inst.UpdateSettingInt("MpNoRepeat", settings.NoRepeat);
         DataManager.inst.UpdateSettingBool("MpLinkedHealthPopup", settings.LinkedHealthPopup);
         DataManager.inst.UpdateSettingBool("MpChatEnabled", settings.ChatEnabled);
         DataManager.inst.UpdateSettingBool("MpAllowNonPublicLevels", settings.AllowNonPublicLevels);
@@ -63,6 +65,7 @@ public class MultiplayerSettings
 
     public bool TransparentPlayer { get; set; } = true;
     public int TransparentPlayerAlpha { get; set; }
+    public int NoRepeat { get; set; }
     public bool LinkedHealthPopup { get; set; } = true;
     public bool ChatEnabled { get; set; } = true;
     public bool AllowNonPublicLevels { get; set; } = false;

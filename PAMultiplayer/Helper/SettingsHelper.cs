@@ -100,6 +100,7 @@ public static class SettingsHelper
         
         InstantiateLabel("<b>MISCELLANEOUS</b> - other settings");
         
+        InstantiateSlider("No Repeats in Challenge", "MpNoRepeat", "0 Rounds", "1 Round", "2 Rounds", "3 Rounds", "Infinite");
         InstantiateToggle("Chat Enabled", "MpChatEnabled");
         InstantiateToggle("Linked Health Hit Popup", "MpLinkedHealthPopup");
         InstantiateToggle("Allow hidden workshop levels", "MpAllowNonPublicLevels");

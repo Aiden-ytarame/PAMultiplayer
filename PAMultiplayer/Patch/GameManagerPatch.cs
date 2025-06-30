@@ -673,9 +673,10 @@ public class GameManagerPatch
                  yield break;
              }
              
+             PAM.Logger.LogError(Random.seed.ToString());
              SteamLobbyManager.Inst.RandSeed = Random.seed;
              ObjectManager.inst.seed = Random.seed;
-             RNGSync.seed = SteamLobbyManager.Inst.RandSeed;
+             RNGSync.Seed = SteamLobbyManager.Inst.RandSeed;
              if (GlobalsManager.IsReloadingLobby)
              {
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LevelId", GlobalsManager.LevelId);
@@ -704,7 +705,7 @@ public class GameManagerPatch
              {
                  SteamLobbyManager.Inst.RandSeed = seed;
              }
-             RNGSync.seed = SteamLobbyManager.Inst.RandSeed;
+             RNGSync.Seed = SteamLobbyManager.Inst.RandSeed;
              ObjectManager.inst.seed = SteamLobbyManager.Inst.RandSeed;
          }
          
@@ -799,6 +800,7 @@ public class GameManagerPatch
             LocalFolder = _folder
         };
 
+        _level.name = _id.Value.ToString();
         _level.LevelData = data;
         _level.BaseLevelData = data;
         _level.SteamInfo = new VGLevel.SteamData(){ ItemID = _id};
@@ -832,7 +834,7 @@ public class GameManagerPatch
 
         var level = item.Value;
         
-        if(level.ConsumerApp != 440310 || level.CreatorApp != 440310) 
+        if(level.ConsumerApp != 440310) 
         {
             FailLoad("Workshop item is not from PA");
             return new Item();
@@ -883,15 +885,18 @@ public class GameManagerPatch
 [HarmonyPatch(typeof(ObjectManager))]
 public static class RNGSync
 {
-    public static int seed;
+    public static int Seed;
 
     [HarmonyPatch(nameof(ObjectManager.CreateObjectData))]
     [HarmonyPostfix]
-    public static void test1(int _i,  ref ObjectHelpers.GameObjectRef __result)
+    public static void PostCreateData(int _i,  ref ObjectHelpers.GameObjectRef __result)
     {
-        Random.InitState(seed);
-        __result.sequence.randomState = Random.state;
-        seed = Random.RandomRangeInt(int.MinValue, int.MaxValue);
+        if (GlobalsManager.IsMultiplayer)
+        {
+            Random.InitState(Seed);
+            __result.sequence.randomState = Random.state;
+            Seed = Random.RandomRangeInt(int.MinValue, int.MaxValue);
+        }
     }
     
 }
