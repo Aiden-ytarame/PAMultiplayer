@@ -1,23 +1,18 @@
 ﻿using System;
 using System.Collections;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Runtime.Intrinsics.Arm;
 using System.Security.Cryptography;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Cpp2IL.Core.Extensions;
 using HarmonyLib;
-using AttributeNetworkWrapper.Core;
-using BepInEx;
+using AttributeNetworkWrapperV2;
 using PAMultiplayer.Helper;
 using UnityEngine;
 using PAMultiplayer.Managers;
-using PAMultiplayer.Managers.MenuManagers;
 using SimpleJSON;
 using TMPro;
 using UnityEngine.Localization.PropertyVariants;
-using UnityEngine.Localization.PropertyVariants.TrackedProperties;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
@@ -144,7 +139,7 @@ namespace PAMultiplayer.Patch
     
       //the reason there's both unpause functions here, its cuz the UI unpause calls PauseMenu.UnPause() and pressing ESC calls GameManager.UnPause().
     [HarmonyPatch]
-    public class PauseLobbyPatch
+    public partial class PauseLobbyPatch
     {
         [HarmonyPatch(typeof(PauseUIManager), nameof(PauseUIManager.CloseWithEffects))]
         [HarmonyPrefix]
@@ -220,7 +215,7 @@ namespace PAMultiplayer.Patch
             
             if (GlobalsManager.IsHosting)
             {
-                Multi_StartLevel();
+                CallRpc_Multi_StartLevel();
             }
 
             if (LobbyScreenManager.Instance)

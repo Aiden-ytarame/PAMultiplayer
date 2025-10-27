@@ -1,7 +1,8 @@
 ﻿using System;
 using HarmonyLib;
-using AttributeNetworkWrapper.Core;
+using AttributeNetworkWrapperV2;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
+using PAMultiplayer;
 using PAMultiplayer.Managers;
 using Rewired;
 using Steamworks;
@@ -11,7 +12,7 @@ using Object = UnityEngine.Object;
 namespace PAMultiplayer.Patch;
 
 [HarmonyPatch(typeof(VGPlayer))]
-public class Player_Patch
+public partial class Player_Patch
 {
     
     [HarmonyPatch(nameof(VGPlayer.CheckForObjectCollision))]
@@ -38,28 +39,6 @@ public class Player_Patch
     [HarmonyPrefix]
     static bool Hit_Pre(ref VGPlayer __instance)
     {
-        if (!GlobalsManager.IsMultiplayer)
-        {
-            if (DataManager.inst.GetSettingBool("mp_linkedHealth", false))
-            {
-                if (GameManager.Inst.Paused)
-                    return false;
-                    
-                if (DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) == 1)
-                    return false;
-                    
-                    
-                foreach (var vgPlayerData in VGPlayerManager.Inst.players)
-                {
-                    if (vgPlayerData.PlayerObject.IsValidPlayer() && vgPlayerData.PlayerObject != __instance)
-                    {
-                        vgPlayerData.PlayerObject.PlayerHit();
-                    }
-                }
-            }
-            return true;
-        }
-
         if (GameManager.Inst.Paused)
             return false;
             
@@ -69,37 +48,55 @@ public class Player_Patch
             
             
         VGPlayer player = __instance;
-        bool isLocal = player.IsLocalPlayer();
+        bool isLocal = !GlobalsManager.IsMultiplayer || player.IsLocalPlayer();
 
         //hit is valid
         if (isLocal)
         {
-            if (GlobalsManager.IsHosting)
+            bool linked = DataManager.inst.GetSettingBool("mp_linkedHealth", false);
+            if (GlobalsManager.IsMultiplayer)
             {
-                if (DataManager.inst.GetSettingBool("mp_linkedHealth", false))
+                if (GlobalsManager.IsHosting)
                 {
-                    if (!IsDamageAll)
+                    if (linked)
                     {
-                        DamageAll(player.Health, GlobalsManager.LocalPlayerId);
-                        Multi_DamageAll(player.Health, GlobalsManager.LocalPlayerId);
-                        return false;
+                        if (!IsDamageAll)
+                        {
+                            DamageAll(player.Health, GlobalsManager.LocalPlayerId);
+                            CallRpc_Multi_DamageAll(player.Health, GlobalsManager.LocalPlayerId);
+                            return false;
+                        }
                     }
-
+                    else
+                        CallRpc_Multi_PlayerDamaged(GlobalsManager.LocalPlayerId, player.Health);
+                    
                 }
                 else
-                    Multi_PlayerDamaged(GlobalsManager.LocalPlayerId, player.Health);
-            }
-            else
-            {
-                if (!DataManager.inst.GetSettingBool("mp_linkedHealth", false) || !IsDamageAll)
-                    Server_PlayerDamaged(null, player.Health);
-            }
+                {
+                    if (!linked || !IsDamageAll)
+                        CallRpc_Server_PlayerDamaged(null, player.Health);
+                }
 
-            IsDamageAll = false;
+                IsDamageAll = false;
+                --player.Health;
+            }
+            else // not multiplayer
+            {
+                --player.Health;
+                if (linked)
+                {
+                    foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+                    {
+                        if (vgPlayerData.PlayerObject.IsValidPlayer() && vgPlayerData.PlayerObject != __instance && vgPlayerData.PlayerObject.Health > player.Health)
+                        {
+                            vgPlayerData.PlayerObject.PlayerHit();
+                        }
+                    }
+                }
+            }
         }
             
-            
-        --player.Health;
+       
         player.StopCoroutine("RegisterCloseCall");
             
         if (player.DeathEvent != null && player.Health <= 0)
@@ -156,7 +153,7 @@ public class Player_Patch
             if (GlobalsManager.LocalPlayerObj.Health >= healthPreHit)
             {
                 DamageAll(healthPreHit, steamID);
-                Multi_DamageAll(healthPreHit, steamID);
+                CallRpc_Multi_DamageAll(healthPreHit, steamID);
             }
             return;
         }
@@ -168,8 +165,9 @@ public class Player_Patch
             player.VGPlayerData.PlayerObject.PlayerHit();
         }
         
-        Multi_PlayerDamaged(steamID, healthPreHit);
+        CallRpc_Multi_PlayerDamaged(steamID, healthPreHit);
     }
+    
     [MultiRpc]
     public static void Multi_PlayerDamaged(SteamId steamID, int healthPreHit)
     {
@@ -261,19 +259,19 @@ public class Player_Patch
 
                 ParticleSystem.MainModule settings = ps.main;
                 settings.startColor = new ParticleSystem.MinMaxGradient(beatmapTheme.GetPlayerColor(__instance.PlayerID));
-            }
                 break;
+            }
             case VGPlayer.ParticleTypes.Boost:
             {
                 if (GlobalsManager.IsMultiplayer && __instance.IsLocalPlayer())
                 {
                     if (GlobalsManager.IsHosting)
                     {
-                        Multi_PlayerBoost(GlobalsManager.LocalPlayerId);
+                        CallRpc_Multi_PlayerBoost(GlobalsManager.LocalPlayerId);
                     }
                     else
                     {
-                        Server_PlayerBoost(null);
+                        CallRpc_Server_PlayerBoost(null);
                     }
                 }
                 ps = Object.Instantiate(__instance.PS_Boost, __instance.Player_Wrapper.position, rot);
@@ -282,27 +280,27 @@ public class Player_Patch
 
                 ParticleSystem.MainModule settings = ps.main;
                 settings.startColor = new ParticleSystem.MinMaxGradient(beatmapTheme.GetPlayerColor(__instance.PlayerID));
-            }
                 break;
+            }
             case VGPlayer.ParticleTypes.Hit:
             {
                 ps = Object.Instantiate(__instance.PS_Hit, __instance.Player_Wrapper.position, rot);
 
                 ParticleSystem.MainModule settings = ps.main;
                 settings.startColor = new ParticleSystem.MinMaxGradient(beatmapTheme.guiAccent);
-            }
                 break;
+            }
             case VGPlayer.ParticleTypes.Die:
             {
                 ps = Object.Instantiate(__instance.PS_Die, __instance.Player_Wrapper.position, rot);
 
                 ParticleSystem.MainModule settings = ps.main;
                 settings.startColor = new ParticleSystem.MinMaxGradient(beatmapTheme.guiAccent);
-            }
                 break;
+            }
         }
 
-        if (ps != null)
+        if (ps)
         {
             ps.Play();
             SystemManager.inst.StartCoroutine(__instance.KillParticleSystem(ps));
@@ -327,7 +325,7 @@ public class Player_Patch
             }
         }
         
-        Multi_PlayerBoost(steamID);
+        CallRpc_Multi_PlayerBoost(steamID);
     }
       
     [MultiRpc(SendType.Unreliable)]
@@ -359,6 +357,14 @@ public class Player_Patch
     [HarmonyPostfix]
     static void PostSpawn(ref VGPlayer __instance)
     {
+        if (__instance.RPlayer.id == 0 && PointsManager.Inst)
+        {
+            __instance.add_CloseCallEvent(new Action<Vector3>(_ => { PointsManager.Inst.AddCloseCall(); }));
+            __instance.add_BoostEvent(new Action<Vector3>(_ => { PointsManager.Inst.AddBoost(); }));
+            __instance.add_HitEvent(new Action<int, Vector3>((_, _) => { PointsManager.Inst.AddHit(); }));
+            _holdingBoost = 0;
+        }
+        
         void SetPlayerMesh(VGPlayer player, Mesh mesh)
         {
             Transform playerWrapper = player.transform.GetChild(2);
@@ -457,7 +463,45 @@ public class Player_Patch
         }
         return false;
     }
+
+    static float _holdingBoost = 0;
+    
+    [HarmonyPatch(nameof(VGPlayer.Update))]
+    [HarmonyPostfix]
+    static void PostUpate(VGPlayer __instance)
+    {
+        if (__instance.isDead || __instance.RPlayer.id != 0 || !PointsManager.Inst)
+        {
+            return;
+        }
         
+        if (__instance.BoostDuration < _holdingBoost)
+        {
+            PointsManager.Inst.AddBoost();
+        }
+        _holdingBoost =  __instance.BoostDuration;
+        
+        PointsManager.Inst.AddTimeAlive(Time.deltaTime);
+
+        if (__instance.internalVelocity != Vector2.zero)
+        {
+            PointsManager.Inst.AddTimeMoving(Time.deltaTime);
+        }
+
+        PointsManager.Inst.AddPosition(CameraDB.Inst.CamerasRoot.transform.InverseTransformPoint(__instance.Player_Wrapper.position));
+    }
+    
+    [HarmonyPatch(nameof(VGPlayer.HandleBoost))]
+    [HarmonyPostfix]
+    static void PostHandleBoost(VGPlayer __instance)
+    {
+        if (__instance.BoostDuration < _holdingBoost)
+        {
+            PointsManager.Inst?.AddBoost();
+        }
+        _holdingBoost =  __instance.BoostDuration;
+    }
+
     /// <summary>
     /// this returns the player controller depending on your playerId
     /// the controller 0 is the one LocalPlayer controls
@@ -490,6 +534,22 @@ public static class PlayerManagerPatch
     static bool PreDisConnected()
     {
         return !GlobalsManager.IsMultiplayer;
+    }
+    
+    [HarmonyPatch(nameof(VGPlayerManager.RespawnPlayers))]
+    [HarmonyPrefix]
+    static void OnCheckpoint(VGPlayerManager __instance)
+    {
+        foreach (var vgPlayerData in __instance.players)
+        {
+            if (vgPlayerData.ControllerID == 0 && vgPlayerData.hasSpawnedObject())
+            {
+                if (vgPlayerData.PlayerObject.Health == 1)
+                {
+                    PointsManager.Inst.AddCheckpointWithOneHealth();
+                }
+            }
+        }
     }
 }
 

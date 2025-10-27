@@ -7,6 +7,7 @@ using Cpp2IL.Core.Extensions;
 using Eflatun.SceneReference;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
+using PAMultiplayer;
 using PAMultiplayer.Managers;
 using UnityEngine;
 using UnityEngine.SceneManagement;

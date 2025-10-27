@@ -4,7 +4,7 @@ using Steamworks.Data;
 using TMPro;
 using UnityEngine;
 
-namespace PAMultiplayer.Managers.MenuManagers;
+namespace PAMultiplayer.Managers;
 
 public class MenuSelectionManager : MonoBehaviour
 {

@@ -13,6 +13,7 @@ namespace PAMultiplayer.Managers
             Name = name;
         }
     }
+    
     /// <summary>
     /// Holds global variables like Local player steamId and Player list
     /// Most of this could be moved to PamNetworkManager, but we're too far in ig
@@ -22,7 +23,7 @@ namespace PAMultiplayer.Managers
         public static VGPlayer LocalPlayerObj => Players[LocalPlayerId].VGPlayerData?.PlayerObject;
         public static SteamId LocalPlayerId;
         public static int LocalPlayerObjectId;
-        public static readonly Dictionary<SteamId, PlayerData> Players = new();
+        public static readonly Dictionary<ulong, PlayerData> Players = new();
         public static readonly Dictionary<int, SteamId> ConnIdToSteamId = new();
         
         public static List<string> Queue = new();

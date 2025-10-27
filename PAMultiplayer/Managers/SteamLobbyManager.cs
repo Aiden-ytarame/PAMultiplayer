@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using Il2CppSystems.SceneManagement;
 using Newtonsoft.Json;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
-using PAMultiplayer.Managers.MenuManagers;
 using PAMultiplayer.Patch;
 using Steamworks;
 using Steamworks.Data;

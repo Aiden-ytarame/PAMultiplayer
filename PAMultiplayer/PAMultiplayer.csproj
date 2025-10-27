@@ -6,8 +6,10 @@
     <Description>Multiplayer Mod</Description>
     <Version>1.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>default</LangVersion>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+      <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+      <CompilerGeneratedFilesOutputPath>obj</CompilerGeneratedFilesOutputPath>
     <RestoreAdditionalProjectSources>
       https://api.nuget.org/v3/index.json;
       https://nuget.bepinex.dev/v3/index.json;
@@ -16,14 +18,13 @@
     <RootNamespace>PAMultiplayer</RootNamespace>
     <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
     <MpPluginFolder>/home/aiden/.local/share/Steam/steamapps/common/Project Arrhythmia/BepInEx/plugins/PAMultiplayer</MpPluginFolder>
+    <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-	   <PackageReference Include="AttributeNetworkWrapper.Fody" Version="1.0.0" />
+	   <PackageReference Include="AttributeNetworkWrapperV2.Generator" Version="0.5.0" PrivateAssets="all"/>
+      <PackageReference Include="AttributeNetworkWrapperV2" Version="0.5.0" PrivateAssets="all"/>
 	   <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.704" IncludeAssets="all" />
 	  <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
-	  <PackageReference Include="Costura.Fody" Version="6.0.0">
-	    <PrivateAssets>all</PrivateAssets>
-	  </PackageReference>
 	  <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
   </ItemGroup>
 	
@@ -100,9 +101,6 @@
   </ItemGroup>
   
     <ItemGroup>
-      <EmbeddedResource Include="lib\costura64\steam_api64.dll" />
-      <EmbeddedResource Remove="lib\costura64\**" />
-      <None Remove="Assets\queue assets" />
       <EmbeddedResource Include="Assets\queue assets">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </EmbeddedResource>
@@ -115,13 +113,19 @@
       <EmbeddedResource Include="Assets\challenge">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </EmbeddedResource>
-      
-      <EmbeddedResource Include="costura-win-x64\steam_api64.dll" />
+        <EmbeddedResource Include="Assets\points">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </EmbeddedResource>
+        
+      <None Update="lib\Facepunch.Steamworks.Win64.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+        
     </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MpPluginFolder)" />
-  </Target>
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MpPluginFolder)" />
+    </Target>
 
   <Target Name="Hash" AfterTargets="PostBuild">
     <Exec Command="sha256sum '$(TargetPath)' | awk '{print toupper($1)}' &gt; '$(MpPluginFolder)/ReleaseHash.sha256' " />

@@ -6,11 +6,10 @@ using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
 using Il2CppInterop.Runtime;
 using Il2CppSystems.SceneManagement;
-using AttributeNetworkWrapper.Core;
+using AttributeNetworkWrapperV2;
 using Newtonsoft.Json;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
-using PAMultiplayer.Managers.MenuManagers;
 using SimpleJSON;
 using Steamworks;
 using Steamworks.Data;
@@ -19,6 +18,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 using LobbyState = PAMultiplayer.Managers.SteamLobbyManager.LobbyState;
+using NetworkManager = PAMultiplayer.Managers.NetworkManager;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 
@@ -26,7 +26,7 @@ using Random = UnityEngine.Random;
 namespace PAMultiplayer.Patch;
 
 [HarmonyPatch(typeof(GameManager))]
-public class GameManagerPatch
+public partial class GameManagerPatch
 {
     //sets the loading screen awaits
     [HarmonyPatch(nameof(GameManager.Start))]
@@ -76,7 +76,7 @@ public class GameManagerPatch
             {
                 if (GlobalsManager.IsMultiplayer && GlobalsManager.IsHosting)
                 {
-                    Multi_OpenChallenge();
+                    CallRpc_Multi_OpenChallenge();
                 }
                 SceneLoader.Inst.LoadSceneGroup("Challenge");
                 return;
@@ -95,6 +95,8 @@ public class GameManagerPatch
 
         skipButton.gameObject.SetActive(GlobalsManager.Queue.Count >= 2 || GlobalsManager.IsChallenge);
 
+        __instance.gameObject.AddComponent<PointsManager>();
+        
         if (!GlobalsManager.IsMultiplayer)
         {
             restartButton.gameObject.SetActive(true);
@@ -144,7 +146,7 @@ public class GameManagerPatch
         {
             SceneLoader.Inst.manager.AddToLoadingTasks("Connecting to Server", Task.Run(async () =>
             {
-                while (PaMNetworkManager.PamInstance == null || !AttributeNetworkWrapper.NetworkManager.Instance.TransportActive)
+                while (PaMNetworkManager.PamInstance == null || !AttributeNetworkWrapperV2.NetworkManager.Instance.TransportActive)
                 {
                     await Task.Delay(100);
                 }
@@ -349,7 +351,7 @@ public class GameManagerPatch
             }
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
         }
-        else if (AttributeNetworkWrapper.NetworkManager.Instance != null)
+        else if (AttributeNetworkWrapperV2.NetworkManager.Instance != null)
         {
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
             foreach (var vgPlayerData in GlobalsManager.Players)
@@ -364,7 +366,7 @@ public class GameManagerPatch
             }
             else
             {
-                Server_RequestLobbyState(null);
+                CallRpc_Server_RequestLobbyState(null);
             }
         }
         else
@@ -412,7 +414,7 @@ public class GameManagerPatch
                 }
             }
 
-            Client_LobbyState(conn, endScreen.Hits.Count, GameManager.Inst.CurrentSongTime, playerIds,
+            CallRpc_Client_LobbyState(conn, endScreen.Hits.Count, GameManager.Inst.CurrentSongTime, playerIds,
                 healths.ToArray());
 
             if (!conn.TryGetSteamId(out SteamId id))
@@ -425,7 +427,7 @@ public class GameManagerPatch
                 VGPlayerManager.Inst.players.Add(GlobalsManager.Players[id].VGPlayerData);
             }
 
-            Multi_LatePlayerJoin(id);
+            CallRpc_Multi_LatePlayerJoin(id);
         }
         catch (Exception e)
         {
@@ -510,7 +512,7 @@ public class GameManagerPatch
              else
              {
                  SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                 yield return new WaitUntil(new Func<bool>(() => AttributeNetworkWrapper.NetworkManager.Instance.TransportActive));
+                 yield return new WaitUntil(new Func<bool>(() => AttributeNetworkWrapperV2.NetworkManager.Instance.TransportActive));
                  yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
                  
                  if (GlobalsManager.LobbyState == LobbyState.Challenge)
@@ -650,7 +652,7 @@ public class GameManagerPatch
                  
                  if (GlobalsManager.IsChallenge)
                  {
-                     Multi_OpenChallenge();
+                     CallRpc_Multi_OpenChallenge();
                      SceneLoader.Inst.LoadSceneGroup("Challenge");
                  }
                  else
@@ -696,7 +698,7 @@ public class GameManagerPatch
                  }
 
                  PAM.Logger.LogError(SteamLobbyManager.Inst.RandSeed);
-                 Multi_NextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
+                 CallRpc_Multi_NextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
              }
          }
          else

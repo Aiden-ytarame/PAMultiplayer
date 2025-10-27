@@ -9,9 +9,8 @@ using Newtonsoft.Json;
 using Steamworks;
 using TMPro;
 using UnityEngine;
-using LobbyState = PAMultiplayer.Managers.SteamLobbyManager.LobbyState;
 
-namespace PAMultiplayer.Managers.MenuManagers;
+namespace PAMultiplayer.Managers;
 
 /// <summary>
 /// Manages the Lobby menu that pops up on level enter
@@ -203,7 +202,7 @@ public class LobbyScreenManager : MonoBehaviour
                 
         VGPlayerManager.inst.RespawnPlayers();
         
-        SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)LobbyState.Playing).ToString());
+        SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)SteamLobbyManager.LobbyState.Playing).ToString());
         GlobalsManager.HasStarted = true;
         SteamLobbyManager.Inst.UnloadAll();
         

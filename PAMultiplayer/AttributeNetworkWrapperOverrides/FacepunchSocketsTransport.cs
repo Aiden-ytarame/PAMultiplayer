@@ -1,10 +1,10 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
-using AttributeNetworkWrapper.Core;
+using AttributeNetworkWrapperV2;
 using Steamworks;
 using Steamworks.Data;
-using SendType = AttributeNetworkWrapper.Core.SendType;
+using SendType = AttributeNetworkWrapperV2.SendType;
 
 namespace PAMultiplayer.AttributeNetworkWrapperOverrides;
 

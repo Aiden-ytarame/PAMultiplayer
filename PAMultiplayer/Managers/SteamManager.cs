@@ -4,7 +4,7 @@ using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
-using WrapperNetworkManager = AttributeNetworkWrapper.NetworkManager;
+using WrapperNetworkManager = AttributeNetworkWrapperV2.NetworkManager;
 namespace PAMultiplayer.Managers;
 
 /// <summary>
@@ -117,8 +117,8 @@ public class SteamManager : MonoBehaviour
         GlobalsManager.IsMultiplayer = false;
         GlobalsManager.IsHosting = false;
         
-        SteamLobbyManager.Inst.LeaveLobby();
-        WrapperNetworkManager.Instance.EndServer();
+        SteamLobbyManager.Inst?.LeaveLobby();
+        WrapperNetworkManager.Instance?.EndServer();
     }
     
 }

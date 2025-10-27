@@ -1,6 +1,5 @@
-using System.IO;
+using BepInEx.Configuration;
 using HarmonyLib;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace PAMultiplayer.Patch;
 
@@ -10,63 +9,52 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch(typeof(SettingsManager))]
 public static class SaveSettingsPatch
 {
+    private static ConfigEntry<int> _warpSfx;
+    private static ConfigEntry<int> _hitSfx;
+    private static ConfigEntry<bool> _trasnparent;
+    private static ConfigEntry<int> _transparentAlpha;
+    private static ConfigEntry<int> _noRepeat;
+    private static ConfigEntry<bool> _linked;
+    private static ConfigEntry<bool> _chat;
+    private static ConfigEntry<bool> _allowNonPublicLevels;
+
     [HarmonyPatch(nameof(SettingsManager.UpdateSettingsFile))]
     [HarmonyPrefix]
     static void PreSaveSettings()
     {
-        string settingsPath = Directory.GetCurrentDirectory() + "\\settings\\";
-        if (!Directory.Exists(settingsPath)) return;
+        _warpSfx.Value = DataManager.inst.GetSettingInt("MpPlayerWarpSFX", 1);
+        _hitSfx.Value = DataManager.inst.GetSettingInt("MpPlayerSFX", 0);
+        _trasnparent.Value = DataManager.inst.GetSettingBool("MpTransparentPlayer", true);
+        _transparentAlpha.Value = DataManager.inst.GetSettingInt("MpTransparentPlayerAlpha", 0);
+        _noRepeat.Value = DataManager.inst.GetSettingInt("MpNoRepeat", 0);
+        _linked.Value = DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true);
+        _chat.Value = DataManager.inst.GetSettingBool("MpChatEnabled", true);
+        _allowNonPublicLevels.Value = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false);
         
-        var settings = new MultiplayerSettings()
-        {
-            PlayerWarpSFX = DataManager.inst.GetSettingInt("MpPlayerWarpSFX", 1),
-            PlayerHitSFX = DataManager.inst.GetSettingInt("MpPlayerSFX", 0),
-            TransparentPlayer = DataManager.inst.GetSettingBool("MpTransparentPlayer", true),
-            TransparentPlayerAlpha = DataManager.inst.GetSettingInt("MpTransparentPlayerAlpha", 0),
-            NoRepeat = DataManager.inst.GetSettingInt("MpNoRepeat", 0),
-            LinkedHealthPopup = DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true),
-            ChatEnabled = DataManager.inst.GetSettingBool("MpChatEnabled", true), 
-            AllowNonPublicLevels = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false)
-        };
-        
-        string json = JsonSerializer.Serialize(settings);
-        File.WriteAllText(settingsPath + "multiplayer-settings.vgc", json);
+        PAM.Inst.Config.Save();
     }
 
     [HarmonyPatch(nameof(SettingsManager.OnAwake))]
     [HarmonyPrefix]
     static void PreStart()
     {
-        string path = Directory.GetCurrentDirectory() + "\\settings\\multiplayer-settings.vgc";
+        _warpSfx = PAM.Inst.Config.Bind(new ConfigDefinition("General", "Player Warp SFX"), 1);
+        _hitSfx = PAM.Inst.Config.Bind(new ConfigDefinition("General", "Player Hit SFX"), 0);
+        _trasnparent = PAM.Inst.Config.Bind(new ConfigDefinition("General", "Transparent Nanos"), true);
+        _transparentAlpha = PAM.Inst.Config.Bind(new ConfigDefinition("General", "Transparent Alpha"), 0);
+        _noRepeat = PAM.Inst.Config.Bind(new ConfigDefinition("General", "No Repeat"), 0);
+        _linked = PAM.Inst.Config.Bind(new ConfigDefinition("General", "Linked Health Popup"), true);
+        _chat = PAM.Inst.Config.Bind(new ConfigDefinition("General", "Chat Enabled"), true);
+        _allowNonPublicLevels = PAM.Inst.Config.Bind(new ConfigDefinition("General", "Allow Private Levels"), false);
         
-        MultiplayerSettings settings = new();
-        
-        if (File.Exists(path))
-        {
-            settings = JsonSerializer.Deserialize<MultiplayerSettings>(File.ReadAllText(path));
-        }
-        
-        DataManager.inst.UpdateSettingInt("MpPlayerWarpSFX", settings.PlayerWarpSFX);
-        DataManager.inst.UpdateSettingInt("MpPlayerSFX", settings.PlayerHitSFX);
-        DataManager.inst.UpdateSettingBool("MpTransparentPlayer", settings.TransparentPlayer);
-        DataManager.inst.UpdateSettingInt("MpTransparentPlayerAlpha", settings.TransparentPlayerAlpha);
-        DataManager.inst.UpdateSettingInt("MpNoRepeat", settings.NoRepeat);
-        DataManager.inst.UpdateSettingBool("MpLinkedHealthPopup", settings.LinkedHealthPopup);
-        DataManager.inst.UpdateSettingBool("MpChatEnabled", settings.ChatEnabled);
-        DataManager.inst.UpdateSettingBool("MpAllowNonPublicLevels", settings.AllowNonPublicLevels);
+        DataManager.inst.UpdateSettingInt("MpPlayerWarpSFX", _warpSfx.Value);
+        DataManager.inst.UpdateSettingInt("MpPlayerSFX", _hitSfx.Value);
+        DataManager.inst.UpdateSettingBool("MpTransparentPlayer", _trasnparent.Value);
+        DataManager.inst.UpdateSettingInt("MpTransparentPlayerAlpha", _transparentAlpha.Value);
+        DataManager.inst.UpdateSettingInt("MpNoRepeat", _noRepeat.Value);
+        DataManager.inst.UpdateSettingBool("MpLinkedHealthPopup", _linked.Value);
+        DataManager.inst.UpdateSettingBool("MpChatEnabled", _chat.Value);
+        DataManager.inst.UpdateSettingBool("MpAllowNonPublicLevels", _allowNonPublicLevels.Value);
         
     }
-}
-
-public class MultiplayerSettings
-{
-    public int PlayerWarpSFX { get; set; } = 1;
-    public int PlayerHitSFX { get; set; }
-
-    public bool TransparentPlayer { get; set; } = true;
-    public int TransparentPlayerAlpha { get; set; }
-    public int NoRepeat { get; set; }
-    public bool LinkedHealthPopup { get; set; } = true;
-    public bool ChatEnabled { get; set; } = true;
-    public bool AllowNonPublicLevels { get; set; } = false;
 }

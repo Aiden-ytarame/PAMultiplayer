@@ -1,7 +1,7 @@
 using System;
 using HarmonyLib;
-using Il2CppInterop.Runtime;
-using AttributeNetworkWrapper.Core;
+using AttributeNetworkWrapperV2;
+using PAMultiplayer;
 using PAMultiplayer.Managers;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -13,7 +13,7 @@ namespace PAMultiplayer.Patch;
 /// takes care of checkpoint for server only
 /// </summary>
 [HarmonyPatch(typeof(GameManager))]
-public static class CheckpointHandler
+public static partial class CheckpointHandler
 {
     [HarmonyPatch(nameof(GameManager.CheckpointCheck))]
     [HarmonyPrefix]
@@ -44,7 +44,7 @@ public static class CheckpointHandler
             if (tmpIndex != -1)
             {
                 __instance.currentCheckpointIndex = tmpIndex;
-                Multi_CheckpointHit(tmpIndex);
+                CallRpc_Multi_CheckpointHit(tmpIndex);
                 
                 GameManager.Inst.playingCheckpointAnimation = true;
                 VGPlayerManager.Inst.RespawnPlayers();
@@ -72,7 +72,7 @@ public static class CheckpointHandler
 /// takes care of rewinding to the correct checkpoint
 /// </summary>
 [HarmonyPatch(typeof(VGPlayerManager))]
-public static class RewindHandler
+public static partial class RewindHandler
 {
     [HarmonyPatch(nameof(VGPlayerManager.SpawnPlayers))]
     [HarmonyPrefix]
@@ -98,7 +98,7 @@ public static class RewindHandler
                     index = GameManager.Inst.currentCheckpointIndex;
                 }
                 
-                Multi_RewindToCheckpoint(index);
+                CallRpc_Multi_RewindToCheckpoint(index);
                 
                 foreach (var vgPlayerData in VGPlayerManager.Inst.players)
                 {

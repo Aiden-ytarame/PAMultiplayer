@@ -1,13 +1,14 @@
 using System.Collections.Generic;
 using Il2CppSystems.SceneManagement;
-using AttributeNetworkWrapper.Core;
+using AttributeNetworkWrapperV2;
+using PAMultiplayer;
 using PAMultiplayer.Managers;
 using Steamworks;
-using NetworkManager = AttributeNetworkWrapper.NetworkManager;
+using NetworkManager = AttributeNetworkWrapperV2.NetworkManager;
 
 namespace PAMultiplayer.AttributeNetworkWrapperOverrides;
 
-public class PaMNetworkManager : NetworkManager
+public partial class PaMNetworkManager : NetworkManager
 {
     FacepunchSocketsTransport _facepunchtransport;
     public static PaMNetworkManager PamInstance { get; private set; }
@@ -64,14 +65,14 @@ public class PaMNetworkManager : NetworkManager
         
         foreach (var keyValuePair in GlobalsManager.Players)
         {
-            Client_RegisterPlayerId(connection, keyValuePair.Key, keyValuePair.Value.VGPlayerData.PlayerID, GlobalsManager.Players.Count);
+            CallRpc_Client_RegisterPlayerId(connection, keyValuePair.Key, keyValuePair.Value.VGPlayerData.PlayerID, GlobalsManager.Players.Count);
         }
         
         SteamId steamId = ulong.Parse(connection.Address);
         int id = GlobalsManager.Players[steamId].VGPlayerData.PlayerID;
         GlobalsManager.ConnIdToSteamId.Add(connection.ConnectionId, steamId);
         
-        Multi_RegisterJoinedPlayerId(steamId, id);
+        CallRpc_Multi_RegisterJoinedPlayerId(steamId, id);
         
         PAM.Logger.LogInfo($"Player {connection.Address} joined game server.");
     }

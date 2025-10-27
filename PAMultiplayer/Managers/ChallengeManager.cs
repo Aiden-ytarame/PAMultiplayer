@@ -3,12 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
+using AttributeNetworkWrapperV2;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppSystems.SceneManagement;
-using AttributeNetworkWrapper.Core;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Steamworks;
@@ -16,12 +15,11 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
-using LobbyState = PAMultiplayer.Managers.SteamLobbyManager.LobbyState;
 using Random = UnityEngine.Random;
 
 namespace PAMultiplayer.Managers;
 
-public class ChallengeManager : MonoBehaviour
+public partial class ChallengeManager : MonoBehaviour
 {
     public static ChallengeManager Inst { get; private set; }
     public static readonly List<string> RecentLevels = new();
@@ -378,7 +376,7 @@ public class ChallengeManager : MonoBehaviour
 
         if (GlobalsManager.IsMultiplayer)
         {
-           Multi_VoteWinner(level.SteamInfo.ItemID);
+           CallRpc_Multi_VoteWinner(level.SteamInfo.ItemID);
         }
       
     }
@@ -643,7 +641,7 @@ public class ChallengeManager : MonoBehaviour
             else
             {
                 SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                yield return new WaitUntil(new Func<bool>(() => AttributeNetworkWrapper.NetworkManager.Instance.TransportActive));
+                yield return new WaitUntil(new Func<bool>(() => AttributeNetworkWrapperV2.NetworkManager.Instance.TransportActive));
                 yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
             }
         }
@@ -657,7 +655,7 @@ public class ChallengeManager : MonoBehaviour
         
         if (GlobalsManager.IsHosting)
         {
-            SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)LobbyState.Challenge).ToString());
+            SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)SteamLobbyManager.LobbyState.Challenge).ToString());
             
             yield return PickLevelForVoting();
             
@@ -684,7 +682,7 @@ public class ChallengeManager : MonoBehaviour
             timer.Stop();
             PAM.Logger.LogDebug($"took {timer.ElapsedMilliseconds}ms to get level data");
           
-            Multi_CheckLevelIds(ids);
+            CallRpc_Multi_CheckLevelIds(ids);
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
         }
         else
@@ -695,7 +693,7 @@ public class ChallengeManager : MonoBehaviour
         yield return new WaitUntil(new Func<bool>(() => SteamLobbyManager.Inst.IsEveryoneLoaded));
         yield return null;
         SteamLobbyManager.Inst.UnloadAll();
-        PauseLobbyPatch.Multi_StartLevel();
+        PauseLobbyPatch.CallRpc_Multi_StartLevel();
         StartVoting();
     }
 
@@ -732,7 +730,7 @@ public class ChallengeManager : MonoBehaviour
         }
 
         PAM.Logger.LogInfo($"requesting audio of [{unknownLevelIds.Count}] levels");
-        Server_UnknownLevelIds(null, unknownLevelIds);
+        CallRpc_Server_UnknownLevelIds(null, unknownLevelIds);
     }
 
     [ServerRpc]
@@ -761,14 +759,14 @@ public class ChallengeManager : MonoBehaviour
                 if (offset + separator < songData.Item1.Length)
                 {
                     ArraySegment<short> segment = new(songData.Item1, offset, separator);
-                    Client_AudioData(conn, levelId, songData.Item2, songData.Item3, segment, false);
+                    CallRpc_Client_AudioData(conn, levelId, songData.Item2, songData.Item3, segment, false);
                     offset += separator + 1;
                 }
                 else
                 {
                     ArraySegment<short> segment = new ArraySegment<short>(songData.Item1, offset,
                         Mathf.FloorToInt(songData.Item1.Length - offset));
-                    Client_AudioData(conn, levelId, songData.Item2, songData.Item3, segment, true);
+                    CallRpc_Client_AudioData(conn, levelId, songData.Item2, songData.Item3, segment, true);
                     break;
                 }
             }
@@ -917,7 +915,7 @@ public class ChallengeManager : MonoBehaviour
     }
 }
 
-public class VoterCell : MonoBehaviour
+public partial class VoterCell : MonoBehaviour
 {
     private GhostUIElement _ghostUIElement;
     private Image _border;
@@ -994,7 +992,7 @@ public class VoterCell : MonoBehaviour
             return;
         }
         
-        Server_LevelVoted(null, Level.SteamInfo.ItemID);
+        CallRpc_Server_LevelVoted(null, Level.SteamInfo.ItemID);
     }
 
     private void OnTriggerExit2D(Collider2D other)

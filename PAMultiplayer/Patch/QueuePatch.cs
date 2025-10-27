@@ -4,6 +4,7 @@ using System.Reflection;
 using Cpp2IL.Core.Extensions;
 using HarmonyLib;
 using Il2CppSystems.SceneManagement;
+using PAMultiplayer;
 using PAMultiplayer.Managers;
 using TMPro;
 using UnityEngine;
@@ -173,7 +174,7 @@ public static class LevelEndScreenPatch
             {
                 if (GlobalsManager.IsMultiplayer && GlobalsManager.IsHosting)
                 {
-                    GameManagerPatch.Multi_OpenChallenge();
+                    GameManagerPatch.CallRpc_Multi_OpenChallenge();
                 }
                 SceneLoader.Inst.LoadSceneGroup("Challenge");
                 return;

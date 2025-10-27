@@ -4,7 +4,6 @@ using HarmonyLib;
 using Newtonsoft.Json;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
-using PAMultiplayer.Managers.MenuManagers;
 using UnityEngine;
 
 namespace PAMultiplayer.Patch;
@@ -44,7 +43,7 @@ public static class DebugControllerPatch
                         }
                         
                         GameManager.Inst.RewindToCheckpoint(index);
-                        RewindHandler.Multi_RewindToCheckpoint(index);
+                        RewindHandler.CallRpc_Multi_RewindToCheckpoint(index);
                     }
                     else
                     {

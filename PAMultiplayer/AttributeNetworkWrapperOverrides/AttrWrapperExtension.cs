@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using AttributeNetworkWrapper.Core;
+using AttributeNetworkWrapperV2;
+using PAMultiplayer;
 using PAMultiplayer.Managers;
 using Steamworks;
 using UnityEngine;

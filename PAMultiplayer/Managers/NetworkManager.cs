@@ -1,6 +1,6 @@
-﻿using BepInEx.Unity.IL2CPP.UnityEngine;
+﻿using AttributeNetworkWrapperV2;
+using BepInEx.Unity.IL2CPP.UnityEngine;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
-using AttributeNetworkWrapper.Core;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Rewired;
@@ -16,7 +16,7 @@ namespace PAMultiplayer.Managers
     /// calls receive for the server/client callbacks
     /// and cleans some stuff on level unload
     /// </summary>
-    public class NetworkManager : MonoBehaviour
+    public partial class NetworkManager : MonoBehaviour
     {
         private bool _pressedNameKey;
         PaMNetworkManager _paMNetworkManager;
@@ -29,9 +29,9 @@ namespace PAMultiplayer.Managers
                 {
                     var v2 = playerData.VGPlayerData.PlayerObject.Player_Wrapper.position;
                     if (GlobalsManager.IsHosting)
-                        Multi_PlayerPos(GlobalsManager.LocalPlayerId, v2);
+                        CallRpc_Multi_PlayerPos(GlobalsManager.LocalPlayerId, v2);
                     else
-                        Server_PlayerPos(null, v2);
+                        CallRpc_Server_PlayerPos(null, v2);
                 }
             }
             
@@ -53,7 +53,7 @@ namespace PAMultiplayer.Managers
 
             if (_paMNetworkManager == null)
             {
-                _paMNetworkManager = (PaMNetworkManager)AttributeNetworkWrapper.NetworkManager.Instance;
+                _paMNetworkManager = (PaMNetworkManager)AttributeNetworkWrapperV2.NetworkManager.Instance;
             }
             
             _paMNetworkManager?.Receive();
@@ -67,7 +67,7 @@ namespace PAMultiplayer.Managers
                 return;
             }
             SetPlayerPos(steamID, pos);
-            Multi_PlayerPos(steamID, pos);
+            CallRpc_Multi_PlayerPos(steamID, pos);
         }
         
         [MultiRpc(SendType.Unreliable)]

@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Linq;
+using AttributeNetworkWrapperV2;
 using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
 using Il2CppInterop.Runtime.Injection;
 using PAMultiplayer.Managers;
-using PAMultiplayer.Managers.MenuManagers;
 using PAMultiplayer.Patch;
-
+using NetworkManager = PAMultiplayer.Managers.NetworkManager;
 
 namespace PAMultiplayer;
 
@@ -23,7 +23,7 @@ public class PAM : BasePlugin
     Harmony harmony;
     const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "1.0.8";
+    public const string Version = "1.1.0";
 
     public override void Load()
     {
@@ -39,7 +39,7 @@ public class PAM : BasePlugin
             ClassInjector.RegisterTypeInIl2Cpp<MultiplayerDiscordManager>();
             ClassInjector.RegisterTypeInIl2Cpp<ChallengeManager>();
             ClassInjector.RegisterTypeInIl2Cpp<VoterCell>();
-            
+            ClassInjector.RegisterTypeInIl2Cpp<PointsManager>();
         }
         catch (Exception e)
         {
