@@ -136,10 +136,6 @@ public class SteamLobbyManager : MonoBehaviour
         if (GlobalsManager.Players.TryGetValue(friend.Id, out var player))
         {
             string hex = VGPlayerManager.Inst.GetPlayerColorHex(player.VGPlayerData.PlayerID);
-            if (hex == "#FFFFFF")
-            {
-                hex = "FFFFFF";
-            }
             VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{friend.Name}</color>] Disconnected", 2.5f);
             
             VGPlayerManager.Inst.players.Remove(player.VGPlayerData);
@@ -154,6 +150,7 @@ public class SteamLobbyManager : MonoBehaviour
                 playerObj.PlayerDeath(0);
             }
 
+            PointsManager.Inst?.PlayerLeft(friend.Id);
 
             if (!GlobalsManager.IsHosting)
             {
@@ -207,11 +204,6 @@ public class SteamLobbyManager : MonoBehaviour
         };
         
         string hex = VGPlayerManager.Inst.GetPlayerColorHex(newData.PlayerID);
-        if (hex == "#FFFFFF")
-        {
-            hex = "FFFFFF";
-        }
-        
         VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{friend.Name}</color>] Joined", 2.5f);
 
         if(GlobalsManager.Players.TryAdd(friend.Id, new PlayerData(newData, friend.Name)))

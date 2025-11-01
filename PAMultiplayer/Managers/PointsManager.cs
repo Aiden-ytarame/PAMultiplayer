@@ -1,19 +1,13 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using AttributeNetworkWrapperV2;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Cpp2IL.Core.Extensions;
-using Il2CppInterop.Runtime;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using Steamworks;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 using VGFunctions;
-using Random = UnityEngine.Random;
-using Type = Il2CppSystem.Type;
 
 namespace PAMultiplayer.Managers;
 
@@ -25,12 +19,13 @@ public partial class PointsManager : MonoBehaviour
         public int Points = points;
     }
 
-    private struct PlayerRank(int hits, int boosts, int cc, int score)
+    private struct PlayerRank(int hits, int boosts, int cc, int score, bool disqualify)
     {
-        public int Hits = hits;
-        public int Boosts = boosts;
-        public int Cc = cc;
-        public int Score = score;
+        public readonly int Hits = hits;
+        public readonly int Boosts = boosts;
+        public readonly int Cc = cc;
+        public readonly int Score = score;
+        public readonly bool Disqualify = disqualify;
     }
 
     private struct PlayerEntry
@@ -40,12 +35,13 @@ public partial class PointsManager : MonoBehaviour
             Transform wrapper = entry.GetChild(1);
             Icon = wrapper.GetChild(1).GetComponent<TextMeshProUGUI>();
             Name = wrapper.GetChild(2).GetComponent<TextMeshProUGUI>();
-            
+
             Transform content = entry.GetChild(2);
             Rank = content.GetChild(0).GetComponent<TextMeshProUGUI>();
-            
+
             Stats = content.GetChild(1).GetComponent<TextMeshProUGUI>();
-            
+
+            content.GetChild(2).GetChild(0).transform.Cast<RectTransform>().sizeDelta = new Vector2(50, 50);
             Score = content.GetChild(2).GetChild(1).GetComponent<TextMeshProUGUI>();
         }
 
@@ -56,16 +52,16 @@ public partial class PointsManager : MonoBehaviour
         public readonly TextMeshProUGUI Score;
 
     }
-    
+
     public static PointsManager Inst;
     private float _levelDuration = 0;
-    
+
     private int _localBoosts = 0;
     private int _localCc = 0;
     private int _localHits = 0;
     private int _localDeaths = 0;
     private float _timeOfDeath = 0;
-    
+
     private float _averageBoostDuration = 0;
     private float _timeAlive = 0;
     private float _timeMoving = 0;
@@ -74,17 +70,18 @@ public partial class PointsManager : MonoBehaviour
     private int _posSaved = 0;
 
     private int _checkpointLow = 0;
-    
-    private Dictionary<ulong, PlayerRank> _playerRanks = new();
-    
+
+    private readonly List<ulong> _playersDead = new();
+
+    private readonly Dictionary<ulong, PlayerRank> _playerRanks = new();
+    private readonly Dictionary<ulong, PlayerEntry> _playerEntries = new();
+
     private AssetBundle _pointsBundle;
     private UI_Menu _menu;
     private Transform _playerList;
     private GameObject _playerEntryPrefab;
-    
-    private Texture2D[] _pointsSprites = new Texture2D[5];
 
-    private static readonly int[] COIN_VALUES = [10000, 1000, 100, 10, 1];
+    private static readonly string[] PlayerShapes = ["■", "▲", "<size=60>●", "<size=50><voffset=-15>^"];
 
     private void Awake()
     {
@@ -92,27 +89,24 @@ public partial class PointsManager : MonoBehaviour
         {
             Destroy(this);
         }
-        
+
         Inst = this;
-        GameManager.Inst.add_levelRestartEvent(new Action(() => Inst.LevelRestarted()));
-        
+        GameManager.Inst.add_levelRestartEvent(new Action(() => Inst?.LevelRestarted()));
+        GameManager.Inst.add_levelFinishEvent(new Action(() => Inst?.LevelEnded()));
+
         using (var stream = Assembly.GetExecutingAssembly()
                    .GetManifestResourceStream("PAMultiplayer.Assets.points"))
         {
             _pointsBundle = AssetBundle.LoadFromMemory(stream!.ReadBytes());
-            foreach (var allAssetName in _pointsBundle.AllAssetNames())
-            {
-                PAM.Logger.LogFatal(allAssetName);
-            }
         }
 
-        _playerEntryPrefab = _pointsBundle.LoadAsset("assets/playerentry.prefab").Cast<GameObject>();
+        Transform uiManager = PauseUIManager.Inst.transform.parent;
+        _menu = Instantiate(_pointsBundle.LoadAsset("assets/level result.prefab").Cast<GameObject>(), uiManager)
+            .GetComponent<UI_Menu>();
         
-        _pointsSprites[4] = _pointsBundle.LoadAsset("assets/challenge/pamcoin-01.png").Cast<Texture2D>();
-        _pointsSprites[3] = _pointsBundle.LoadAsset("assets/challenge/pamcoin-02.png").Cast<Texture2D>();
-        _pointsSprites[2] = _pointsBundle.LoadAsset("assets/challenge/pamcoin-03.png").Cast<Texture2D>();
-        _pointsSprites[1] = _pointsBundle.LoadAsset("assets/challenge/pamcoin-05.png").Cast<Texture2D>();
-        _pointsSprites[0] = _pointsBundle.LoadAsset("assets/challenge/pamcoin-04.png").Cast<Texture2D>();
+        _playerList = _menu.transform.Find("PlayersList");
+        
+        _playerEntryPrefab = _pointsBundle.LoadAsset("assets/playerentry.prefab").Cast<GameObject>();
     }
 
     private void OnDestroy()
@@ -131,11 +125,11 @@ public partial class PointsManager : MonoBehaviour
         {
             return;
         }
-        
+
         _levelDuration += Time.deltaTime;
     }
 
-    public void LevelRestarted()
+    private void LevelRestarted()
     {
         _levelDuration = 0;
         _localBoosts = 0;
@@ -146,127 +140,94 @@ public partial class PointsManager : MonoBehaviour
         _averageBoostDuration = 0;
         _timeAlive = 0;
         _timeMoving = 0;
-        
+
         _sumOfPos = Vector3.zero;
         _posSaved = 0;
 
         _checkpointLow = 0;
+        
+        _playerEntries.Clear();
+        _playerRanks.Clear();
+        _playersDead.Clear();
     }
 
-    private void Start()
+    private void LevelEnded()
     {
-        GameManager.Inst.add_levelStartEvent(new Action(() => Inst.StartCoroutine(Inst.ShowLobby().WrapToIl2Cpp())));
-        //StartCoroutine(ShowLobby().WrapToIl2Cpp());
-    }
-
-    IEnumerator ShowLobby()
-    {
-        Transform uiManager = PauseUIManager.Inst.transform.parent;
-        _menu = Instantiate(_pointsBundle.LoadAsset("assets/level result.prefab").Cast<GameObject>(), uiManager).GetComponent<UI_Menu>();
-
-        _playerList = _menu.transform.Find("PlayersList");
-        
-        yield return new WaitForUpdate();
-        yield return new WaitForUpdate();
-        
-        _menu.ShowBase();
-        _menu.SwapView("main");
-        CameraDB.Inst.SetUIVolumeWeightIn(0.2f);
-
-        for (int i = 0; i < 16; i++)
+        int score = DataManager.inst.GetSettingInt("MpScore", 0);
+        if (!GlobalsManager.JoinedMidLevel)
         {
-           GenerateEntry();
+            score += GetWonChallenges();
+        }
+        
+        DataManager.inst.UpdateSettingInt("MpScore", score);
+        if (GlobalsManager.IsMultiplayer)
+        {
+            CallRpc_Client_SendResults(null, _localHits, _localBoosts, _localCc, score, GlobalsManager.JoinedMidLevel);
+            ShowEndScreen();
         }
     }
 
+
     public void ShowEndScreen()
     {
-        Transform uiManager = PauseUIManager.Inst.transform.parent;
-        var screen = Instantiate(_pointsBundle.LoadAsset("assets/level result.prefab").Cast<GameObject>(), uiManager).GetComponent<UI_Menu>();
-        
-        screen.ShowBase();
-        screen.SwapView("main");
+        _menu.ShowBase();
+        _menu.SwapView("main");
         CameraDB.Inst.SetUIVolumeWeightIn(0.2f);
+        
+        foreach (var keyValuePair in GlobalsManager.Players)
+        {
+            GenerateEntry(keyValuePair.Key, keyValuePair.Value);
+        }
     }
 
-    private void GenerateEntry()
+    private void GenerateEntry(ulong playerId, PlayerData playerData)
     {
-         var entry = new PlayerEntry(Instantiate(_playerEntryPrefab, _playerList).transform);
-            entry.Name.text = $"player test";
-            
-            var rank = (DataManager.LevelRankType)Random.RandomRangeInt(0, 7);
-            
-            entry.Rank.text = "<color=#" + LSColors.ColorToHex(DataManager.inst.LevelRanks[rank].Color) + ">"
-            + DataManager.inst.LevelRanks[rank].ASCII.GetLocalizedString();
+        var entry = new PlayerEntry(Instantiate(_playerEntryPrefab, _playerList).transform);
+        entry.Name.text = playerData.Name;
 
-            entry.Stats.rectTransform.anchoredPosition = new Vector2(100, 0);
-            entry.Stats.text = $"<b><color=#fe0932>{Random.RandomRangeInt(0, 100)} </color>/ <color=#00aeef>{Random.RandomRangeInt(0, 100)} </color>/ <color=#00efbe>{Random.RandomRangeInt(0, 100)}</color>";
-            entry.Stats.transform.Cast<RectTransform>().anchoredPosition = new Vector2(100, 7);
-            int randScore = Random.RandomRangeInt(0, 100000);
-            
-            Dictionary<int, int> scores = new();
-            
-            for (var j = 0; j < COIN_VALUES.Length; j++)
-            {
-                int value = COIN_VALUES[j];
+        var hex = LSColors.ColorToHex(GameManager.Inst.LiveTheme.GetPlayerColor(playerData.VGPlayerData.PlayerID % 4));
+        entry.Icon.text = $"<color=#{hex}>{PlayerShapes[playerData.VGPlayerData.PlayerID / 4]}";
 
-                int amount = randScore / value;
-                int curr = scores.GetValueOrDefault(j);
-                scores[j] = curr + amount;
-                randScore -= value * amount;
-            }
-
-            int count = 0;
-            foreach (var keyValuePair in scores)
-            {
-                if (keyValuePair.Value == 0)
-                {
-                    continue;
-                }
-                
-                if (++count >= 50)
-                {
-                    break;
-                }
-                
-                var go = new GameObject($"icon {keyValuePair.Key}");
-                go.transform.SetParent(entry.Score, false);
-               
-                go.AddComponent<RawImage>().texture = _pointsSprites[keyValuePair.Key];
-               
-                
-                for (int j = 0; j < keyValuePair.Value - 1; j++)
-                {
-                    if (++count > 50)
-                    {
-                        break;
-                    }
-                    Instantiate(go, entry.Score);
-                }
-                
-                if (++count > 50)
-                {
-                    break;
-                }
-                
-                new GameObject("spacer", Il2CppType.Of<RectTransform>()).transform.SetParent(entry.Score);
-            }
+        entry.Stats.rectTransform.anchoredPosition = new Vector2(100, 0);
+        entry.Stats.transform.Cast<RectTransform>().anchoredPosition = new Vector2(100, 7);
+        
+        _playerEntries.Add(playerId, entry);
+        
+        if (_playerRanks.TryGetValue(playerId, out var playerRank))
+        {
+           UpdateEntry(playerId, playerRank);
+        }
+        else
+        {
+            entry.Rank.text = "<color=#" + LSColors.ColorToHex(DataManager.inst.LevelRanks[DataManager.LevelRankType.N].Color) + ">"
+                              + DataManager.inst.LevelRanks[DataManager.LevelRankType.N].ASCII.GetLocalizedString();
+            
+            entry.Score.text = "X";
+        }
     }
 
-    [MultiRpc]
-    private static void Multi_RequestClientResults()
+    private void UpdateEntry(ulong playerId, PlayerRank playerRank)
     {
-        if (!Inst)
+        if (!_playerEntries.TryGetValue(playerId, out var entry))
         {
             return;
         }
         
-        Inst._playerRanks.Clear();
-        CallRpc_Client_SendResults(null, Inst._localHits, Inst._localBoosts, Inst._localCc, 0);
+        DataManager.LevelRankType rank = playerRank.Disqualify ? DataManager.LevelRankType.N : DataManager.LevelRank.GetLevelRankTypeFromHits(playerRank.Hits);
+        entry.Rank.text = "<color=#" + LSColors.ColorToHex(DataManager.inst.LevelRanks[rank].Color) + ">"
+                          + DataManager.inst.LevelRanks[rank].ASCII.GetLocalizedString();
+            UIStateManager.Inst.RefreshTextCache(entry.Rank, entry.Rank.text);
+            
+        entry.Stats.text =
+            $"<b><color=#fe0932>{playerRank.Hits} </color>/ <color=#00aeef>{playerRank.Boosts} </color>/ <color=#00efbe>{playerRank.Cc}</color>";
+        UIStateManager.Inst.RefreshTextCache(entry.Stats, entry.Stats.text);
+        
+        entry.Score.text = $"<b><size=36>X<size=31>{playerRank.Score}";
+        UIStateManager.Inst.RefreshTextCache(entry.Score, entry.Score.text);
     }
 
     [ServerRpc]
-    private static void Client_SendResults(ClientNetworkConnection conn, int hit, int boost, int cc, int score)
+    private static void Client_SendResults(ClientNetworkConnection conn, int hit, int boost, int cc, int score, bool midLevel)
     {
         if (!Inst)
         {
@@ -275,21 +236,30 @@ public partial class PointsManager : MonoBehaviour
         
         if (!conn.TryGetSteamId(out SteamId id))
         {
+            PAM.Logger.LogError($"couldnt find id {conn.Address}");
             return;
         }
         
-        CallRpc_Multi_SetPlayerResults(id, hit, boost, cc, score);
+        CallRpc_Multi_SetPlayerResults(id, hit, boost, cc, score, midLevel);
     }
 
     [MultiRpc]
-    private static void Multi_SetPlayerResults(ulong steamId, int hit, int boost, int cc, int score)
+    private static void Multi_SetPlayerResults(ulong steamId, int hit, int boost, int cc, int score, bool midLevel)
     {
-        Inst._playerRanks[steamId] = new PlayerRank(hit, boost, cc, score);
+        if (!Inst)
+        {
+            return;
+        }
+        
+        PAM.Logger.LogError($"data from {steamId}");
+        Inst._playerRanks[steamId] = new PlayerRank(hit, boost, cc, score, midLevel);
+        Inst.UpdateEntry(steamId, Inst._playerRanks[steamId]);
     }
     
-    public void AddBoost()
+    public void AddBoost(float duration)
     {
         _localBoosts++;
+        _averageBoostDuration += duration;
     }
 
     public void AddCloseCall()
@@ -301,12 +271,6 @@ public partial class PointsManager : MonoBehaviour
     {
         _localHits++;
     }
-
-    public void AddBoostDuration(float duration)
-    {
-        _averageBoostDuration += duration;
-    }
-
     public void AddTimeAlive(float time)
     {
         _timeAlive += time;
@@ -320,6 +284,7 @@ public partial class PointsManager : MonoBehaviour
     public void AddDeath()
     {
         _localDeaths++;
+        _localHits++;
         _timeOfDeath = Time.timeSinceLevelLoad;
     }
 
@@ -333,8 +298,21 @@ public partial class PointsManager : MonoBehaviour
     {
         _checkpointLow++;
     }
+
+    public void PlayerHasDied(ulong playerId)
+    {
+        if (!_playersDead.Contains(playerId))
+        {
+            _playersDead.Add(playerId);
+        }
+    }
+
+    public void PlayerLeft(ulong playerId)
+    {
+        _playersDead.Remove(playerId);
+    }
     
-    public void GetWonChallenges()
+    public int GetWonChallenges()
     {
         List<PointChallenge> challenges = new();
         
@@ -345,50 +323,59 @@ public partial class PointsManager : MonoBehaviour
                 challenges.Add(new PointChallenge("Participation trophy", 1));
                 break;
             case DataManager.LevelRankType.D:
-                challenges.Add(new PointChallenge("Maybe next time", 5));
+                challenges.Add(new PointChallenge("Maybe next time", 2));
                 break;
             case DataManager.LevelRankType.C:
-                challenges.Add(new PointChallenge("Could be better", 10));
+                challenges.Add(new PointChallenge("Could be better", 4));
                 break;
             case DataManager.LevelRankType.B:
-                challenges.Add(new PointChallenge("Not bad", 15));
+                challenges.Add(new PointChallenge("Not bad", 6));
                 break;
             case DataManager.LevelRankType.A:
-                challenges.Add(new PointChallenge("Very good", 20));
+                challenges.Add(new PointChallenge("Very good", 8));
                 break;
             case DataManager.LevelRankType.S:
-                challenges.Add(new PointChallenge("Well done", 25));
+                challenges.Add(new PointChallenge("Well done", 10));
                 break;
             case DataManager.LevelRankType.P:
-                challenges.Add(new PointChallenge("Perfection", 30));
+                challenges.Add(new PointChallenge("Perfection", 12));
                 break;
         }
+
+        if (GlobalsManager.IsMultiplayer)
+        {
+            if (GlobalsManager.Players.Count > 1 &&
+                _playersDead.Count - 1 == GlobalsManager.Players.Count &&
+                !_playersDead.Contains(GlobalsManager.LocalPlayerId.Value))
+            {
+                challenges.Add(new PointChallenge("Carry", 10));
+            }
+        }
         
-        //boost challengess
+        //boost challenges
         {
             _averageBoostDuration /= _localBoosts;
             float boostsPerSecond = _localBoosts / _levelDuration;
 
             PAM.Logger.LogFatal($"average Boost [{boostsPerSecond}]");
-            
             if (_localBoosts == 0)
             {
-                challenges.Add(new PointChallenge("Patience is a virtue", 30));
+                challenges.Add(new PointChallenge("Didnt even try", 12));
             }
             else
             {
                 if (boostsPerSecond > 5)
                 {
-                    challenges.Add(new PointChallenge("Impatient", 10));
+                    challenges.Add(new PointChallenge("Impatient", 3));
                 }
-                else if (boostsPerSecond < 0.3f)
+                else if (boostsPerSecond < 0.15f)
                 {
-                    challenges.Add(new PointChallenge("Patience is a virtue", 15));
+                    challenges.Add(new PointChallenge("Patience is a virtue", 6));
                 }
 
                 if (_averageBoostDuration > 0.22f)
                 {
-                    challenges.Add(new PointChallenge("Looong", 10));
+                    challenges.Add(new PointChallenge("Looong", 3));
                 }
                 else if (_averageBoostDuration < 0.09f)
                 {
@@ -400,13 +387,13 @@ public partial class PointsManager : MonoBehaviour
         //CC
         {
             float ccPerSeconds = _localCc / _levelDuration;
-             if (ccPerSeconds > 1)
+             if (ccPerSeconds > 0.5f)
             {
-                challenges.Add(new PointChallenge("A little too close", 10));
+                challenges.Add(new PointChallenge("A little too close", 6));
             }
-            else if (ccPerSeconds < 0.3f)
+            else if (ccPerSeconds < 0.05f)
             {
-                challenges.Add(new PointChallenge("Not even close", 10));
+                challenges.Add(new PointChallenge("Not even close", 9));
             }
         }
         
@@ -416,11 +403,11 @@ public partial class PointsManager : MonoBehaviour
 
             if (ratioMoving > 0.93f)
             {
-                challenges.Add(new PointChallenge("Good cardio", 10));
+                challenges.Add(new PointChallenge("Good cardio", 2));
             }
             else if (ratioMoving < 0.1f)
             {
-                challenges.Add(new PointChallenge("Why even bother", 10));
+                challenges.Add(new PointChallenge("Why even bother", 4));
             }
         }
         
@@ -430,16 +417,16 @@ public partial class PointsManager : MonoBehaviour
 
             if (_localDeaths == 0)
             {
-                challenges.Add(new PointChallenge("Not even a death", 15));
+                challenges.Add(new PointChallenge("Not even a death", 11));
             }
             else if (ratioAlive < 0.4f)
             {
-                challenges.Add(new PointChallenge("Gamemode 3", 5));
+                challenges.Add(new PointChallenge("Gamemode 3", 1));
             }
 
             if (_localDeaths > 0 && (_levelDuration - _timeOfDeath) < 5)
             {
-                challenges.Add(new PointChallenge("Right at the end", 5));
+                challenges.Add(new PointChallenge("Right at the end", 4));
             }
         }
 
@@ -452,27 +439,29 @@ public partial class PointsManager : MonoBehaviour
             PAM.Logger.LogFatal($"MAG [{mag}]");
             if (mag < 1)
             {
-                challenges.Add(new PointChallenge("Center of attentions", 15));
+                challenges.Add(new PointChallenge("Center of attentions", 3));
             }
-            else if (mag > 3)
+            else if (mag > 3.7f)
             {
-                challenges.Add(new PointChallenge("Shy nano", 5));
+                challenges.Add(new PointChallenge("Shy nano", 2));
             }
         }
         
         
         //checkpoint
         {
-            if (DataManager.inst.gameData.beatmapData.checkpoints.Count - 1 == _checkpointLow)
+            int checkCount = DataManager.inst.gameData.beatmapData.checkpoints.Count;
+            if (checkCount > 1 && checkCount - 1 == _checkpointLow)
             {
-                challenges.Add(new PointChallenge("On edge", 15));
+                challenges.Add(new PointChallenge("On edge", 5));
             }
         }
+
+
+        VGLevel level = GameManager.Inst.FetchLevel();
+        float difficultyMult;
         
-        
-        float difficultyMult = 1;
-        
-        switch (GameManager.Inst.FetchLevel().Difficulty)
+        switch (level.Difficulty)
         {
             case DataManager.DifficultyType.Basic:
                 difficultyMult = 0.6f;
@@ -493,11 +482,20 @@ public partial class PointsManager : MonoBehaviour
                 difficultyMult = 0;
                 break;
         }
-        
+
+        float durationMult = level.LevelMusic.length / 90; //1:30 level for 1x
+
+        int wonAmount = 0;
+        int raw = 0;
         foreach (var challenge in challenges)
         {
-            challenge.Points = (int)(challenge.Points * difficultyMult);
+            raw += challenge.Points;
+            challenge.Points = (int)(challenge.Points * difficultyMult * durationMult);
+            wonAmount += challenge.Points;
+            PAM.Logger.LogError(challenge.Name);
         }
+        PAM.Logger.LogFatal($"Raw [{raw}], time and difficulty scaled [{wonAmount}]");
+        return wonAmount;
     }
     //screen side
     //rewind

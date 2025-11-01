@@ -29,9 +29,13 @@ namespace PAMultiplayer.Managers
                 {
                     var v2 = playerData.VGPlayerData.PlayerObject.Player_Wrapper.position;
                     if (GlobalsManager.IsHosting)
+                    {
                         CallRpc_Multi_PlayerPos(GlobalsManager.LocalPlayerId, v2);
+                    }
                     else
+                    {
                         CallRpc_Server_PlayerPos(null, v2);
+                    }
                 }
             }
             
@@ -64,9 +68,9 @@ namespace PAMultiplayer.Managers
         {
             if(!conn.TryGetSteamId(out SteamId steamID))
             {
+                PAM.Logger.LogError($"failed to get player position {conn.Address}");
                 return;
             }
-            SetPlayerPos(steamID, pos);
             CallRpc_Multi_PlayerPos(steamID, pos);
         }
         

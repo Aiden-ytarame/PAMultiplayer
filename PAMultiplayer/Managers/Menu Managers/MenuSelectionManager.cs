@@ -34,7 +34,7 @@ public class MenuSelectionManager : MonoBehaviour
             MultiplayerUIManager.Inst.OpenUI();
         }));
         
-        buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(new Action(async () =>
+        buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(new Action(async void () =>
         {
             Menu.HideAllInstant();
             GeneralUILoader.Inst?.LeaveSaveUI?.Invoke();
@@ -44,8 +44,10 @@ public class MenuSelectionManager : MonoBehaviour
             if (lobbies != null && lobbies.Length > 0)
             {
                 GlobalsManager.IsHosting = false;
-                GlobalsManager.IsMultiplayer = true;
+                GlobalsManager.IsMultiplayer = true; 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 lobbies[0].Join();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
 
         }));

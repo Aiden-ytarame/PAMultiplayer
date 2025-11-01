@@ -26,10 +26,18 @@ public partial class PaMNetworkManager : NetworkManager
         base.OnClientConnected(connection);
     }
 
-    public override void StartServer()
+    public override void StartServer(bool serverIsPeer)
     {
-        base.StartServer();
+        base.StartServer(serverIsPeer);
         _facepunchtransport = (FacepunchSocketsTransport)Transport;
+        if (serverIsPeer)
+        {
+            ServerSelfPeerConnection = new ClientNetworkConnection(_facepunchtransport.GetNextConnectionId(), GlobalsManager.LocalPlayerId.ToString());
+            _facepunchtransport.SteamIdToNetId.Add(GlobalsManager.LocalPlayerId, ServerSelfPeerConnection.ConnectionId);
+            _facepunchtransport.IDToConnection.Add(ServerSelfPeerConnection.ConnectionId, null);
+            
+            GlobalsManager.ConnIdToSteamId.Add(ServerSelfPeerConnection.ConnectionId, GlobalsManager.LocalPlayerId);
+        }
         PamInstance = this;
     }
 
@@ -44,6 +52,7 @@ public partial class PaMNetworkManager : NetworkManager
     {
         base.OnClientDisconnected();
         PamInstance = null;
+        Shutdown();
         
         if(!GlobalsManager.IsMultiplayer) return;
         
@@ -55,8 +64,11 @@ public partial class PaMNetworkManager : NetworkManager
 
     public override void EndServer()
     {
+        PAM.Logger.LogFatal("EndServer");
         base.EndServer();
+        GlobalsManager.ConnIdToSteamId.Clear();
         PamInstance = null;
+        Shutdown();
     }
 
     public override void OnServerClientConnected(ClientNetworkConnection connection)
@@ -88,12 +100,12 @@ public partial class PaMNetworkManager : NetworkManager
     private static int _amountOfInfo;
 
     [ClientRpc]
-    public static void Client_RegisterPlayerId(ClientNetworkConnection conn, SteamId steamID, int id, int amount)
+    private static void Client_RegisterPlayerId(ClientNetworkConnection conn, SteamId steamID, int id, int amount)
     {
         GlobalsManager.HasLoadedBasePlayerIds = false;
         
         _amountOfInfo++;
-        PAM.Logger.LogInfo($"Player Id from [{id}] Received");
+        PAM.Logger.LogInfo($"Player Id from [{id}] Received, {steamID}//{amount}");
 
         if (GlobalsManager.Players.TryGetValue(steamID, out var player))
         {
@@ -115,13 +127,19 @@ public partial class PaMNetworkManager : NetworkManager
         if (_amountOfInfo >= amount)
         {
             _amountOfInfo = 0;
+            PAM.Logger.LogInfo($"Player Id from [{id}] Received");
             GlobalsManager.HasLoadedBasePlayerIds = true;
         }
     }
     
     [MultiRpc]
-    public static void Multi_RegisterJoinedPlayerId(SteamId steamID, int id)
+    private static void Multi_RegisterJoinedPlayerId(SteamId steamID, int id)
     {
+        if (GlobalsManager.IsHosting)
+        {
+            return;
+        }
+        
         PAM.Logger.LogInfo($"Multi Player Id from [{id}] Received");
 
         if (GlobalsManager.Players.TryGetValue(steamID, out var player))

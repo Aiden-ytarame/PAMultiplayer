@@ -28,21 +28,24 @@ public static class LoadingTipsPatch
     {
         var customTips = new List<string>(__instance.Tips)
         {
-            "You should try the log Fallen Kingdom!",
+            "You should try the log Unerfed Fallen Kingdom!",
             "You can always call other Nanos for help!",
             "Git Gud",
             "I'm in your walls.",
             "Good Nano~",
             "No tips for you >:)",
             "Boykisser sent kisses!",
+            "Girlkisser sent kisses!",
+            "Theykisser sent kisses!",
             "The developer wants me to say something here.",
-            "I'm a furry. So what?",
             "You might be a Nano but you should hydrate anyways.",
             "Before time began there was The Cube...",
             "Ready to be carried by another Nano again?",
             "Squeezing your Nano through the internet wire...",
             "The triangle is the simplest shape a computer can render",
-            "Meow!"
+            "Make sure to check out the game's official forum!",
+            "Meow!",
+            "Some Nanos seem to keep replaying some logs until they master it\nUnsure how productive that may be"
         };
         //thanks Pidge for making this public after I complained lol
         __instance.Tips = customTips.ToArray();

@@ -33,7 +33,7 @@ public partial class GameManagerPatch
     [HarmonyPostfix]
     static void PostStart(ref GameManager __instance)
     {
-        if (__instance.IsEditor)
+        if (!__instance.IsArcade)
             return;
 
         Transform pauseUi = PauseUIManager.Inst.transform.Find("Pause Menu");
@@ -384,7 +384,7 @@ public partial class GameManagerPatch
     }
 
     [ServerRpc]
-    public async static void Server_RequestLobbyState(ClientNetworkConnection conn)
+    private async static void Server_RequestLobbyState(ClientNetworkConnection conn)
     {
         try
         {
@@ -422,11 +422,6 @@ public partial class GameManagerPatch
                 return;
             }
 
-            if (!VGPlayerManager.Inst.players.Contains(GlobalsManager.Players[id].VGPlayerData))
-            {
-                VGPlayerManager.Inst.players.Add(GlobalsManager.Players[id].VGPlayerData);
-            }
-
             CallRpc_Multi_LatePlayerJoin(id);
         }
         catch (Exception e)
@@ -437,7 +432,7 @@ public partial class GameManagerPatch
 
     
     [ClientRpc]
-    public static void Client_LobbyState(ClientNetworkConnection conn, int hitCount, float currentTime,
+    private static void Client_LobbyState(ClientNetworkConnection conn, int hitCount, float currentTime,
         List<ulong> playerIds, Span<short> healths) //weird types is cuz they already have writers, ill fix later
     {
         LevelEndScreen.ActionMoment actionMoment = new();  
@@ -482,7 +477,7 @@ public partial class GameManagerPatch
     }
 
     [MultiRpc]
-    public static void Multi_LatePlayerJoin(SteamId playerId)
+    private static void Multi_LatePlayerJoin(SteamId playerId)
     {
         if (!VGPlayerManager.Inst.players.Contains(GlobalsManager.Players[playerId].VGPlayerData))
         {
@@ -752,8 +747,13 @@ public partial class GameManagerPatch
     }
 
     [MultiRpc]
-    public static void Multi_NextQueueLevel(ulong levelID, int seed)
+    private static void Multi_NextQueueLevel(ulong levelID, int seed)
     {
+        if (GlobalsManager.IsHosting)
+        {
+            return;
+        }
+        
         PAM.Logger.LogInfo($"New random seed : {seed}");
 
         GlobalsManager.LevelId = levelID.ToString();
@@ -786,6 +786,11 @@ public partial class GameManagerPatch
     [MultiRpc]
     public static void Multi_OpenChallenge()
     {
+        if (GlobalsManager.IsHosting)
+        {
+            return;
+        }
+        
         SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "0");
         GlobalsManager.IsReloadingLobby = true;
         GlobalsManager.HasLoadedLobbyInfo = true;

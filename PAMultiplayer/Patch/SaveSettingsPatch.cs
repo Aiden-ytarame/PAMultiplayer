@@ -1,5 +1,6 @@
 using BepInEx.Configuration;
 using HarmonyLib;
+using PAMultiplayer.Managers;
 
 namespace PAMultiplayer.Patch;
 
@@ -17,7 +18,8 @@ public static class SaveSettingsPatch
     private static ConfigEntry<bool> _linked;
     private static ConfigEntry<bool> _chat;
     private static ConfigEntry<bool> _allowNonPublicLevels;
-
+    private static ConfigEntry<int> _score;
+    
     [HarmonyPatch(nameof(SettingsManager.UpdateSettingsFile))]
     [HarmonyPrefix]
     static void PreSaveSettings()
@@ -30,6 +32,7 @@ public static class SaveSettingsPatch
         _linked.Value = DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true);
         _chat.Value = DataManager.inst.GetSettingBool("MpChatEnabled", true);
         _allowNonPublicLevels.Value = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false);
+        _score.Value = DataManager.inst.GetSettingInt("MpScore", 0);
         
         PAM.Inst.Config.Save();
     }
@@ -46,6 +49,7 @@ public static class SaveSettingsPatch
         _linked = PAM.Inst.Config.Bind(new ConfigDefinition("General", "Linked Health Popup"), true);
         _chat = PAM.Inst.Config.Bind(new ConfigDefinition("General", "Chat Enabled"), true);
         _allowNonPublicLevels = PAM.Inst.Config.Bind(new ConfigDefinition("General", "Allow Private Levels"), false);
+        _score = PAM.Inst.Config.Bind(new ConfigDefinition("General", "Score"), 0, new ConfigDescription("I know you\'re thinking about it, dont do it... be legitimate..."));
         
         DataManager.inst.UpdateSettingInt("MpPlayerWarpSFX", _warpSfx.Value);
         DataManager.inst.UpdateSettingInt("MpPlayerSFX", _hitSfx.Value);
@@ -55,6 +59,7 @@ public static class SaveSettingsPatch
         DataManager.inst.UpdateSettingBool("MpLinkedHealthPopup", _linked.Value);
         DataManager.inst.UpdateSettingBool("MpChatEnabled", _chat.Value);
         DataManager.inst.UpdateSettingBool("MpAllowNonPublicLevels", _allowNonPublicLevels.Value);
+        DataManager.inst.UpdateSettingInt("MpScore", _score.Value);
         
     }
 }

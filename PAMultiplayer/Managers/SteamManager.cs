@@ -1,4 +1,5 @@
 using System;
+using AttributeNetworkWrapperV2;
 using HarmonyLib;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using Steamworks;
@@ -16,6 +17,7 @@ public class SteamManager : MonoBehaviour
 
     private void Awake()
     {
+        RpcHandler.TryGetRpcInvoker(1, out var invoker);
         if (Inst)
         {
             Destroy(this);
@@ -107,8 +109,13 @@ public class SteamManager : MonoBehaviour
     {
         PAM.Logger.LogInfo("Starting Server.");
         PaMNetworkManager netManager = new PaMNetworkManager();
-        netManager.Init(new FacepunchSocketsTransport());
-        netManager.StartServer();
+        
+        if (!netManager.Init(new FacepunchSocketsTransport()))
+        {
+            throw new Exception("Tried to initialize network manager while another one already runs");
+        }
+        
+        netManager.StartServer(true);
     }
 
     public void EndServer()

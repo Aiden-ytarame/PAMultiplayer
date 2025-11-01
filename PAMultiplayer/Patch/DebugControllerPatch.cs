@@ -26,15 +26,6 @@ public static class DebugControllerPatch
                     {
                         __instance.AddLog("Is host, Killing all players.");
                         
-                        foreach (var vgPlayerData in VGPlayerManager.Inst.players)
-                        {
-                            if (vgPlayerData.PlayerObject.IsValidPlayer())
-                            {
-                                vgPlayerData.PlayerObject.Health = 0;
-                                vgPlayerData.PlayerObject.ClearEvents();
-                                vgPlayerData.PlayerObject.PlayerDeath();
-                            }
-                        }
                         int index = 0;
         
                         if (DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) <= 1)
@@ -42,7 +33,6 @@ public static class DebugControllerPatch
                             index = GameManager.Inst.currentCheckpointIndex;
                         }
                         
-                        GameManager.Inst.RewindToCheckpoint(index);
                         RewindHandler.CallRpc_Multi_RewindToCheckpoint(index);
                     }
                     else

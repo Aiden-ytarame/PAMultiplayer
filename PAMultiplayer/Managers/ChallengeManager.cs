@@ -366,6 +366,12 @@ public partial class ChallengeManager : MonoBehaviour
     
     void SetVoteWinner(VGLevel level)
     {
+        if (GlobalsManager.IsMultiplayer)
+        {
+            CallRpc_Multi_VoteWinner(level.SteamInfo.ItemID);
+            return;
+        }
+        
         foreach (var levelButton in _levelButtons)
         {
             if (levelButton.Level != level)
@@ -373,16 +379,10 @@ public partial class ChallengeManager : MonoBehaviour
                 levelButton.Hide();
             }
         }
-
-        if (GlobalsManager.IsMultiplayer)
-        {
-           CallRpc_Multi_VoteWinner(level.SteamInfo.ItemID);
-        }
-      
     }
 
     [MultiRpc]
-    public static void Multi_VoteWinner(ulong level)
+    private static void Multi_VoteWinner(ulong level)
     {
         Inst.SetVoteWinner(level);
     }
@@ -698,9 +698,12 @@ public partial class ChallengeManager : MonoBehaviour
     }
 
     [MultiRpc]
-    public static void Multi_CheckLevelIds(List<ulong> levelIds)
+    private static void Multi_CheckLevelIds(List<ulong> levelIds)
     {
-        Inst?.StartCoroutine(CheckLevelIds(levelIds).WrapToIl2Cpp());
+        if (!GlobalsManager.IsHosting)
+        {
+            Inst?.StartCoroutine(CheckLevelIds(levelIds).WrapToIl2Cpp());
+        }
     }
 
     static IEnumerator CheckLevelIds(List<ulong> levelIds)
@@ -734,7 +737,7 @@ public partial class ChallengeManager : MonoBehaviour
     }
 
     [ServerRpc]
-    public static void Server_UnknownLevelIds(ClientNetworkConnection conn, List<ulong> levelIds)
+    private static void Server_UnknownLevelIds(ClientNetworkConnection conn, List<ulong> levelIds)
     {
         if (!Inst)
         {
@@ -777,7 +780,7 @@ public partial class ChallengeManager : MonoBehaviour
     private static ulong _lastId;
     
     [ClientRpc]
-    public static void Client_AudioData(ClientNetworkConnection conn, ulong audioID, int frequency, int channels, Span<short> songData, bool last)
+    private static void Client_AudioData(ClientNetworkConnection conn, ulong audioID, int frequency, int channels, Span<short> songData, bool last)
     {
         PAM.Logger.LogInfo("Received audio data");
     
@@ -1029,7 +1032,7 @@ public partial class VoterCell : MonoBehaviour
     }
 
     [ServerRpc]
-    public static void Server_LevelVoted(ClientNetworkConnection conn, ulong level)
+    private static void Server_LevelVoted(ClientNetworkConnection conn, ulong level)
     {
         if (!conn.TryGetSteamId(out SteamId id))
         {

@@ -13,15 +13,15 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     private SocketManager server;
     private ConnectionManager client;
     
-    Dictionary<int, Connection> _idToConnection = new();
-    public readonly Dictionary<ulong, int> SteamIdToNetId = new();
-    
-    protected static byte[] _buffer = new byte[1024];
+    internal readonly Dictionary<int, Connection?> IDToConnection = new();
+    internal readonly Dictionary<ulong, int> SteamIdToNetId = new();
 
-    int GetNextConnectionId()
+    private static byte[] _buffer = new byte[1024];
+
+    public int GetNextConnectionId()
     {
         int id = 0;
-        while (_idToConnection.ContainsKey(id))
+        while (IDToConnection.ContainsKey(id))
         {
             id++;
         }
@@ -31,7 +31,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     
     int GetIdFromSteamConnection(Connection steamConnection)
     {
-        foreach (var keyValuePair in _idToConnection)
+        foreach (var keyValuePair in IDToConnection)
         {
             if (keyValuePair.Value == steamConnection)
             {
@@ -84,7 +84,8 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     //Transport
     public override void ConnectClient(string address)
     {
-        _idToConnection.Clear();
+        IDToConnection.Clear();
+        SteamIdToNetId.Clear();
         if (ulong.TryParse(address, out var id))
         {
             client = SteamNetworkingSockets.ConnectRelay(id, 0, this);
@@ -102,7 +103,8 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
 
     public override void StartServer()
     {
-        _idToConnection.Clear();
+        IDToConnection.Clear();
+        SteamIdToNetId.Clear();
         server = SteamNetworkingSockets.CreateRelaySocket(0, this);
         IsActive = true;
     }
@@ -115,9 +117,9 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
 
     public override void KickConnection(int connectionId)
     {
-        if (_idToConnection.TryGetValue(connectionId, out var connection))
+        if (IDToConnection.TryGetValue(connectionId, out var connection))
         {
-            connection.Close();
+            connection?.Close();
         }
     }
 
@@ -130,11 +132,11 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
 
     public override void SendMessageToClient(int connectionId, ArraySegment<byte> data, SendType sendType = SendType.Reliable)
     {
-        if (_idToConnection.TryGetValue(connectionId, out var connection))
+        if (IDToConnection.TryGetValue(connectionId, out var connection))
         {
             var steamSendType = sendType == SendType.Reliable ? Steamworks.Data.SendType.Reliable : Steamworks.Data.SendType.Unreliable;
             
-            connection.SendMessage(data.Array, data.Offset, data.Count, steamSendType);
+            connection?.SendMessage(data.Array, data.Offset, data.Count, steamSendType);
         }
     }
 
@@ -142,7 +144,8 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     {
         server?.Close();
         client?.Close();
-        _idToConnection.Clear();
+        IDToConnection.Clear();
+        SteamIdToNetId.Clear();
         IsActive = false;
     }
 
@@ -157,7 +160,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     {
         int id = GetNextConnectionId();
         
-        _idToConnection.Add(id, connection);
+        IDToConnection.Add(id, connection);
         SteamIdToNetId.Add(info.Identity.SteamId, id);
         
         OnServerClientConnected?.Invoke(new ClientNetworkConnection(id, info.Identity.SteamId.ToString()));
@@ -172,7 +175,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
             return;
         }
         
-        _idToConnection.Remove(id);
+        IDToConnection.Remove(id);
         SteamIdToNetId.Remove(info.Identity.SteamId);
         OnServerClientDisconnected?.Invoke(new ClientNetworkConnection(id, info.Identity.SteamId.ToString()));
 

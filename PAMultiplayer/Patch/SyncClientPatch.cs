@@ -45,19 +45,13 @@ public static partial class CheckpointHandler
             {
                 __instance.currentCheckpointIndex = tmpIndex;
                 CallRpc_Multi_CheckpointHit(tmpIndex);
-                
-                GameManager.Inst.playingCheckpointAnimation = true;
-                VGPlayerManager.Inst.RespawnPlayers();
-                VGPlayerManager.Inst.HealPlayers();
-
-                GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation(tmpIndex));
             }
         }
         return false;
     }
 
     [MultiRpc]
-    public static void Multi_CheckpointHit(int index)
+    private static void Multi_CheckpointHit(int index)
     {
         PAM.Logger.LogInfo($"Checkpoint [{index}] Received");
         GameManager.Inst.playingCheckpointAnimation = true;
@@ -99,17 +93,6 @@ public static partial class RewindHandler
                 }
                 
                 CallRpc_Multi_RewindToCheckpoint(index);
-                
-                foreach (var vgPlayerData in VGPlayerManager.Inst.players)
-                {
-                    if (vgPlayerData.PlayerObject.IsValidPlayer())
-                    {
-                        vgPlayerData.PlayerObject.Health = 0;
-                        vgPlayerData.PlayerObject.ClearEvents();
-                        vgPlayerData.PlayerObject.PlayerDeath();
-                    }
-                }
-                GameManager.Inst.RewindToCheckpoint(index);
             });
         }
         else

@@ -39,6 +39,11 @@ public partial class Player_Patch
     [HarmonyPrefix]
     static bool Hit_Pre(ref VGPlayer __instance)
     {
+        if (!SingletonBase<GameManager>.Inst.IsArcade || GameManager.Inst.IsEditor)
+        {
+            return true;
+        }
+        
         if (GameManager.Inst.Paused)
             return false;
             
@@ -62,7 +67,6 @@ public partial class Player_Patch
                     {
                         if (!IsDamageAll)
                         {
-                            DamageAll(player.Health, GlobalsManager.LocalPlayerId);
                             CallRpc_Multi_DamageAll(player.Health, GlobalsManager.LocalPlayerId);
                             return false;
                         }
@@ -98,12 +102,15 @@ public partial class Player_Patch
             
        
         player.StopCoroutine("RegisterCloseCall");
-            
+
         if (player.DeathEvent != null && player.Health <= 0)
+        {
             player.DeathEvent.Invoke(player.Player_Wrapper.position);
-            
+        }
         else if (player.HitEvent != null)
+        {
             player.HitEvent.Invoke(player.Health, player.Player_Wrapper.position);
+        }
 
         if (player.Health > 0)
         {
@@ -141,7 +148,7 @@ public partial class Player_Patch
     }
 
     [ServerRpc]
-    public static void Server_PlayerDamaged(ClientNetworkConnection conn, int healthPreHit)
+    private static void Server_PlayerDamaged(ClientNetworkConnection conn, int healthPreHit)
     {
         if(!conn.TryGetSteamId(out SteamId steamID))
         {
@@ -152,27 +159,24 @@ public partial class Player_Patch
         {
             if (GlobalsManager.LocalPlayerObj.Health >= healthPreHit)
             {
-                DamageAll(healthPreHit, steamID);
                 CallRpc_Multi_DamageAll(healthPreHit, steamID);
             }
             return;
-        }
-        
-        if(GlobalsManager.Players.TryGetValue(steamID, out var player))
-        {
-            if (!player.VGPlayerData.PlayerObject.IsValidPlayer()) return;
-            player.VGPlayerData.PlayerObject.Health = healthPreHit;
-            player.VGPlayerData.PlayerObject.PlayerHit();
         }
         
         CallRpc_Multi_PlayerDamaged(steamID, healthPreHit);
     }
     
     [MultiRpc]
-    public static void Multi_PlayerDamaged(SteamId steamID, int healthPreHit)
+    private static void Multi_PlayerDamaged(SteamId steamID, int healthPreHit)
     {
+        if (healthPreHit == 1)
+        {
+            PointsManager.Inst?.PlayerHasDied(steamID);
+        }
+        
         PAM.Inst.Log.LogDebug($"Damaging player {steamID}");
-
+        
         if (steamID.IsLocalPlayer()) return;
         
         if(GlobalsManager.Players.TryGetValue(steamID, out var player))
@@ -184,7 +188,7 @@ public partial class Player_Patch
     }
 
     [MultiRpc]
-    public static void Multi_DamageAll(int healthPreHit, SteamId playerHit)
+    private static void Multi_DamageAll(int healthPreHit, SteamId playerHit)
     {
         DamageAll(healthPreHit, playerHit);
     }
@@ -195,10 +199,6 @@ public partial class Player_Patch
             if (GlobalsManager.Players.TryGetValue(hitPlayerId, out var playerData))
             {
                 string hex = VGPlayerManager.Inst.GetPlayerColorHex(playerData.VGPlayerData.PlayerID);
-                if (hex == "#FFFFFF")
-                {
-                    hex = "FFFFFF";
-                }
                 VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{playerData.Name}</color>] got hit!", 1f);
             }
         }
@@ -360,8 +360,8 @@ public partial class Player_Patch
         if (__instance.RPlayer.id == 0 && PointsManager.Inst)
         {
             __instance.add_CloseCallEvent(new Action<Vector3>(_ => { PointsManager.Inst.AddCloseCall(); }));
-            __instance.add_BoostEvent(new Action<Vector3>(_ => { PointsManager.Inst.AddBoost(); }));
             __instance.add_HitEvent(new Action<int, Vector3>((_, _) => { PointsManager.Inst.AddHit(); }));
+            __instance.add_DeathEvent(new Action<Vector3>(_ => { PointsManager.Inst.AddDeath(); }));
             _holdingBoost = 0;
         }
         
@@ -470,16 +470,10 @@ public partial class Player_Patch
     [HarmonyPostfix]
     static void PostUpate(VGPlayer __instance)
     {
-        if (__instance.isDead || __instance.RPlayer.id != 0 || !PointsManager.Inst)
+        if (GameManager.Inst.CurGameState != GameManager.GameState.Playing || __instance.isDead || __instance.RPlayer.id != 0 || !PointsManager.Inst)
         {
             return;
         }
-        
-        if (__instance.BoostDuration < _holdingBoost)
-        {
-            PointsManager.Inst.AddBoost();
-        }
-        _holdingBoost =  __instance.BoostDuration;
         
         PointsManager.Inst.AddTimeAlive(Time.deltaTime);
 
@@ -495,11 +489,16 @@ public partial class Player_Patch
     [HarmonyPostfix]
     static void PostHandleBoost(VGPlayer __instance)
     {
+        if (GlobalsManager.IsMultiplayer && !__instance.IsLocalPlayer())
+        {
+            return;
+        }
+        
         if (__instance.BoostDuration < _holdingBoost)
         {
-            PointsManager.Inst?.AddBoost();
+            PointsManager.Inst?.AddBoost(_holdingBoost);
         }
-        _holdingBoost =  __instance.BoostDuration;
+        _holdingBoost = __instance.BoostDuration;
     }
 
     /// <summary>
@@ -551,6 +550,16 @@ public static class PlayerManagerPatch
             }
         }
     }
+
+    [HarmonyPatch(nameof(VGPlayerManager.GetPlayerColorHex))]
+    [HarmonyPostfix]
+    static void PostGetColorHex(ref string __result)
+    {
+        if (__result == "#ffffff")
+        {
+            __result = "ffffff";
+        }
+    }
 }
 
 
@@ -579,6 +588,23 @@ public static class PlayerDataPatch
         return false;
     }
    
+}
+
+[HarmonyPatch(typeof(PlayerTrail))]
+public static class TrailPatch
+{
+    [HarmonyPatch(nameof(PlayerTrail.UpdateTailFull))]
+    [HarmonyPrefix]
+    static bool PreTailUpdate(PlayerTrail __instance, ref int _health)
+    {
+        if (_health >= __instance.Trail.Count)
+        {
+            PAM.Logger.LogFatal($"Tried to update tail with invalid health value of [{_health}]");
+            return false;
+        }
+
+        return true;
+    }
 }
 
 [HarmonyPatch(typeof(MeshDeformation))]

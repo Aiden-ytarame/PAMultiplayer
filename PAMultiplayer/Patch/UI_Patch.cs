@@ -234,6 +234,11 @@ namespace PAMultiplayer.Patch
         [MultiRpc]
         public static void Multi_StartLevel()
         {
+            if (GlobalsManager.IsHosting)
+            {
+                return;
+            }
+            
             if (LobbyScreenManager.Instance)
             {
                 LobbyScreenManager.Instance.StartLevel();
