@@ -5,6 +5,7 @@ using DiscordRPC.Logging;
 using DiscordRPC.Message;
 using Steamworks;
 using UnityEngine;
+using EventType = DiscordRPC.EventType;
 
 namespace PAMultiplayer.Managers;
 
@@ -103,30 +104,37 @@ public class MultiplayerDiscordManager : MonoBehaviour
 
 	public void SetLevelPresence(string state, string details, string levelCoverUrl)
 	{
-		presence.State = state;
-		presence.Details = details;
-		presence.Assets.LargeImageKey = levelCoverUrl;
-		presence.Assets.LargeImageText = "Level Cover";
-		presence.Timestamps = new Timestamps(DateTime.UtcNow);
-		
-		if (GlobalsManager.IsMultiplayer)
+		try
 		{
-			string id = SteamLobbyManager.Inst.CurrentLobby.Id.ToString();
-			presence.Party = new Party()
+			presence.State = state;
+			presence.Details = details;
+			presence.Assets.LargeImageKey = levelCoverUrl;
+			presence.Assets.LargeImageText = "Level Cover";
+			presence.Timestamps = new Timestamps(DateTime.UtcNow);
+		
+			if (GlobalsManager.IsMultiplayer)
 			{
-				ID = id + SteamLobbyManager.Inst.CurrentLobby.Owner.Id,
-				Max = SteamLobbyManager.Inst.CurrentLobby.MaxMembers,
-				Size = SteamLobbyManager.Inst.CurrentLobby.MemberCount,
-				Privacy = Party.PrivacySetting.Public
-			};
-			presence.Secrets = new Secrets()
-			{
-				JoinSecret = id
-			};
+				string id = SteamLobbyManager.Inst.CurrentLobby.Id.ToString();
+				presence.Party = new Party()
+				{
+					ID = id + SteamLobbyManager.Inst.CurrentLobby.Owner.Id,
+					Max = SteamLobbyManager.Inst.CurrentLobby.MaxMembers,
+					Size = SteamLobbyManager.Inst.CurrentLobby.MemberCount,
+					Privacy = Party.PrivacySetting.Public
+				};
+				presence.Secrets = new Secrets()
+				{
+					JoinSecret = id
+				};
 
-			presence.Buttons = null;
+				presence.Buttons = null;
+			}
+			client.SetPresence(presence);
 		}
-		client.SetPresence(presence);
+		catch (Exception e)
+		{
+			PAM.Logger.LogError(e);
+		}
 	}
 
 	public void UpdatePartySize(int size)

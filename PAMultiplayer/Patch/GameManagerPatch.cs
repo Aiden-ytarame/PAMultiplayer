@@ -2,10 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
 using HarmonyLib;
-using Il2CppInterop.Runtime;
-using Il2CppSystems.SceneManagement;
 using AttributeNetworkWrapperV2;
 using Newtonsoft.Json;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
@@ -14,6 +11,7 @@ using SimpleJSON;
 using Steamworks;
 using Steamworks.Data;
 using Steamworks.Ugc;
+using Systems.SceneManagement;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -53,17 +51,17 @@ public partial class GameManagerPatch
             
             PauseUIManager.Inst.PauseMenu.AllViews["main"].Elements.Add(skipButton.GetComponent<UI_Button>());
             
-            restartButton.GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
+            restartButton.GetComponent<MultiElementButton>().onClick.AddListener(() =>
             {
                 GlobalsManager.IsReloadingLobby = true;
-            }));
+            });
         }
 
        
 
         var button = skipButton.GetComponent<MultiElementButton>();
         button.onClick = new();
-        button.onClick.AddListener(new Action(() =>
+        button.onClick.AddListener(() =>
         {
             PauseUIManager.Inst.CloseUI();
             GlobalsManager.IsReloadingLobby = true;
@@ -90,7 +88,7 @@ public partial class GameManagerPatch
 
             SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
             PAM.Logger.LogInfo("Skipping to next level in queue!");
-        }));
+        });
 
 
         skipButton.gameObject.SetActive(GlobalsManager.Queue.Count >= 2 || GlobalsManager.IsChallenge);
@@ -128,7 +126,7 @@ public partial class GameManagerPatch
         }
 
         __instance.gameObject.AddComponent<NetworkManager>();
-        __instance.StartCoroutine(FetchExternalData().WrapToIl2Cpp());
+        __instance.StartCoroutine(FetchExternalData());
 
         //this is for waiting for the Objects to load before initialing the server/client
 
@@ -138,9 +136,10 @@ public partial class GameManagerPatch
             {
                 while (!SteamLobbyManager.Inst.InLobby)
                 {
+                    PAM.Logger.LogError("waiting");
                     await Task.Delay(100);
                 }
-            }).ToIl2Cpp());
+            }));
         }
         else
         {
@@ -150,7 +149,7 @@ public partial class GameManagerPatch
                 {
                     await Task.Delay(100);
                 }
-            }).ToIl2Cpp());
+            }));
             
             SceneLoader.Inst.manager.AddToLoadingTasks("Server Info", Task.Run(async () =>
             {
@@ -158,7 +157,7 @@ public partial class GameManagerPatch
                 {
                     await Task.Delay(100);
                 }
-            }).ToIl2Cpp());
+            }));
 
             skipButton.gameObject.SetActive(false);
         }
@@ -193,7 +192,7 @@ public partial class GameManagerPatch
         //but I dont want to have a bunch of commits just changing the name colors.
         //we also can make this repo not a github page but eh, why not 
         UnityWebRequest webRequest =
-            UnityWebRequest.Get("https://aiden-ytarame.github.io/Test-static-files/ColoredNames.json");
+            UnityWebRequest.Get("https://raw.githubusercontent.com/aiden-ytarame//ColoredNames.json");
         yield return webRequest.SendWebRequest();
 
         if (webRequest.result != UnityWebRequest.Result.Success)
@@ -366,7 +365,7 @@ public partial class GameManagerPatch
             }
             else
             {
-                CallRpc_Server_RequestLobbyState(null);
+                CallRpc_Server_RequestLobbyState();
             }
         }
         else
@@ -432,7 +431,7 @@ public partial class GameManagerPatch
 
     
     [ClientRpc]
-    private static void Client_LobbyState(ClientNetworkConnection conn, int hitCount, float currentTime,
+    private static void Client_LobbyState(int hitCount, float currentTime,
         List<ulong> playerIds, Span<short> healths) //weird types is cuz they already have writers, ill fix later
     {
         LevelEndScreen.ActionMoment actionMoment = new();  
@@ -501,14 +500,16 @@ public partial class GameManagerPatch
              if (GlobalsManager.IsHosting)
              {
                  SteamLobbyManager.Inst.CreateLobby();
-                 yield return new WaitUntil(new Func<bool>(() => SteamLobbyManager.Inst.InLobby));
+                 yield return new WaitUntil(() => SteamLobbyManager.Inst.InLobby);
+
+                 GlobalsManager.HasLoadedLobbyInfo = true;
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)LobbyState.Lobby).ToString());
              }
              else
              {
                  SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                 yield return new WaitUntil(new Func<bool>(() => AttributeNetworkWrapperV2.NetworkManager.Instance.TransportActive));
-                 yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
+                 yield return new WaitUntil(() => AttributeNetworkWrapperV2.NetworkManager.Instance!.TransportActive);
+                 yield return new WaitUntil(() => GlobalsManager.HasLoadedAllInfo);
                  
                  if (GlobalsManager.LobbyState == LobbyState.Challenge)
                  {
@@ -519,9 +520,9 @@ public partial class GameManagerPatch
                          {
                              await Task.Delay(100);
                          }
-                     }).ToIl2Cpp());
+                     }));
                      
-                     yield return new WaitUntil(new Func<bool>(() => GlobalsManager.LobbyState != LobbyState.Challenge));
+                     yield return new WaitUntil(() => GlobalsManager.LobbyState != LobbyState.Challenge);
                      
                      yield break;
                  }
@@ -536,7 +537,7 @@ public partial class GameManagerPatch
                          {
                              await Task.Delay(100);
                          }
-                     }).ToIl2Cpp()); 
+                     })); 
                  }
                  else
                  {
@@ -573,7 +574,7 @@ public partial class GameManagerPatch
                      {
                          await Task.Delay(100);
                      }
-                 }).ToIl2Cpp());
+                 }));
                  
                  var item = DownloadLevel();
                  
@@ -734,9 +735,7 @@ public partial class GameManagerPatch
          
          yield return gm.StartCoroutine(gm.LoadTweens());
          
-         var comparision = DelegateSupport.ConvertDelegate<Il2CppSystem.Comparison<DataManager.GameData.BeatmapData.Checkpoint>>(
-             new Comparison<DataManager.GameData.BeatmapData.Checkpoint>((x, y) => x.time.CompareTo(y.time)));
-         
+         var comparision = new Comparison<DataManager.GameData.BeatmapData.Checkpoint>((x, y) => x.time.CompareTo(y.time));
          DataManager.inst.gameData.beatmapData.checkpoints.Sort(comparision);
          
          if (VGPlayerManager.Inst.players.Count == 0)
@@ -762,7 +761,7 @@ public partial class GameManagerPatch
         GlobalsManager.LobbyState = LobbyState.Lobby;
         GlobalsManager.HasLoadedLobbyInfo = true;
         
-        DataManager.inst.StartCoroutine(NextQueueLevelIEnu(levelID, seed).WrapToIl2Cpp()); //task crashes game here 
+        DataManager.inst.StartCoroutine(NextQueueLevelIEnu(levelID, seed)); //task crashes game here 
     }
 
     static IEnumerator NextQueueLevelIEnu(ulong levelID, int seed)
@@ -877,14 +876,17 @@ public partial class GameManagerPatch
     }
     
     //this is patched manually in Plugin.cs
-    public static bool OverrideLoadGame(ref bool __result)
+    [HarmonyPrefix]
+    [HarmonyPatch(nameof(GameManager.LoadGame))]
+    public static bool OverrideLoadGame(ref IEnumerator __result)
     {
+        
         if (!GameManager.Inst.IsArcade || !GlobalsManager.IsMultiplayer)
+        {
             return true;
-        
-        GameManager.Inst.StartCoroutine(CustomLoadGame(ArcadeManager.Inst.CurrentArcadeLevel).WrapToIl2Cpp());
-        
-        __result = false;
+        }
+
+        GameManager.Inst.StartCoroutine(CustomLoadGame(ArcadeManager.Inst.CurrentArcadeLevel));
         return false;
     }
 }
@@ -906,14 +908,5 @@ public static class RNGSync
         }
     }
     
-}
-
-
-public static class TaskExtension
-{
-    public static Il2CppSystem.Threading.Tasks.Task ToIl2Cpp(this Task task)
-    {
-        return Il2CppSystem.Threading.Tasks.Task.Run(new Action(task.Wait));
-    }
 }
 

@@ -5,12 +5,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using AttributeNetworkWrapperV2;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
-using Il2CppSystems.SceneManagement;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Steamworks;
+using Systems.SceneManagement;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -73,7 +71,7 @@ public partial class ChallengeManager : MonoBehaviour
         
         if (GlobalsManager.IsMultiplayer)
         {
-            StartCoroutine(InitMultiplayer().WrapToIl2Cpp());
+            StartCoroutine(InitMultiplayer());
             return;
         }
         
@@ -82,7 +80,7 @@ public partial class ChallengeManager : MonoBehaviour
             MultiplayerDiscordManager.Instance.SetChallengePresence();  
         }
 
-        StartCoroutine(PostAwake().WrapToIl2Cpp());
+        StartCoroutine(PostAwake());
     }
 
     IEnumerator PostAwake()
@@ -115,7 +113,7 @@ public partial class ChallengeManager : MonoBehaviour
             vgPlayerData.PlayerObject.SetColor(ChallengeTheme.GetPlayerColor(vgPlayerData.PlayerID), ChallengeTheme.guiAccent);
         }
         
-        StartCoroutine(ShowLevels().WrapToIl2Cpp());
+        StartCoroutine(ShowLevels());
         
         Transform skip = PauseUIManager.Inst.transform.Find("Pause Menu")?.Find("Skip Queue Level");
         if (skip)
@@ -203,7 +201,7 @@ public partial class ChallengeManager : MonoBehaviour
         
         for (int i = 0; i < 24; i++)
         {
-            var level = nonRepeatLevels[Random.RandomRange(0, nonRepeatLevels.Count)];
+            var level = nonRepeatLevels[Random.Range(0, nonRepeatLevels.Count)];
 
             if (_levelsToVote.Contains(level))
             {
@@ -329,7 +327,7 @@ public partial class ChallengeManager : MonoBehaviour
     void StartVoting()
     {
         SpawnPlayers_Multiplayer();
-        StartCoroutine(ShowLevels().WrapToIl2Cpp());
+        StartCoroutine(ShowLevels());
     }
 
     public void PlayerVote(VGPlayer player, VGLevel level)
@@ -442,7 +440,7 @@ public partial class ChallengeManager : MonoBehaviour
             level.TrackName = result.Value.Title;
             level.ArtistName = "Artist";
             
-            StartCoroutine(GetImageFromWorkshop(level, result.Value.PreviewImageUrl).WrapToIl2Cpp());
+            StartCoroutine(GetImageFromWorkshop(level, result.Value.PreviewImageUrl));
         }
         catch (Exception e)
         {
@@ -461,7 +459,7 @@ public partial class ChallengeManager : MonoBehaviour
         
         yield return www.SendWebRequest();
         
-        if (www.isNetworkError || www.isHttpError)
+        if (www.result != UnityWebRequest.Result.Success)
         {
             PAM.Logger.LogError(www.error);
             level.AlbumArt = null;
@@ -520,15 +518,14 @@ public partial class ChallengeManager : MonoBehaviour
             divider *= 2;
         }
         
-        //float[] does not work with GetData
-        var songData = new Il2CppStructArray<float>(Mathf.FloorToInt(4/*seconds*/ * clip.frequency * clip.channels));
+        float[] songData = new float[Mathf.FloorToInt(4/*seconds*/ * clip.frequency * clip.channels)];
         short[] songDataShort = new short[Mathf.FloorToInt(4/*seconds*/ * frequency * clip.channels)];
         
         clip.GetData(songData, clip.samples / 2);
 
         //reduces frequency to 22-24k hz~
         int index = 0;
-        for (var i = 0; i < songData.Count; i += (divider - 1) * clip.channels)
+        for (var i = 0; i < songData.Length; i += (divider - 1) * clip.channels)
         {
             for (int j = 0; j < clip.channels; j++)
             {
@@ -674,7 +671,7 @@ public partial class ChallengeManager : MonoBehaviour
             foreach (var vgLevel in _levelsToVote)
             {
                 ids.Add(vgLevel.SteamInfo.ItemID);
-                StartCoroutine(GetSongData(vgLevel).WrapToIl2Cpp());
+                StartCoroutine(GetSongData(vgLevel));
             }
             
             yield return new WaitUntil(new Func<bool>(() => _songData.Count >= 6));
@@ -702,7 +699,7 @@ public partial class ChallengeManager : MonoBehaviour
     {
         if (!GlobalsManager.IsHosting)
         {
-            Inst?.StartCoroutine(CheckLevelIds(levelIds).WrapToIl2Cpp());
+            Inst?.StartCoroutine(CheckLevelIds(levelIds));
         }
     }
 
@@ -733,7 +730,7 @@ public partial class ChallengeManager : MonoBehaviour
         }
 
         PAM.Logger.LogInfo($"requesting audio of [{unknownLevelIds.Count}] levels");
-        CallRpc_Server_UnknownLevelIds(null, unknownLevelIds);
+        CallRpc_Server_UnknownLevelIds(unknownLevelIds);
     }
 
     [ServerRpc]
@@ -780,7 +777,7 @@ public partial class ChallengeManager : MonoBehaviour
     private static ulong _lastId;
     
     [ClientRpc]
-    private static void Client_AudioData(ClientNetworkConnection conn, ulong audioID, int frequency, int channels, Span<short> songData, bool last)
+    private static void Client_AudioData(ulong audioID, int frequency, int channels, Span<short> songData, bool last)
     {
         PAM.Logger.LogInfo("Received audio data");
     
@@ -870,7 +867,7 @@ public partial class ChallengeManager : MonoBehaviour
                 {
                     await Task.Delay(100);
                 }
-            }).ToIl2Cpp());
+            }));
           
             SceneLoader.Inst.manager.AddToLoadingTasks("Setting up chosen levels", Task.Run(async () =>
             {
@@ -878,7 +875,7 @@ public partial class ChallengeManager : MonoBehaviour
                 {
                     await Task.Delay(100);
                 }
-            }).ToIl2Cpp()); 
+            })); 
                 
             SceneLoader.Inst.manager.AddToLoadingTasks("Waiting other players", Task.Run(async () =>
             {
@@ -886,7 +883,7 @@ public partial class ChallengeManager : MonoBehaviour
                 {
                     await Task.Delay(0);
                 }
-            }).ToIl2Cpp());
+            }));
         }
         else
         {
@@ -896,7 +893,7 @@ public partial class ChallengeManager : MonoBehaviour
                 {
                     await Task.Delay(0);
                 }
-            }).ToIl2Cpp());
+            }));
         }
     }
     
@@ -995,7 +992,7 @@ public partial class VoterCell : MonoBehaviour
             return;
         }
         
-        CallRpc_Server_LevelVoted(null, Level.SteamInfo.ItemID);
+        CallRpc_Server_LevelVoted(Level.SteamInfo.ItemID);
     }
 
     private void OnTriggerExit2D(Collider2D other)

@@ -1,6 +1,6 @@
 using System;
-using Il2CppSystems.SceneManagement;
 using Steamworks.Data;
+using Systems.SceneManagement;
 using TMPro;
 using UnityEngine;
 
@@ -24,7 +24,7 @@ public class MenuSelectionManager : MonoBehaviour
 
         Transform buttons = transform.Find("New Game");
         
-        buttons.GetChild(0).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
+        buttons.GetChild(0).GetComponent<MultiElementButton>().onClick.AddListener(() =>
         {
             Menu.HideAllInstant();
             MultiplayerUIManager.Inst.SetContinueAction(new Action(() =>
@@ -32,9 +32,9 @@ public class MenuSelectionManager : MonoBehaviour
                 SceneLoader.Inst.LoadSceneGroup("Arcade");
             }));
             MultiplayerUIManager.Inst.OpenUI();
-        }));
+        });
         
-        buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(new Action(async void () =>
+        buttons.GetChild(1).GetComponent<MultiElementButton>().onClick.AddListener(async void () =>
         {
             Menu.HideAllInstant();
             GeneralUILoader.Inst?.LeaveSaveUI?.Invoke();
@@ -50,21 +50,21 @@ public class MenuSelectionManager : MonoBehaviour
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
 
-        }));
+        });
 
-        LobbyCount = buttons.GetChild(1).FindChild("QueueIcon/Text").GetComponent<TextMeshProUGUI>();
+        LobbyCount = buttons.GetChild(1).Find("QueueIcon/Text").GetComponent<TextMeshProUGUI>();
         
-        buttons.GetChild(2).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
+        buttons.GetChild(2).GetComponent<MultiElementButton>().onClick.AddListener(() =>
         {
             Menu.HideAllInstant();
-            MultiplayerUIManager.Inst.SetContinueAction(new Action(() =>
+            MultiplayerUIManager.Inst.SetContinueAction(() =>
             {
                 GlobalsManager.IsChallenge = true;
                 SceneLoader.Inst.LoadSceneGroup("Challenge");
-            }));
+            });
             MultiplayerUIManager.Inst.OpenUI();
-        }));
-        buttons.GetChild(3).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
+        });
+        buttons.GetChild(3).GetComponent<MultiElementButton>().onClick.AddListener(() =>
         {
             Menu.HideAllInstant();
             if (LobbyCreationManager.Instance)
@@ -79,14 +79,14 @@ public class MenuSelectionManager : MonoBehaviour
             GlobalsManager.IsChallenge = true;
            // SceneLoader.Inst.LoadSceneGroup("Challenge");
             
-        }));
+        });
 
-        buttons.GetChild(4).GetComponent<MultiElementButton>().onClick.AddListener(new Action(() =>
+        buttons.GetChild(4).GetComponent<MultiElementButton>().onClick.AddListener(() =>
         {
           //  GeneralUILoader.Inst?.AbortSaveUI?.Invoke();
           //EventSystem.current.SetSelectedGameObject(null);
             GeneralUILoader.Inst?.LeaveSaveUI?.Invoke();
-        }));
+        });
     }
     
     public async void OpenMenu()

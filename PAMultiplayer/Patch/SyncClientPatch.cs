@@ -70,13 +70,13 @@ public static partial class RewindHandler
 {
     [HarmonyPatch(nameof(VGPlayerManager.SpawnPlayers))]
     [HarmonyPrefix]
-    static void ReplaceDeathAction(ref Il2CppSystem.Action<Vector3> _deathAction)
+    static void ReplaceDeathAction(ref Action<Vector3> _deathAction)
     {
         if (!GlobalsManager.IsMultiplayer) return;
         
         if (GlobalsManager.IsHosting)
         {
-            _deathAction = new Action<Vector3>(x =>
+            _deathAction = x =>
             {
                 //if any player is alive don't rewind
                 foreach (var vgPlayerData in VGPlayerManager.Inst.players)
@@ -84,7 +84,7 @@ public static partial class RewindHandler
                    if(vgPlayerData.PlayerObject.IsValidPlayer()) //if player object exist
                        return; //dont rewind
                 }
-                
+
                 int index = 0;
         
                 if (DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0) <= 1)
@@ -93,14 +93,15 @@ public static partial class RewindHandler
                 }
                 
                 CallRpc_Multi_RewindToCheckpoint(index);
-            });
+            };
         }
         else
         {
-            _deathAction = new Action<Vector3>(x =>
+            _deathAction = x =>
             {
+                PAM.Logger.LogWarning("Client Dead");
                 //clients do nothing on death, just wait for the server message.
-            });
+            };
         }
     }
 

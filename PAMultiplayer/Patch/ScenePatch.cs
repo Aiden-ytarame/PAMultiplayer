@@ -1,17 +1,13 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
-using Cpp2IL.Core.Extensions;
+using Crosstales;
 using Eflatun.SceneReference;
 using HarmonyLib;
-using Il2CppSystems.SceneManagement;
-using PAMultiplayer;
 using PAMultiplayer.Managers;
+using Systems.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Object = UnityEngine.Object;
 
 
 namespace PAMultiplayer.Patch;
@@ -63,7 +59,7 @@ public static class LoadingTipsPatch
             using var stream = Assembly.GetExecutingAssembly()
                 .GetManifestResourceStream("PAMultiplayer.Assets.challenge");
 
-            var lobbyBundle = AssetBundle.LoadFromMemory(stream!.ReadBytes());
+            var lobbyBundle = AssetBundle.LoadFromMemory(stream!.CTReadFully());
 
             var scene = lobbyBundle.GetAllScenePaths()[0];
             var guid = "11f830737ff4bc41a4ffe792d073f41f";
@@ -91,7 +87,7 @@ public static class LoadingTipsPatch
             sceneGroup.Scenes.Add(sceneData);
             groups.Add(sceneGroup);
             SceneLoader.Inst.sceneGroups = groups.ToArray();
-            SceneManager.add_sceneLoaded(new Action<Scene, LoadSceneMode>((scene, _) =>
+            SceneManager.sceneLoaded += (scene, _) =>
             {
                 //just in-casse
                 if (scene.name == "Arcade" || scene.name == "Menu")
@@ -112,7 +108,7 @@ public static class LoadingTipsPatch
                 //horrible code, please end me
                 var manager = scene.GetRootGameObjects().First(x => x.name == "Managers");
                 manager.AddComponent<ChallengeManager>();
-            }));
+            };
 
             //unloading the asset bundle unloads the scene
             //lobbyBundle.Unload(false);

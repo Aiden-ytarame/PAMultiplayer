@@ -1,12 +1,9 @@
 ﻿using AttributeNetworkWrapperV2;
-using BepInEx.Unity.IL2CPP.UnityEngine;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Rewired;
 using Steamworks;
 using UnityEngine;
-using KeyCode = BepInEx.Unity.IL2CPP.UnityEngine.KeyCode;
 
 namespace PAMultiplayer.Managers
 {
@@ -34,7 +31,7 @@ namespace PAMultiplayer.Managers
                     }
                     else
                     {
-                        CallRpc_Server_PlayerPos(null, v2);
+                        CallRpc_Server_PlayerPos(v2);
                     }
                 }
             }
@@ -45,7 +42,7 @@ namespace PAMultiplayer.Managers
                 if (!_pressedNameKey)
                 {
                     _pressedNameKey = true;
-                    StartCoroutine(PauseLobbyPatch.ShowNames().WrapToIl2Cpp());
+                    StartCoroutine(PauseLobbyPatch.ShowNames());
                 }
             }
             else

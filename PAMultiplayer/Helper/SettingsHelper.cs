@@ -1,6 +1,7 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.Localization;
 using UnityEngine.Localization.Settings;
 using UnityEngine.Localization.Tables;
@@ -25,66 +26,65 @@ public static class SettingsHelper
     /// </summary>
     public static void SetupMenu()
     {
-        Transform settingTabPrefab = GameObject.Find("Canvas/Window/Content/Settings/Left Panel/Audio").transform;
-
+        Transform settingTabPrefab = GameObject.Find("Canvas/Window/Content/Settings/Blank").transform.GetChild(0).GetChild(0);
+        
         if (!settingTabPrefab)
         {
             PAM.Logger.LogError("No settings tab found, SetupMenu was called at a incorrect time or scene changed");
             return;
         }
-
-        UI_Book book = settingTabPrefab.parent.parent.Find("Right Panel").GetComponent<UI_Book>();
+        UI_Book book = settingTabPrefab.parent.parent.parent.GetComponent<UI_Book>();
         
-        _settingsPanel = Object.Instantiate(book.transform.Find("Content/Blank"), book.transform.Find("Content")).Find("Content");
-        Object.Destroy(_settingsPanel.GetChild(0).gameObject); //the blank text
+        _settingsPanel = Object.Instantiate(book.transform.Find("Audio"), book.transform).Find("Right");
+        for (int i = 0; i < _settingsPanel.childCount; i++)
+        {
+            Object.Destroy(_settingsPanel.GetChild(i).gameObject);
+        }
+       
+        var titleCard =_settingsPanel.parent.GetChild(0).GetChild(1).GetComponent<TextMeshProUGUI>();
 
-        var layout = _settingsPanel.GetComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(12, 0, 12, 0);
-        layout.spacing = 32;
-        layout.childControlHeight = false;
-        layout.childForceExpandWidth = false;
-        layout.childForceExpandHeight = false;
-        
+        titleCard.text = VGFunctions.LSText.ASCII.Get2HighASCII("Multiplayer Settings", 80);
+        //UIStateManager.Inst.RefreshTextCache(titleCard, VGFunctions.LSText.ASCII.Get2HighASCII("Multiplayer Settings", 80));
+
        LocalizationSettings.StringDatabase.GetTable("General UI").AddEntry("mp", $"Multiplayer {PAM.Version}");
         _mpPage = new()
         {
             _ID = "Multiplayer",
             PageContainer = _settingsPanel.parent.gameObject,
             TitleLocalized = new LocalizedString("General UI", "mp"),
-            BottomTitleLocalized = new LocalizedString("Empty", "Empty")
-            
+            BottomTitleLocalized = new LocalizedString("Empty", "Empty"),
+            SubElements = [_settingsPanel.parent.GetChild(0).GetChild(0).GetComponent<UI_Button>()]
         };
         book.Pages.Add(_mpPage);
-        
+   
         //the button
-        GameObject mpSettingsTab = Object.Instantiate(settingTabPrefab.gameObject, settingTabPrefab.parent);
+        GameObject mpSettingsTab = Object.Instantiate(settingTabPrefab.GetChild(1).gameObject, settingTabPrefab);
         var text = mpSettingsTab.GetComponentInChildren<TextMeshProUGUI>();
         text.text = "Multiplayer";
-        
+      
         UIStateManager.Inst.RefreshTextCache(text, "Multiplayer");
-
-        var button = mpSettingsTab.GetComponentInChildren<MultiElementButton>();
+     
+        var button = mpSettingsTab.GetComponent<MultiElementButton>();
         
-        button.m_OnClick = new();
+        button.onClick = new();
         
-        var uiButton = mpSettingsTab.GetComponentInChildren<UI_Button>();
-        button.m_OnClick.AddListener(new Action(() =>
+        var uiButton = mpSettingsTab.GetComponent<UI_Button>();
+        button.onClick.AddListener(() =>
         {
             book.ForceSwapPage("Multiplayer");
             uiButton.OnClick();
-        }));
+        });
         
-    
         //get 'prefabs'
-        Transform prefabsParent =  book.transform.Find("Content/Audio/Content");
-        _sliderPrefab = prefabsParent.Find("Menu Music").gameObject;
+        Transform prefabsParent =  book.transform.Find("Audio/Right");
+        _sliderPrefab = prefabsParent.Find("Music").gameObject;
         _togglePrefab = prefabsParent.Find("Checkpoint SFX").gameObject;
         _labelPrefab = prefabsParent.Find("General Title").gameObject;
         _spacerPrefab = prefabsParent.Find("spacer").gameObject;
-        
-        //add our button to the Settings page to the UI_Book in the Canvas
-        book.transform.parent.parent.parent.parent.GetComponent<UI_Book>().Pages[6].SubElements.Add(uiButton);
-     
+      
+        //add our button to the Settings page in the UI_Book in the Canvas
+        book.transform.parent.parent.parent.GetComponent<UI_Book>().Pages[6].SubElements.Add(uiButton);
+      
         //_mpPage.DefaultSelection = mpSettingsTab.GetComponentInChildren<UI_Button>().gameObject;
         SetupSettings();
     }
@@ -138,7 +138,7 @@ public static class SettingsHelper
             DataManager.inst.UpdateSettingInt(dataId, (int)f);
         },values);
     }
-    static void InstantiateSlider(string label, string dataId, Action<float> setter, params string[] values)
+    static void InstantiateSlider(string label, string dataId, UnityAction<float> setter, params string[] values)
     {
         UI_Slider slider = Object.Instantiate(_sliderPrefab, _settingsPanel).GetComponent<UI_Slider>();
         slider.DataID = dataId;

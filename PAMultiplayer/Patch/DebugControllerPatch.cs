@@ -17,7 +17,6 @@ public static class DebugControllerPatch
     static void PostAwake(DebugController __instance)
     {
         DebugCommand killCommand = new("Kill_All", "Kills all players (multiplayer mod, any)", 
-            new Action(
             () =>
             {
                 if (GlobalsManager.IsMultiplayer)
@@ -56,11 +55,10 @@ public static class DebugControllerPatch
                         vgPlayerData.PlayerObject.PlayerHit();
                     }
                 }
-            }));
+            });
         __instance.CommandList.Add(killCommand);
         
         DebugCommand disconnectCommand = new("Force_Disconnect", "Disconnects you from the lobby (multiplayer mod, any)", 
-            new Action(
             () =>
             {
                 __instance.AddLog("Attempting to disconnect from the lobby.");
@@ -68,7 +66,7 @@ public static class DebugControllerPatch
                 SteamManager.Inst.EndServer();
                 SteamManager.Inst.EndClient();
                 GlobalsManager.Players.Clear();
-            }));
+            });
         __instance.CommandList.Add(disconnectCommand);
 
 
@@ -108,185 +106,178 @@ public static class DebugControllerPatch
         DebugCommand<string> queueCommand = new("add_queue",
             "Adds a level to the queue, the level has to be downloaded. (multiplayer mod, host)",
             "string(level_id)",
-            new Action<string>(
-                levelId =>
+            levelId =>
+            {
+                if (GlobalsManager.IsMultiplayer && !GlobalsManager.IsHosting)
                 {
-                    if (GlobalsManager.IsMultiplayer && !GlobalsManager.IsHosting)
-                    {
-                        __instance.AddLog("You're not the host.");
-                        return;
-                    }
+                    __instance.AddLog("You're not the host.");
+                    return;
+                }
 
-                    if (ArcadeLevelDataManager.Inst.GetLocalCustomLevel(levelId.ToString()))
+                if (ArcadeLevelDataManager.Inst.GetLocalCustomLevel(levelId.ToString()))
+                {
+                    GlobalsManager.Queue.Add(levelId);
+                    __instance.AddLog($"Adding level with id [{levelId}] to queue.");
+                        
+                    List<string> levelNames = new();
+                    levelNames.Add(ArcadeManager.Inst.CurrentArcadeLevel.name);
+                        
+                    foreach (var id in GlobalsManager.Queue)
                     {
-                        GlobalsManager.Queue.Add(levelId);
-                        __instance.AddLog($"Adding level with id [{levelId}] to queue.");
-                        
-                        List<string> levelNames = new();
-                        levelNames.Add(ArcadeManager.Inst.CurrentArcadeLevel.name);
-                        
-                        foreach (var id in GlobalsManager.Queue)
-                        {
-                            VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-                            levelNames.Add(level.TrackName);
-                        }
-                        SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
-                        
-                        return;
+                        VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
+                        levelNames.Add(level.TrackName);
                     }
-                    __instance.AddLog($"Level with id [{levelId}] wasn't found downloaded.");
-                }));
+                    SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
+                        
+                    return;
+                }
+                __instance.AddLog($"Level with id [{levelId}] wasn't found downloaded.");
+            });
         __instance.CommandList.Add(queueCommand);
         
         DebugCommand toggleTransparencyCommand = new("toggle_transparency",
             "toggles Transparent Nanos. (multiplayer mod, any)",
-            new Action(
-                () =>
+            () =>
+            {
+                if (!GlobalsManager.IsMultiplayer)
                 {
-                    if (!GlobalsManager.IsMultiplayer)
+                    __instance.AddLog("Not in multiplayer, not toggling transparency.");
+                    return;
+                }
+
+                bool isTransparent = !DataManager.inst.GetSettingBool("MpTransparentPlayer", false);
+                DataManager.inst.UpdateSettingBool("MpTransparentPlayer", isTransparent);
+
+                foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+                {
+                    if (!vgPlayerData.PlayerObject.IsValidPlayer() || vgPlayerData.PlayerObject.IsLocalPlayer())
                     {
-                        __instance.AddLog("Not in multiplayer, not toggling transparency.");
-                        return;
+                        continue;
                     }
 
-                    bool isTransparent = !DataManager.inst.GetSettingBool("MpTransparentPlayer", false);
-                    DataManager.inst.UpdateSettingBool("MpTransparentPlayer", isTransparent);
-
-                    foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+                    foreach (var trail in vgPlayerData.PlayerObject.Player_Trail.Trail)
                     {
-                        if (!vgPlayerData.PlayerObject.IsValidPlayer() || vgPlayerData.PlayerObject.IsLocalPlayer())
-                        {
-                            continue;
-                        }
-
-                        foreach (var trail in vgPlayerData.PlayerObject.Player_Trail.Trail)
-                        {
-                            trail.Render_Trail.enabled = isTransparent;
-                        }
+                        trail.Render_Trail.enabled = isTransparent;
                     }
+                }
 
-                    __instance.AddLog($"Toggle Transparency to [{isTransparent}].");
-                }));
+                __instance.AddLog($"Toggle Transparency to [{isTransparent}].");
+            });
         __instance.CommandList.Add(toggleTransparencyCommand);
         
         DebugCommand toggleLinkedHealthCommand = new("toggle_linked",
             "Toggles the modifier Linked Health. (multiplayer mod, host)",
-            new Action(
-                () =>
-                {
-                    bool isLinked = !DataManager.inst.GetSettingBool("mp_linkedHealth", false);
-                    DataManager.inst.UpdateSettingBool("mp_linkedHealth", isLinked);
+            () =>
+            {
+                bool isLinked = !DataManager.inst.GetSettingBool("mp_linkedHealth", false);
+                DataManager.inst.UpdateSettingBool("mp_linkedHealth", isLinked);
                     
-                    if (GlobalsManager.IsMultiplayer)
-                    {
-                        SteamLobbyManager.Inst.CurrentLobby.SetData("LinkedMod", isLinked.ToString());
-                    }
-                    __instance.AddLog($"Toggle Linked Health to [{isLinked}].");
-                }));
+                if (GlobalsManager.IsMultiplayer)
+                {
+                    SteamLobbyManager.Inst.CurrentLobby.SetData("LinkedMod", isLinked.ToString());
+                }
+                __instance.AddLog($"Toggle Linked Health to [{isLinked}].");
+            });
         __instance.CommandList.Add(toggleLinkedHealthCommand);
         
         DebugCommand playerListCommand = new("player_list",
             "shows all player ids. (multiplayer mod, any)",
-            new Action(
-                () =>
+            () =>
+            {
+                if (!GlobalsManager.IsMultiplayer)
                 {
-                    if (!GlobalsManager.IsMultiplayer)
-                    {
-                        __instance.AddLog("Not in multiplayer.");
-                        return;
-                    }
+                    __instance.AddLog("Not in multiplayer.");
+                    return;
+                }
 
-                    __instance.AddLog("Showing all players.");
-                    if (GlobalsManager.IsHosting)
+                __instance.AddLog("Showing all players.");
+                if (GlobalsManager.IsHosting)
+                {
+                    foreach (var player in PaMNetworkManager.PamInstance.SteamIdToNetId)
                     {
-                        foreach (var player in PaMNetworkManager.PamInstance.SteamIdToNetId)
-                        {
-                            __instance.AddLog($"ID [{player.Value}], Name [{GlobalsManager.Players[player.Key].Name}]");
-                        }
-                        return;
+                        __instance.AddLog($"ID [{player.Value}], Name [{GlobalsManager.Players[player.Key].Name}]");
                     }
+                    return;
+                }
                     
-                    foreach (var player in GlobalsManager.Players)
-                    {
-                        __instance.AddLog(player.Value.Name);
-                    }
-                }));
+                foreach (var player in GlobalsManager.Players)
+                {
+                    __instance.AddLog(player.Value.Name);
+                }
+            });
         __instance.CommandList.Add(playerListCommand);
         
         DebugCommand<int> kickPlayerCommand = new("kick",
             "attempts to kick a player from the lobby. (multiplayer mod, host)",
             "int(player_id)",
-            new Action<int>(
-                playerId =>
+            playerId =>
+            {
+                if (!GlobalsManager.IsMultiplayer || !GlobalsManager.IsHosting)
                 {
-                    if (!GlobalsManager.IsMultiplayer || !GlobalsManager.IsHosting)
-                    {
-                        __instance.AddLog("Not in multiplayer or not the host. not kicking player.");
-                        return;
-                    }
+                    __instance.AddLog("Not in multiplayer or not the host. not kicking player.");
+                    return;
+                }
                     
-                    PaMNetworkManager.PamInstance.KickClient(playerId);
-                    __instance.AddLog("Attempting to kick player from server.");
-                }));
+                PaMNetworkManager.PamInstance.KickClient(playerId);
+                __instance.AddLog("Attempting to kick player from server.");
+            });
         __instance.CommandList.Add(kickPlayerCommand);
         
         DebugCommand<string> privateCommand = new("set_Lobby_Privacy",
             "set the lobby privacy setting. (multiplayer mod, host)",
             "bool(private)",
-            new Action<string>(
-                isPrivateStr =>
+            isPrivateStr =>
+            {
+                if (!bool.TryParse(isPrivateStr.ToLower(), out bool isPrivate))
                 {
-                    if (!bool.TryParse(isPrivateStr.ToLower(), out bool isPrivate))
-                    {
-                        __instance.AddLog("Invalid parameter, pass \"true\" or \"false\".");
-                        return;
-                    }
+                    __instance.AddLog("Invalid parameter, pass \"true\" or \"false\".");
+                    return;
+                }
                     
-                    if (!GlobalsManager.IsMultiplayer || !GlobalsManager.IsHosting)
-                    {
-                        __instance.AddLog("Not in multiplayer or not the host.");
-                        return;
-                    }
+                if (!GlobalsManager.IsMultiplayer || !GlobalsManager.IsHosting)
+                {
+                    __instance.AddLog("Not in multiplayer or not the host.");
+                    return;
+                }
 
-                    if (isPrivate)
-                    {
-                        SteamLobbyManager.Inst.CurrentLobby.SetFriendsOnly();
-                        __instance.AddLog("Lobby was made private.");
-                    }
-                    else
-                    {
-                        SteamLobbyManager.Inst.CurrentLobby.SetPublic();
-                        __instance.AddLog("Lobby was made public.");
-                    }
+                if (isPrivate)
+                {
+                    SteamLobbyManager.Inst.CurrentLobby.SetFriendsOnly();
+                    __instance.AddLog("Lobby was made private.");
+                }
+                else
+                {
+                    SteamLobbyManager.Inst.CurrentLobby.SetPublic();
+                    __instance.AddLog("Lobby was made public.");
+                }
                    
-                }));
+            });
         __instance.CommandList.Add(privateCommand);
         
         DebugCommand<int> lobbySizeCommand = new("set_lobby_size",
             "attempts to change the lobby size. (multiplayer mod, host) | 1 - 4 players. | 2 - 8 players. | 3 - 12 players. | 4 - 16 players.",
             "int(player_count)",
-            new Action<int>(
-                playerCount =>
+            playerCount =>
+            {
+                if (!GlobalsManager.IsMultiplayer || !GlobalsManager.IsHosting)
                 {
-                    if (!GlobalsManager.IsMultiplayer || !GlobalsManager.IsHosting)
-                    {
-                        __instance.AddLog("Not in multiplayer or not the host.");
-                        return;
-                    }
+                    __instance.AddLog("Not in multiplayer or not the host.");
+                    return;
+                }
 
-                    playerCount = Mathf.Clamp(playerCount * 4, 4, 16);
+                playerCount = Mathf.Clamp(playerCount * 4, 4, 16);
 
-                    if (SteamLobbyManager.Inst.CurrentLobby.MemberCount < playerCount)
-                    {
-                        __instance.AddLog("Tried to set lobby size to less than the lobby player count.");
-                    }
-                    else
-                    {
-                        SteamLobbyManager.Inst.CurrentLobby.MaxMembers = playerCount;
-                        LobbyCreationManager.Instance.PlayerCount = playerCount;
-                        __instance.AddLog($"Set lobby max players to [{playerCount}]");
-                    }
-                }));
+                if (SteamLobbyManager.Inst.CurrentLobby.MemberCount < playerCount)
+                {
+                    __instance.AddLog("Tried to set lobby size to less than the lobby player count.");
+                }
+                else
+                {
+                    SteamLobbyManager.Inst.CurrentLobby.MaxMembers = playerCount;
+                    LobbyCreationManager.Instance.PlayerCount = playerCount;
+                    __instance.AddLog($"Set lobby max players to [{playerCount}]");
+                }
+            });
         __instance.CommandList.Add(lobbySizeCommand);
 
     

@@ -1,10 +1,11 @@
 using System.Collections.Generic;
-using Il2CppSystems.SceneManagement;
+using System.Linq;
 using Newtonsoft.Json;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Steamworks;
 using Steamworks.Data;
+using Systems.SceneManagement;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -145,7 +146,7 @@ public class SteamLobbyManager : MonoBehaviour
 
             if (playerObj)
             {
-                playerObj.DeathEvent?.Invoke(playerObj.Player_Wrapper.position);
+                playerObj.GetDeathEvent()?.Invoke(playerObj.Player_Wrapper.position);
                 playerObj.ClearEvents();
                 playerObj.PlayerDeath(0);
             }
@@ -414,9 +415,9 @@ public class SteamLobbyManager : MonoBehaviour
 
     public void UnloadAll()
     {
-        foreach (var keyValuePair in _loadedPlayers)
+        foreach (var key in _loadedPlayers.Keys.ToList())
         {
-            _loadedPlayers[keyValuePair.Key] = false;
+            _loadedPlayers[key] = false;
         }
     }
 

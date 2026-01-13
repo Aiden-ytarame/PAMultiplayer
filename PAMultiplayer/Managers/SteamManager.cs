@@ -59,11 +59,11 @@ public class SteamManager : MonoBehaviour
             SteamNetworkingUtils.SendBufferSize = 10485760; //this is set to 10mb~ due to sending audio to clients in challenge mode.
             
             GlobalsManager.LocalPlayerId = SteamClient.SteamId;
-            PAM.Inst.Log.LogInfo("Steam Initialized");
+            PAM.Logger.LogInfo("Steam Initialized");
         }
         catch(Exception)
         {
-            PAM.Inst.Log.LogError("failed to initialize steam");
+            PAM.Logger.LogError("failed to initialize steam");
         }
         
     }

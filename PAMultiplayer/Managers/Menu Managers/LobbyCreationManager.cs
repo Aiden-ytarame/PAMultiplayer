@@ -1,6 +1,6 @@
 using System;
-using Il2CppSystems.SceneManagement;
 using Steamworks.Data;
+using Systems.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -30,19 +30,19 @@ public class LobbyCreationManager : MonoBehaviour
         LobbyCreationMenu = gameObject.GetComponent<UI_Menu>();
 
         MultiElementToggle toggle = transform.Find("Pause Menu/Private").GetComponent<MultiElementToggle>();
-        toggle.onValueChanged.AddListener(new Action<bool>(x =>
+        toggle.onValueChanged.AddListener(x =>
         {
             IsPrivate = x;
-        }));
+        });
         
         UI_Slider slider = transform.Find("Pause Menu/PlayerCount").GetComponent<UI_Slider>();
-        slider.OnValueChanged.AddListener(new Action<float>(x =>
+        slider.OnValueChanged.AddListener(x =>
         {
             PlayerCount = 16 - (int)x * 4;
-        }));
+        });
         
         transform.Find("Pause Menu/StartLobby").GetComponent<MultiElementButton>().onClick
-            .AddListener(new Action(() =>
+            .AddListener(() =>
             {
                 GlobalsManager.IsHosting = true;
                 GlobalsManager.IsMultiplayer = true;
@@ -64,11 +64,11 @@ public class LobbyCreationManager : MonoBehaviour
                 
                 LobbyCreationMenu.HideAllInstant();
                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-            }));
+            });
 
         MultiElementButton returnButton = transform.Find("Pause Menu/Return to Customs").GetComponent<MultiElementButton>();
         returnButton.onClick = new();//todo: remove this in unity
-        returnButton.onClick.AddListener(new Action(CloseMenu));
+        returnButton.onClick.AddListener(CloseMenu);
     }
 
     public void OpenMenu(bool bIsChallange)

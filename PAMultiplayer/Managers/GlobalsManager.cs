@@ -37,7 +37,7 @@ namespace PAMultiplayer.Managers
 
         public static bool HasLoadedExternalInfo;
         public static bool HasLoadedBasePlayerIds;
-        public static bool HasLoadedLobbyInfo;
+        public static bool HasLoadedLobbyInfo = true;
         
         public static bool IsReloadingLobby = false;
         public static bool HasStarted = false;

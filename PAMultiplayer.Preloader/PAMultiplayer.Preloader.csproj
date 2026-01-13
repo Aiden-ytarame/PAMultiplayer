@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <MpPluginFolder>/home/aiden/.local/share/Steam/steamapps/common/Project Arrhythmia/BepInEx/patchers/PAMultiplayer</MpPluginFolder>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Mono.Cecil" Version="0.10.4" />
+    </ItemGroup>
+
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MpPluginFolder)" />
+    </Target>
+</Project>

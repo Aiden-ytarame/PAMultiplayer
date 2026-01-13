@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using AttributeNetworkWrapperV2;
-using Cpp2IL.Core.Extensions;
+using Crosstales;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using Steamworks;
 using TMPro;
@@ -41,7 +41,7 @@ public partial class PointsManager : MonoBehaviour
 
             Stats = content.GetChild(1).GetComponent<TextMeshProUGUI>();
 
-            content.GetChild(2).GetChild(0).transform.Cast<RectTransform>().sizeDelta = new Vector2(50, 50);
+            (content.GetChild(2).GetChild(0).transform as RectTransform)!.sizeDelta = new Vector2(50, 50);
             Score = content.GetChild(2).GetChild(1).GetComponent<TextMeshProUGUI>();
         }
 
@@ -91,22 +91,22 @@ public partial class PointsManager : MonoBehaviour
         }
 
         Inst = this;
-        GameManager.Inst.add_levelRestartEvent(new Action(() => Inst?.LevelRestarted()));
-        GameManager.Inst.add_levelFinishEvent(new Action(() => Inst?.LevelEnded()));
+        GameManager.Inst.levelRestartEvent += () => Inst?.LevelRestarted();
+        GameManager.Inst.levelFinishEvent += () => Inst?.LevelEnded();
 
         using (var stream = Assembly.GetExecutingAssembly()
                    .GetManifestResourceStream("PAMultiplayer.Assets.points"))
         {
-            _pointsBundle = AssetBundle.LoadFromMemory(stream!.ReadBytes());
+            _pointsBundle = AssetBundle.LoadFromMemory(stream!.CTReadFully());
         }
 
         Transform uiManager = PauseUIManager.Inst.transform.parent;
-        _menu = Instantiate(_pointsBundle.LoadAsset("assets/level result.prefab").Cast<GameObject>(), uiManager)
+        _menu = Instantiate(_pointsBundle.LoadAsset("assets/level result.prefab") as GameObject, uiManager)
             .GetComponent<UI_Menu>();
         
         _playerList = _menu.transform.Find("PlayersList");
         
-        _playerEntryPrefab = _pointsBundle.LoadAsset("assets/playerentry.prefab").Cast<GameObject>();
+        _playerEntryPrefab = _pointsBundle.LoadAsset("assets/playerentry.prefab") as GameObject;
     }
 
     private void OnDestroy()
@@ -162,7 +162,7 @@ public partial class PointsManager : MonoBehaviour
         DataManager.inst.UpdateSettingInt("MpScore", score);
         if (GlobalsManager.IsMultiplayer)
         {
-            CallRpc_Client_SendResults(null, _localHits, _localBoosts, _localCc, score, GlobalsManager.JoinedMidLevel);
+            CallRpc_Client_SendResults(_localHits, _localBoosts, _localCc, score, GlobalsManager.JoinedMidLevel);
             ShowEndScreen();
         }
     }
@@ -187,9 +187,8 @@ public partial class PointsManager : MonoBehaviour
 
         var hex = LSColors.ColorToHex(GameManager.Inst.LiveTheme.GetPlayerColor(playerData.VGPlayerData.PlayerID % 4));
         entry.Icon.text = $"<color=#{hex}>{PlayerShapes[playerData.VGPlayerData.PlayerID / 4]}";
-
-        entry.Stats.rectTransform.anchoredPosition = new Vector2(100, 0);
-        entry.Stats.transform.Cast<RectTransform>().anchoredPosition = new Vector2(100, 7);
+        
+        entry.Stats.rectTransform.anchoredPosition = new Vector2(100, 7);
         
         _playerEntries.Add(playerId, entry);
         

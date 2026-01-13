@@ -2,7 +2,6 @@
 using HarmonyLib;
 using AttributeNetworkWrapperV2;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
-using PAMultiplayer;
 using PAMultiplayer.Managers;
 using Rewired;
 using Steamworks;
@@ -78,7 +77,7 @@ public partial class Player_Patch
                 else
                 {
                     if (!linked || !IsDamageAll)
-                        CallRpc_Server_PlayerDamaged(null, player.Health);
+                        CallRpc_Server_PlayerDamaged(player.Health);
                 }
 
                 IsDamageAll = false;
@@ -102,18 +101,20 @@ public partial class Player_Patch
             
        
         player.StopCoroutine("RegisterCloseCall");
-
-        if (player.DeathEvent != null && player.Health <= 0)
+        
+        if (player.GetDeathEvent() != null && player.Health <= 0)
         {
-            player.DeathEvent.Invoke(player.Player_Wrapper.position);
+            player.GetDeathEvent().Invoke(player.Player_Wrapper.position);
         }
-        else if (player.HitEvent != null)
+        else if (player.GetHitEvent() != null)
         {
-            player.HitEvent.Invoke(player.Health, player.Player_Wrapper.position);
+            player.GetHitEvent().Invoke(player.Health, player.Player_Wrapper.position);
         }
-
+        
         if (player.Health > 0)
         {
+            player.StartHurtDecay();
+            
             int warp = DataManager.inst.GetSettingInt("MpPlayerWarpSFX", 0);
             if (warp == 0 || (warp == 1 && player.IsLocalPlayer()))
             {
@@ -126,9 +127,6 @@ public partial class Player_Patch
             {
                 AudioManager.Inst.PlaySound("HurtPlayer", 0.6f);
             }
-                
-            player.StartHurtDecay();
-             
             if(isLocal)
                 player.PlayerHitAnimation(); //this runs the camera shake, annoying in multiplayer
             else
@@ -175,10 +173,10 @@ public partial class Player_Patch
             PointsManager.Inst?.PlayerHasDied(steamID);
         }
         
-        PAM.Inst.Log.LogDebug($"Damaging player {steamID}");
+        PAM.Logger.LogDebug($"Damaging player {steamID}");
         
         if (steamID.IsLocalPlayer()) return;
-        
+       
         if(GlobalsManager.Players.TryGetValue(steamID, out var player))
         {
             if (!player.VGPlayerData.PlayerObject.IsValidPlayer()) return;
@@ -211,7 +209,7 @@ public partial class Player_Patch
             {
                 if (player.Health < healthPreHit)
                 {
-                    PAM.Inst.Log.LogWarning($"Old message");
+                    PAM.Logger.LogWarning($"Old message");
                     continue;
                 }
 
@@ -271,7 +269,7 @@ public partial class Player_Patch
                     }
                     else
                     {
-                        CallRpc_Server_PlayerBoost(null);
+                        CallRpc_Server_PlayerBoost();
                     }
                 }
                 ps = Object.Instantiate(__instance.PS_Boost, __instance.Player_Wrapper.position, rot);
@@ -359,9 +357,9 @@ public partial class Player_Patch
     {
         if (__instance.RPlayer.id == 0 && PointsManager.Inst)
         {
-            __instance.add_CloseCallEvent(new Action<Vector3>(_ => { PointsManager.Inst.AddCloseCall(); }));
-            __instance.add_HitEvent(new Action<int, Vector3>((_, _) => { PointsManager.Inst.AddHit(); }));
-            __instance.add_DeathEvent(new Action<Vector3>(_ => { PointsManager.Inst.AddDeath(); }));
+            __instance.CloseCallEvent += _ => PointsManager.Inst.AddCloseCall();
+            __instance.HitEvent += (_, _) => PointsManager.Inst.AddHit();
+            __instance.DeathEvent += _ => PointsManager.Inst.AddDeath();
             _holdingBoost = 0;
         }
         
@@ -470,7 +468,7 @@ public partial class Player_Patch
     [HarmonyPostfix]
     static void PostUpate(VGPlayer __instance)
     {
-        if (GameManager.Inst.CurGameState != GameManager.GameState.Playing || __instance.isDead || __instance.RPlayer.id != 0 || !PointsManager.Inst)
+        if (!GameManager.Inst || GameManager.Inst.CurGameState != GameManager.GameState.Playing || __instance.isDead || __instance.RPlayer.id != 0 || !PointsManager.Inst)
         {
             return;
         }
@@ -597,7 +595,7 @@ public static class TrailPatch
     [HarmonyPrefix]
     static bool PreTailUpdate(PlayerTrail __instance, ref int _health)
     {
-        if (_health >= __instance.Trail.Count)
+        if (_health > __instance.Trail.Count)
         {
             PAM.Logger.LogFatal($"Tried to update tail with invalid health value of [{_health}]");
             return false;

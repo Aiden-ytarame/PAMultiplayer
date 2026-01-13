@@ -3,15 +3,15 @@ using System.Collections;
 using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
-using Cpp2IL.Core.Extensions;
 using HarmonyLib;
 using AttributeNetworkWrapperV2;
+using Crosstales;
 using PAMultiplayer.Helper;
 using UnityEngine;
 using PAMultiplayer.Managers;
 using SimpleJSON;
 using TMPro;
+using UnityEngine.Events;
 using UnityEngine.Localization.PropertyVariants;
 using UnityEngine.Networking;
 using UnityEngine.UI;
@@ -30,28 +30,29 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         static void AddUIToSettings(ref ModifiersManager __instance)
         {
-            var hiddenButtons = __instance.transform.parent.Find("Buttons/Buttons Hidden").gameObject;
+            var hiddenButtons = __instance.transform.parent.Find("Buttons/Primary/Multiplayer").gameObject;
             hiddenButtons.SetActive(true);
-
-            var mpToggle = hiddenButtons.transform.GetChild(0).GetComponent<MultiElementToggle>();
+            var mpToggle = hiddenButtons.GetComponent<MultiElementToggle>();
             mpToggle.isOn = false;
             mpToggle.interactable = true;
             mpToggle.onValueChanged = new Toggle.ToggleEvent();
-            mpToggle.onValueChanged.AddListener(new Action<bool>(_ =>
+            mpToggle.onValueChanged.AddListener(_ =>
             {
                 mpToggle.isOn = false;
                 if(LobbyCreationManager.Instance) 
                     LobbyCreationManager.Instance.OpenMenu(false);
-            }));
-
+            });
+            
+            mpToggle.GetComponentInChildren<TextMeshProUGUI>().richText = true;
+            
             if (LobbyCreationManager.Instance)
             {
                 LobbyCreationManager.Instance.FallbackUIElement = mpToggle;
             }
             MultiElementButton playgame = __instance.transform.parent.Find("Buttons/Primary/Play").GetComponent<MultiElementButton>();
-            
+ 
             //playgame.onClick = new Button.ButtonClickedEvent();
-            playgame.onClick.AddListener(new Action(() =>
+            playgame.onClick.AddListener(() =>
             {
                 if (GlobalsManager.Queue.Count > 0)
                 {
@@ -66,21 +67,28 @@ namespace PAMultiplayer.Patch
                     
                     //SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
                 }   
-            }));
-            
+            });
+           
             var row1 = __instance.transform.Find("r-2");
-            var linkedHealthToggle = Object.Instantiate(row1.GetChild(0), __instance.transform).GetComponent<MultiElementToggle>();
+            var mpRow = Object.Instantiate(row1, __instance.transform);
+            for (int i = 0; i <   mpRow.childCount; i++)
+            {
+                Object.Destroy(mpRow.GetChild(i).gameObject);
+            }
+          
+            var linkedHealthToggle = Object.Instantiate(row1.GetChild(0), mpRow).GetComponent<MultiElementToggle>();
             var modText = linkedHealthToggle.gameObject.GetComponentInChildren<TextMeshProUGUI>();
             
             UIStateManager.Inst.RefreshTextCache(modText, "<size=75%><sprite name=\"heart\"><size=100%>Linked Health");
             modText.text = "<size=75%><sprite name=\"heart\"><size=100%>Linked Health";
+            modText.richText = true;
             linkedHealthToggle.name = "mp_linkedHealth";
             
             linkedHealthToggle.onValueChanged = new();
-            linkedHealthToggle.onValueChanged.AddListener(new Action<bool>(on =>
+            linkedHealthToggle.onValueChanged.AddListener(on =>
             {
                 DataManager.inst.UpdateSettingBool("mp_linkedHealth", on);
-            }));
+            });
             
             DataManager.inst.UpdateSettingBool("mp_linkedHealth", false);
             linkedHealthToggle.isOn = false;
@@ -88,7 +96,6 @@ namespace PAMultiplayer.Patch
             
             //adds to the 'Song Menu' page so it plays the glitch effect on this toggle 
             Object.FindFirstObjectByType<UI_Book>().Pages[1].SubElements.Add(linkedHealthToggle.uiElement);
-            
         }
     }
 
@@ -119,11 +126,11 @@ namespace PAMultiplayer.Patch
             using (var stream = Assembly.GetExecutingAssembly()
                        .GetManifestResourceStream("PAMultiplayer.Assets.lobbysettings"))
             {
-                var lobbyBundle = AssetBundle.LoadFromMemory(stream!.ReadBytes());
-                lobbySettingsGo = Object.Instantiate(lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]).Cast<GameObject>(),
+                var lobbyBundle = AssetBundle.LoadFromMemory(stream!.CTReadFully());
+                lobbySettingsGo = Object.Instantiate(lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[0]) as GameObject,
                     generalUI);
           
-                selectionMenuGo = Object.Instantiate(lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]).Cast<GameObject>(),
+                selectionMenuGo = Object.Instantiate(lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[1]) as GameObject,
                     generalUI);
                 
                 lobbyBundle.Unload(false);
@@ -176,7 +183,7 @@ namespace PAMultiplayer.Patch
                         text = "YOU";
                         if (!ChallengeManager.Inst && player.VGPlayerData.PlayerObject)
                         {
-                            GameManager.Inst.StartCoroutine(ShowDecay(player.VGPlayerData.PlayerObject).WrapToIl2Cpp());
+                            GameManager.Inst.StartCoroutine(ShowDecay(player.VGPlayerData.PlayerObject));
                         }
                     }
 
@@ -222,10 +229,10 @@ namespace PAMultiplayer.Patch
             {
                 SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "0");
                 
-                GameManager.Inst.StartCoroutine(ShowNames().WrapToIl2Cpp());
+                GameManager.Inst.StartCoroutine(ShowNames());
                 
                 LobbyScreenManager.Instance.StartLevel();
-                Object.Destroy(LobbyScreenManager.Instance, 0.2f);
+                Object.Destroy(LobbyScreenManager.Instance, 1f);
             }
             CameraDB.Inst.SetUIVolumeWeightOut(0.2f);
             return true;
@@ -265,19 +272,20 @@ namespace PAMultiplayer.Patch
         static bool PostStart(ShowChangeLog __instance)
         {
             PAM.Logger.LogError("SKIP INTRO");
-            UI_Book book = __instance.transform.parent.parent.parent.Find("Settings/Right Panel").GetComponent<UI_Book>();
+            UI_Book book = __instance.transform.parent.parent.parent.Find("Settings").GetComponent<UI_Book>();
             
-            void instantiateSlider(GameObject prefab, Transform parent, string label, string dataId, Action<float> setter)
+            void instantiateSlider(GameObject prefab, Transform parent, string label, string dataId, UnityAction<float> setter)
             {
                 GameObject WarpSliderObj = Object.Instantiate(prefab, parent);
             
                 UI_Slider slider = WarpSliderObj.GetComponent<UI_Slider>();
                 slider.DataID = dataId;
-                slider.DataIDType = UI_Slider.DataType.Runtime;
+                slider.DataIDType = UI_Slider.DataType.Enum;
+                slider.Type = UI_Slider.VisualType.dot;
                 slider.Range = new Vector2(0, 2);
                 slider.Values = new[] { "All Players", "Local player Only", "None" };
                 slider.Value = DataManager.inst.GetSettingInt(dataId, 0);
-                slider.Label.text = label;
+                slider.Label.text = label;  
                 slider.Label.GetComponentInChildren<GameObjectLocalizer>().enabled = false;
                 slider.OnValueChanged.AddListener(setter);
                
@@ -285,15 +293,15 @@ namespace PAMultiplayer.Patch
                 book.Pages[1].SubElements.Add(slider);
             }
             
-            SystemManager.inst.StartCoroutine(FetchGithubReleases(__instance.gameObject).WrapToIl2Cpp());
-            
-            GameObject sliderPrefab = book.transform.Find("Content/Audio/Content/Menu Music").gameObject;
+            SystemManager.inst.StartCoroutine(FetchGithubReleases(__instance.gameObject));
+          
+            GameObject sliderPrefab = book.transform.Find("Audio/Right/Music").gameObject;
             Transform audioParent = sliderPrefab.transform.parent;
-            
+           
             //destroy SFX toggles
             Object.Destroy(audioParent.GetChild(audioParent.childCount-1).gameObject);
             Object.Destroy(audioParent.GetChild(audioParent.childCount-2).gameObject);
-            
+        
             instantiateSlider(sliderPrefab, audioParent, "Player Hit SFX", "MpPlayerSFX", x =>
             {
                 DataManager.inst.UpdateSettingInt("MpPlayerSFX", (int)x);
@@ -307,21 +315,21 @@ namespace PAMultiplayer.Patch
             
             //this creates the Multiplayer tab in the settings
             SettingsHelper.SetupMenu();
-
+           
             MultiElementButton button = __instance.transform.parent.parent.Find("pc_top-buttons/Custom Mode")
                 .GetComponent<MultiElementButton>();
 
             button.onClick = new();
-            button.onClick.AddListener(new Action(() =>
+            button.onClick.AddListener(() =>
             {
                 MenuSelectionManager.Instance.OpenMenu();
-            }));
+            });
             
             if (!SingletonBase<SettingsManager>.Inst.ShowChangeLog())
             {
                 __instance.gameObject.SetActive(false);
             }
-
+          
             return false;
         }
 
@@ -370,20 +378,21 @@ namespace PAMultiplayer.Patch
             
             var button = updateMod.GetComponent<MultiElementButton>();
             button.onClick = new Button.ButtonClickedEvent();
-            button.onClick.AddListener(new Action(() =>
+            button.onClick.AddListener(() =>
             {
                 if (_isUpdating || _updated)
                 {
                     return;
                 }
+
                 _isUpdating = true;
-                
+
                 const string downloadingStr = "<sprite name=info> Updating Multiplayer...";
                 updateText.text = downloadingStr;
                 UIStateManager.Inst.RefreshTextCache(updateText, downloadingStr);
-                
-                DataManager.inst.StartCoroutine(DownloadGithubRelease(updateText).WrapToIl2Cpp());
-            }));
+
+                DataManager.inst.StartCoroutine(DownloadGithubRelease(updateText));
+            });
             
             
             //stupid workaround to getting the wrong canvas
@@ -451,7 +460,7 @@ namespace PAMultiplayer.Patch
             
                 try
                 {
-                    File.Move(fullPath, Path.GetDirectoryName(fullPath) + "\\PAMultiplayerOld.dll", true);
+                    File.Move(fullPath, Path.GetDirectoryName(fullPath) + "\\PAMultiplayerOld.dll");
                 }
                 catch (Exception e)
                 {

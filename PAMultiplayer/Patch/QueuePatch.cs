@@ -1,11 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Cpp2IL.Core.Extensions;
+using Crosstales;
 using HarmonyLib;
-using Il2CppSystems.SceneManagement;
-using PAMultiplayer;
 using PAMultiplayer.Managers;
+using Systems.SceneManagement;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -35,16 +33,16 @@ public static class ArcadeMenuPatch
         
         using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("PAMultiplayer.Assets.queue assets"))
         {
-            var lobbyBundle = AssetBundle.LoadFromMemory(stream!.ReadBytes());
+            var lobbyBundle = AssetBundle.LoadFromMemory(stream!.CTReadFully());
             
-            QueueIconPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]).Cast<GameObject>();
+            QueueIconPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[0]) as GameObject;
          
             lobbyBundle.Unload(false);
         }
         
-        foreach (var LevelButton in __instance.LevelButtons)
+        foreach (var levelButton in __instance.LevelButtons)
         {
-            Transform button = LevelButton.Button.transform;
+            Transform button = levelButton.Button.transform;
             GameObject icon = Object.Instantiate(QueueIconPrefab, button);
  
             _queueButtons.Add(icon.AddComponent<QueueButton>());
@@ -84,10 +82,6 @@ public class QueueButton : MonoBehaviour
     
     private void Start()
     {
-        queueButton = gameObject.GetComponent<UI_Button>();
-        queueText = gameObject.GetComponentInChildren<TextMeshProUGUI>();
-        queueButton.GetComponent<MultiElementButton>().onClick.AddListener(new Action(OnClick));
-
         _queueUpdated += UpdateButton;
     }
 
@@ -125,6 +119,14 @@ public class QueueButton : MonoBehaviour
 
     public void SetLevel(string level)
     {
+        if (queueButton == null)
+        {
+            queueButton = gameObject.GetComponent<UI_Button>();
+            queueText = gameObject.GetComponentInChildren<TextMeshProUGUI>();
+            queueButton.GetComponent<MultiElementButton>().onClick.AddListener(OnClick);
+        }
+
+        queueButton = gameObject.GetComponent<UI_Button>();
         queueButton.Show();
         
         currentLevel = level;
@@ -162,7 +164,7 @@ public static class LevelEndScreenPatch
         
         //remove all listeners seems broken :c
         nextLevel.onClick = new Button.ButtonClickedEvent();
-        nextLevel.onClick.AddListener(new Action(() =>
+        nextLevel.onClick.AddListener(() =>
         {
             GlobalsManager.IsReloadingLobby = true;
             if (GlobalsManager.IsMultiplayer)
@@ -186,7 +188,7 @@ public static class LevelEndScreenPatch
             
             SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
             PAM.Logger.LogInfo("Starting next level in queue!");
-        }));
+        });
 
         if (GlobalsManager.IsMultiplayer)
         {

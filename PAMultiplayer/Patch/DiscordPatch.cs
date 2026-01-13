@@ -9,7 +9,7 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch(typeof(DiscordManager))]
 public static class DiscordManagerPatch
 {
-    [HarmonyPatch(nameof(DiscordManager.Awake))]
+    [HarmonyPatch("Awake")]
     [HarmonyPrefix]
     static void stopPresence(DiscordManager __instance)
     {

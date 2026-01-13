@@ -2,11 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
-using Cpp2IL.Core.Extensions;
-using Il2CppSystems.SceneManagement;
+using Crosstales;
 using Newtonsoft.Json;
 using Steamworks;
+using Systems.SceneManagement;
 using TMPro;
 using UnityEngine;
 
@@ -45,11 +44,10 @@ public class LobbyScreenManager : MonoBehaviour
         using (var stream = Assembly.GetExecutingAssembly()
                    .GetManifestResourceStream("PAMultiplayer.Assets.lobbymenuv2"))
         {
-            var lobbyBundle = AssetBundle.LoadFromMemory(stream!.ReadBytes());
-            lobbyGo = Instantiate(lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[0]).Cast<GameObject>(),
-                UiManager);
-            _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[1]).Cast<GameObject>();
-            _queueEntryPrefab = lobbyBundle.LoadAsset(lobbyBundle.AllAssetNames()[2]).Cast<GameObject>();
+            var lobbyBundle = AssetBundle.LoadFromMemory(stream!.CTReadFully());
+            lobbyGo = Instantiate(lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[0]) as GameObject, UiManager.transform);
+            _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[1]) as GameObject;
+            _queueEntryPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[2]) as GameObject;
           
             lobbyBundle.Unload(false);
         }
@@ -63,16 +61,10 @@ public class LobbyScreenManager : MonoBehaviour
         var buttons = lobbyGo.transform.Find("Pause Menu");
         ResumeButton = buttons.GetChild(0).GetComponent<MultiElementButton>();
         
-        ResumeButton.onClick.AddListener(new Action(() =>
-        {
-            GameManager.Inst.UnPause();
-        }));
+        ResumeButton.onClick.AddListener(GameManager.Inst.UnPause);
 
         QuitButton = buttons.GetChild(1).GetComponent<MultiElementButton>();
-        QuitButton.onClick.AddListener(new Action(() =>
-        {
-            SceneLoader.Inst.LoadSceneGroup("Arcade");
-        }));
+        QuitButton.onClick.AddListener(() => SceneLoader.Inst.LoadSceneGroup("Arcade"));
         
         if (!GlobalsManager.IsHosting)
         {
@@ -94,7 +86,7 @@ public class LobbyScreenManager : MonoBehaviour
 
     private void Start()
     {
-        StartCoroutine(ShowLobby().WrapToIl2Cpp());
+        StartCoroutine(ShowLobby());
     }
 
     IEnumerator ShowLobby()
@@ -130,7 +122,7 @@ public class LobbyScreenManager : MonoBehaviour
             return;
         }
 
-        var playerEntry = Instantiate(_playerPrefab, _playersList).Cast<GameObject>().transform;
+        var playerEntry = Instantiate<GameObject>(_playerPrefab, _playersList.transform).transform;
 
         if (SpecialColors.TryGetValue(player, out var hex))
         {
@@ -175,7 +167,7 @@ public class LobbyScreenManager : MonoBehaviour
             var loadIcon = value.GetChild(1).GetComponent<TextMeshProUGUI>();
             loadIcon.text = "▓";
 
-            UIStateManager.inst.RefreshTextCache(loadIcon, "▓");
+            UIStateManager.Inst.RefreshTextCache(loadIcon, "▓");
 
             if (GlobalsManager.IsHosting)
             {
@@ -200,14 +192,15 @@ public class LobbyScreenManager : MonoBehaviour
             player.Spawn(); //for the spawn effect
         }
                 
-        VGPlayerManager.inst.RespawnPlayers();
+        VGPlayerManager.Inst.RespawnPlayers();
         
         SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)SteamLobbyManager.LobbyState.Playing).ToString());
         GlobalsManager.HasStarted = true;
-        SteamLobbyManager.Inst.UnloadAll();
         
         LobbyMenu.HideAll();
         GameManager.Inst.UnPause();
+        
+        SteamLobbyManager.Inst.UnloadAll();
     }
 
     public void UpdateQueue()
@@ -235,7 +228,7 @@ public class LobbyScreenManager : MonoBehaviour
         
         foreach (var queueEntry in queue)
         {
-            var entry = Instantiate(_queueEntryPrefab, _queueList).Cast<GameObject>();
+            var entry = Instantiate(_queueEntryPrefab, _queueList);
             entry.GetComponentInChildren<TextMeshProUGUI>().text = queueEntry;
         }
     }

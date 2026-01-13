@@ -59,5 +59,19 @@ public static class AttrWrapperExtension
         int count = reader.ReadInt32();
         return MemoryMarshal.Cast<byte, short>(reader.BinaryReader.ReadBytes(count)).ToArray();
     }
+
+    public static void WriteVersion(this NetworkWriter writer, Version version)
+    {
+        writer.Write(version.Major);
+        writer.Write(version.Minor);
+        writer.Write(version.Build);
+        writer.Write(version.Revision);
+    }
+
+    public static Version ReadVersion(this NetworkReader reader)
+    {
+        return new Version(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+    }
+    
     public static bool TryGetSteamId(this ClientNetworkConnection conn, out SteamId steamId) => GlobalsManager.ConnIdToSteamId.TryGetValue(conn.ConnectionId, out steamId);
 }

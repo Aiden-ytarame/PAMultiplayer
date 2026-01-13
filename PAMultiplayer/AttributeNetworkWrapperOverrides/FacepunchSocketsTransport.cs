@@ -63,9 +63,9 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
 
             // We want to expand the array up to Array.MaxLength.
             // And we want to give the user the value that they asked for
-            if ((uint)(_buffer.Length * 2) > Array.MaxLength)
+            if ((uint)(_buffer.Length * 2) > 999999)
             {
-                newCapacity = Math.Max(size, Array.MaxLength);
+                newCapacity = Math.Max(size, 9999999);
             }
 
             byte[] newBuffer = new byte[newCapacity];
