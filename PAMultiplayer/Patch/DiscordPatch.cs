@@ -1,5 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using DiscordRPC.IO;
 using HarmonyLib;
 using Lachee.Discord;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 using PAMultiplayer;
 using PAMultiplayer.Managers;
 
@@ -13,8 +21,10 @@ public static class DiscordManagerPatch
     [HarmonyPrefix]
     static void stopPresence(DiscordManager __instance)
     {
+        JsonConvert.DefaultSettings = null; //We hate newtonsoft.json
         __instance.gameObject.AddComponent<MultiplayerDiscordManager>();
         UnityEngine.Object.Destroy(__instance);
     }
     
 }
+

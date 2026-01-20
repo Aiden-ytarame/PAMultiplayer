@@ -145,8 +145,8 @@ public static class DebugControllerPatch
                     return;
                 }
 
-                bool isTransparent = !DataManager.inst.GetSettingBool("MpTransparentPlayer", false);
-                DataManager.inst.UpdateSettingBool("MpTransparentPlayer", isTransparent);
+                bool isTransparent = !Settings.Transparent.Value;
+                Settings.Transparent.Value = isTransparent;
 
                 foreach (var vgPlayerData in VGPlayerManager.Inst.players)
                 {

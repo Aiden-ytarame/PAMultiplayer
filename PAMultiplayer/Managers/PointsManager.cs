@@ -153,13 +153,13 @@ public partial class PointsManager : MonoBehaviour
 
     private void LevelEnded()
     {
-        int score = DataManager.inst.GetSettingInt("MpScore", 0);
+        int score = Settings.Score.Value;
         if (!GlobalsManager.JoinedMidLevel)
         {
             score += GetWonChallenges();
         }
-        
-        DataManager.inst.UpdateSettingInt("MpScore", score);
+
+        Settings.Score.Value = score;
         if (GlobalsManager.IsMultiplayer)
         {
             CallRpc_Client_SendResults(_localHits, _localBoosts, _localCc, score, GlobalsManager.JoinedMidLevel);

@@ -6,7 +6,6 @@ using System.Security.Cryptography;
 using HarmonyLib;
 using AttributeNetworkWrapperV2;
 using Crosstales;
-using PAMultiplayer.Helper;
 using UnityEngine;
 using PAMultiplayer.Managers;
 using SimpleJSON;
@@ -15,6 +14,7 @@ using UnityEngine.Events;
 using UnityEngine.Localization.PropertyVariants;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using Button = UnityEngine.UI.Button;
 using Object = UnityEngine.Object;
 
 namespace PAMultiplayer.Patch
@@ -274,17 +274,17 @@ namespace PAMultiplayer.Patch
             PAM.Logger.LogError("SKIP INTRO");
             UI_Book book = __instance.transform.parent.parent.parent.Find("Settings").GetComponent<UI_Book>();
             
-            void instantiateSlider(GameObject prefab, Transform parent, string label, string dataId, UnityAction<float> setter)
+            void instantiateSlider(GameObject prefab, Transform parent, string label, float value, UnityAction<float> setter)
             {
                 GameObject WarpSliderObj = Object.Instantiate(prefab, parent);
             
                 UI_Slider slider = WarpSliderObj.GetComponent<UI_Slider>();
-                slider.DataID = dataId;
+                slider.DataID = null;
                 slider.DataIDType = UI_Slider.DataType.Enum;
                 slider.Type = UI_Slider.VisualType.dot;
                 slider.Range = new Vector2(0, 2);
                 slider.Values = new[] { "All Players", "Local player Only", "None" };
-                slider.Value = DataManager.inst.GetSettingInt(dataId, 0);
+                slider.Value = value;
                 slider.Label.text = label;  
                 slider.Label.GetComponentInChildren<GameObjectLocalizer>().enabled = false;
                 slider.OnValueChanged.AddListener(setter);
@@ -302,19 +302,16 @@ namespace PAMultiplayer.Patch
             Object.Destroy(audioParent.GetChild(audioParent.childCount-1).gameObject);
             Object.Destroy(audioParent.GetChild(audioParent.childCount-2).gameObject);
         
-            instantiateSlider(sliderPrefab, audioParent, "Player Hit SFX", "MpPlayerSFX", x =>
+            instantiateSlider(sliderPrefab, audioParent, "Player Hit SFX", Settings.HitSfx.Value, x =>
             {
-                DataManager.inst.UpdateSettingInt("MpPlayerSFX", (int)x);
+                Settings.HitSfx.Value = (int)x;
                 DataManager.inst.UpdateSettingBool("PlayerSFX", x != 2);
             });
-            instantiateSlider(sliderPrefab, audioParent, "Player Hit Warp SFX", "MpPlayerWarpSFX", x =>
+            instantiateSlider(sliderPrefab, audioParent, "Player Hit Warp SFX", Settings.WarpSfx.Value, x =>
             {
-                DataManager.inst.UpdateSettingInt("MpPlayerWarpSFX", (int)x);
+                Settings.WarpSfx.Value = (int)x;
                 DataManager.inst.UpdateSettingBool("PlayerWarpSFX", x != 2);
             });
-            
-            //this creates the Multiplayer tab in the settings
-            SettingsHelper.SetupMenu();
            
             MultiElementButton button = __instance.transform.parent.parent.Find("pc_top-buttons/Custom Mode")
                 .GetComponent<MultiElementButton>();

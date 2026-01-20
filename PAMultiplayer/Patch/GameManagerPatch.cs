@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using HarmonyLib;
 using AttributeNetworkWrapperV2;
@@ -192,7 +193,7 @@ public partial class GameManagerPatch
         //but I dont want to have a bunch of commits just changing the name colors.
         //we also can make this repo not a github page but eh, why not 
         UnityWebRequest webRequest =
-            UnityWebRequest.Get("https://raw.githubusercontent.com/aiden-ytarame//ColoredNames.json");
+            UnityWebRequest.Get("https://raw.githubusercontent.com/aiden-ytarame/PAMultiplayer/master/ColoredNames.json");
         yield return webRequest.SendWebRequest();
 
         if (webRequest.result != UnityWebRequest.Result.Success)
@@ -578,7 +579,7 @@ public partial class GameManagerPatch
                  
                  var item = DownloadLevel();
                  
-                 yield return new WaitUntil(new Func<bool>(() => !GlobalsManager.IsDownloading));
+                 yield return new WaitUntil(() => !GlobalsManager.IsDownloading);
                  
                  var result = item.Result;
 
@@ -587,7 +588,7 @@ public partial class GameManagerPatch
                      yield break; //this prob doesnt need to be here
                  }
                  
-                 VGLevel vgLevel = new VGLevel();
+                 VGLevel vgLevel = ScriptableObject.CreateInstance<VGLevel>();
                  
                  vgLevel.InitArcadeData(result.Directory);
                  InitSteamInfo(ref vgLevel, result.Id, result.Directory, result);
@@ -619,7 +620,7 @@ public partial class GameManagerPatch
                  }
                          
                  var levelItem = result.Result;
-                 bool allowHiddenLevel = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false);
+                 bool allowHiddenLevel = Settings.AllowNonPublicLevels.Value;
                  
                  if (levelItem.HasValue && levelItem.Value.Result == Result.OK)
                  {
@@ -812,7 +813,7 @@ public partial class GameManagerPatch
         _level.SteamInfo = new VGLevel.SteamData(){ ItemID = _id};
         
     }
-
+    
     static async Task<Item> DownloadLevel()
     {
         void FailLoad(string errorMessage)

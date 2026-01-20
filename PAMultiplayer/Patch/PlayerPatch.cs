@@ -1,6 +1,7 @@
 ﻿using System;
 using HarmonyLib;
 using AttributeNetworkWrapperV2;
+using PaApi;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
 using Rewired;
@@ -98,7 +99,10 @@ public partial class Player_Patch
                 }
             }
         }
-            
+        else
+        {
+            --player.Health;
+        }
        
         player.StopCoroutine("RegisterCloseCall");
         
@@ -114,15 +118,15 @@ public partial class Player_Patch
         if (player.Health > 0)
         {
             player.StartHurtDecay();
-            
-            int warp = DataManager.inst.GetSettingInt("MpPlayerWarpSFX", 0);
+
+            int warp = Settings.WarpSfx.Value; 
             if (warp == 0 || (warp == 1 && player.IsLocalPlayer()))
             {
                 AudioManager.Inst.ApplyLowPass(0.05f, 0.8f, 1.5f);
                 AudioManager.Inst.ApplyLowPassResonance(0, 0.6f, 0.2f);
             }
 
-            int hit = DataManager.inst.GetSettingInt("MpPlayerSFX", 0);
+            int hit = Settings.HitSfx.Value;
             if (hit == 0 || (hit == 1 && player.IsLocalPlayer()))
             {
                 AudioManager.Inst.PlaySound("HurtPlayer", 0.6f);
@@ -192,7 +196,7 @@ public partial class Player_Patch
     }
     static void DamageAll(int healthPreHit, ulong hitPlayerId)
     {
-        if (DataManager.inst.GetSettingBool("MpLinkedHealthPopup", true))
+        if (Settings.Linked.Value)
         {
             if (GlobalsManager.Players.TryGetValue(hitPlayerId, out var playerData))
             {
@@ -374,7 +378,7 @@ public partial class Player_Patch
             
         if (!GlobalsManager.IsMultiplayer) return;
 
-        if (DataManager.inst.GetSettingBool("MpTransparentPlayer", false) && !__instance.IsLocalPlayer())
+        if (Settings.Transparent.Value && !__instance.IsLocalPlayer())
         {
             foreach (var trail in __instance.Player_Trail.Trail)
             {
@@ -420,11 +424,11 @@ public partial class Player_Patch
     [HarmonyPrefix]
     static bool PreSetColor(VGPlayer __instance, Color _col, Color _colTail)
     {
-        if (GlobalsManager.IsMultiplayer && DataManager.inst.GetSettingBool("MpTransparentPlayer", false) &&
+        if (GlobalsManager.IsMultiplayer && Settings.Transparent.Value &&
             !__instance.IsLocalPlayer())
         {
             float alpha;
-            switch (DataManager.inst.GetSettingInt("MpTransparentPlayerAlpha", 0))
+            switch (Settings.TransparentAlpha.Value)
             {
                 case 1:
                     alpha = 0.50f;

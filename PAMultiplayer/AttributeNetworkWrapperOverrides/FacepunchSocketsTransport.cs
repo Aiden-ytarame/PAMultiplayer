@@ -89,6 +89,8 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
         if (ulong.TryParse(address, out var id))
         {
             client = SteamNetworkingSockets.ConnectRelay(id, 0, this);
+            IsActive = true;
+            OnClientConnected?.Invoke(new ServerNetworkConnection(id.ToString()));
             return;
         }
         
@@ -215,12 +217,14 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     
     // ConnectionManager (client)
 
-    public void OnConnecting(ConnectionInfo info) { }
+    public void OnConnecting(ConnectionInfo info)
+    {
+       
+    }
 
     public void OnConnected(ConnectionInfo info)
     {
-        IsActive = true;
-        OnClientConnected?.Invoke(new ServerNetworkConnection(info.Identity.SteamId.ToString()));
+        
     }
 
     public void OnDisconnected(ConnectionInfo info)

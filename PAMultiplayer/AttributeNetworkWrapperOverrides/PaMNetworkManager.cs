@@ -16,10 +16,28 @@ public partial class PaMNetworkManager : NetworkManager
     public delegate void MultiplayerStateChanged(bool hosting);
     public delegate void PlayerStateChanged(ulong id);
     
+    /// <summary>
+    /// Invoked whenever multiplayer starts as either a host or client.
+    /// </summary>
     public static event MultiplayerStateChanged OnMultiplayerStart;
+    /// <summary>
+    /// Invoked whenever multiplayer ends as either a host or client.
+    /// </summary>
     public static event MultiplayerStateChanged OnMultiplayerEnd;
+    
+    /// <summary>
+    /// Invoked whenever a player joins the server. Also invoked on clients
+    /// </summary>
     public event PlayerStateChanged OnPlayerJoin;
+    
+    /// <summary>
+    /// Invoked whenever a player leaves the server. Also invoked on clients
+    /// </summary>
     public event PlayerStateChanged OnPlayerLeave;
+    
+    /// <summary>
+    /// Returns the mod guid and version after asking the client. Returns all 0's if not installed
+    /// </summary>
     public event ClientModVersionReceived OnClientModVersionReceived;
     
     
@@ -34,23 +52,19 @@ public partial class PaMNetworkManager : NetworkManager
         _facepunchtransport?.Receive();
     }
     
-    public override void OnClientConnected(ServerNetworkConnection connection)
-    {
-        base.OnClientConnected(connection);
-    }
-
     public override void StartServer(bool serverIsPeer)
     {
-        
         base.StartServer(serverIsPeer);
         _facepunchtransport = (FacepunchSocketsTransport)Transport;
         if (serverIsPeer)
         {
+            ClientConnections.Clear();
             ServerSelfPeerConnection = new ClientNetworkConnection(_facepunchtransport.GetNextConnectionId(), GlobalsManager.LocalPlayerId.ToString());
+            
             _facepunchtransport.SteamIdToNetId.Add(GlobalsManager.LocalPlayerId, ServerSelfPeerConnection.ConnectionId);
             _facepunchtransport.IDToConnection.Add(ServerSelfPeerConnection.ConnectionId, null);
-            
             GlobalsManager.ConnIdToSteamId.Add(ServerSelfPeerConnection.ConnectionId, GlobalsManager.LocalPlayerId);
+            ClientConnections.Add(ServerSelfPeerConnection.ConnectionId, ServerSelfPeerConnection);
         }
         PamInstance = this;
         OnMultiplayerStart?.Invoke(true);
@@ -58,9 +72,9 @@ public partial class PaMNetworkManager : NetworkManager
 
     public override void ConnectToServer(string address)
     {
+        PamInstance = this;
         base.ConnectToServer(address);
         _facepunchtransport = (FacepunchSocketsTransport)Transport;
-        PamInstance = this;
         OnMultiplayerStart?.Invoke(false);
     }
 
@@ -195,23 +209,38 @@ public partial class PaMNetworkManager : NetworkManager
         }
     }
     
+    /// <summary>
+    /// Request client to respond if the specified mod is present.
+    /// <see cref="OnClientModVersionReceived"/> is invoked with the client's response.
+    /// </summary>
+    /// <seealso cref="OnClientModVersionReceived"/>
     [MethodImpl(MethodImplOptions.NoInlining)]
     [ClientRpc]
     public static void Client_AskForMod(string modGuid)
     {
+        PAM.Logger.LogInfo($"Mod requested [{modGuid}]");
         if (Chainloader.PluginInfos.TryGetValue(modGuid, out var pluginInfo))
         {
+            PAM.Logger.LogInfo($"Mod found");
             CallRpc_Server_SendModVer(pluginInfo.Metadata.Version, modGuid);
+            return;
         }
         
-        CallRpc_Server_SendModVer(new Version(-1, -1), modGuid);
+        PAM.Logger.LogWarning($"Mod [{modGuid}] was requested by the host, but it was not found.");
+        CallRpc_Server_SendModVer(new Version(0,0,0,0), modGuid);
     }
 
    
+    /// <summary>
+    /// Kicks the client due to a mod being required
+    /// </summary>
+    /// <param name="modGuid"></param>
     [MethodImpl(MethodImplOptions.NoInlining)]
     [ClientRpc]
     public static void Client_MissingMod(string modGuid)
     {
+        PAM.Logger.LogError($"Mod [{modGuid}] is missing or has incorrect version, host requested client to disconnect");
+        
         PamInstance.Shutdown();
         PamInstance = null;
         

@@ -70,7 +70,7 @@ public static class AttrWrapperExtension
 
     public static Version ReadVersion(this NetworkReader reader)
     {
-        return new Version(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+        return new Version(Math.Max(reader.ReadInt32(), 0), Math.Max(reader.ReadInt32(), 0), Math.Max(reader.ReadInt32(), 0), Math.Max(reader.ReadInt32(), 0));
     }
     
     public static bool TryGetSteamId(this ClientNetworkConnection conn, out SteamId steamId) => GlobalsManager.ConnIdToSteamId.TryGetValue(conn.ConnectionId, out steamId);

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using AttributeNetworkWrapperV2;
+using Newtonsoft.Json;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Steamworks;
@@ -13,6 +14,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using VGFunctions;
 using Random = UnityEngine.Random;
 
 namespace PAMultiplayer.Managers;
@@ -33,7 +35,7 @@ public partial class ChallengeManager : MonoBehaviour
     private readonly Dictionary<ulong, Tuple<short[], int, int>> _songData = new(); //struct here crashes bepinex lmao
     
     private bool _votingStarted = false;
-    
+    public AlbumArtManager AlbumArtManager = new();
     public delegate void OnVoteChangedSignature(VGLevel newLevel);
     public event OnVoteChangedSignature OnVoteChanged;
 
@@ -145,6 +147,8 @@ public partial class ChallengeManager : MonoBehaviour
                 vgPlayerData.PlayerObject = null;
             }
         }
+        
+        AlbumArtManager.Dispose();
     }
     #endregion
     
@@ -161,7 +165,7 @@ public partial class ChallengeManager : MonoBehaviour
             yield break;
         }
 
-        int roundsToNotRepeat = DataManager.inst.GetSettingEnum("MpNoRepeat", 0);
+        int roundsToNotRepeat = Settings.NoRepeat.Value;
         if (roundsToNotRepeat != 4)
         {
             roundsToNotRepeat *= 6;
@@ -197,7 +201,7 @@ public partial class ChallengeManager : MonoBehaviour
         }
         
         PAM.Logger.LogInfo($"[{RecentLevels.Count}] levels blacklisted");
-        bool allowNonPublicLevels = DataManager.inst.GetSettingBool("MpAllowNonPublicLevels", false);
+        bool allowNonPublicLevels = Settings.AllowNonPublicLevels.Value;
         
         for (int i = 0; i < 24; i++)
         {
@@ -395,7 +399,7 @@ public partial class ChallengeManager : MonoBehaviour
         try
         {
             VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id.ToString());
-            if (level != null) 
+            if (level) 
             {
                 if (!_levelsToVote.Contains(level))
                 {
@@ -558,13 +562,21 @@ public partial class ChallengeManager : MonoBehaviour
     
     IEnumerator ShowLevels()
     {
+        var albumTask = AlbumArtManager.LoadAlbumArtAsync(_levelsToVote[0].name, _levelsToVote[0].BaseLevelData.LocalFolder);
         yield return new WaitForSeconds(1f);
 
+        double timeSinceLastButton = Time.realtimeSinceStartupAsDouble;
+        
         for (int i = 0; i < 6; i++)
         {
             var level = _levelsToVote[i];
             var button = _levelButtons[i];
-          
+            
+            yield return new WaitUntil(() => albumTask.IsCompleted);
+            //yield return albumTask; this breaks
+            
+            level.AlbumArt = albumTask.Result;
+            
             button.SetLevelData(level);  
             button.Show();
             
@@ -577,8 +589,15 @@ public partial class ChallengeManager : MonoBehaviour
             {
                 AudioManager.Inst.musicSources[AudioManager.Inst.activeSource].time = level.LevelMusic.length / 2;
             }
+
+            if (i < 5)
+            {
+                albumTask = AlbumArtManager.LoadAlbumArtAsync(_levelsToVote[i + 1].name, _levelsToVote[i + 1].BaseLevelData.LocalFolder);
+            }
            
-            yield return new WaitForSecondsRealtime(2.5f);
+            timeSinceLastButton += 2.5;
+            yield return new WaitUntil(() => timeSinceLastButton <= Time.realtimeSinceStartupAsDouble);
+           //Used instead of waitForSeconds to account for lag
         }
 
         foreach (var levelButton in _levelButtons)
@@ -586,16 +605,16 @@ public partial class ChallengeManager : MonoBehaviour
             levelButton.EnableVoting();
         }
         
-        yield return new WaitForSecondsRealtime(5f);
-
         if (GlobalsManager.IsMultiplayer && !GlobalsManager.IsHosting)
         {
             yield break;
         }
         
+        yield return new WaitForSecondsRealtime(5f);
+        
         VGLevel nextLevel = PickLevel();
         
-        if (nextLevel == null)
+        if (!nextLevel)
         {
             SceneLoader.Inst.LoadSceneGroup("Menu");
             yield break;
@@ -633,13 +652,13 @@ public partial class ChallengeManager : MonoBehaviour
             if (GlobalsManager.IsHosting)
             {
                 SteamLobbyManager.Inst.CreateLobby();
-                yield return new WaitUntil(new Func<bool>(() => SteamLobbyManager.Inst.InLobby));
+                yield return new WaitUntil(() => SteamLobbyManager.Inst.InLobby);
             }
             else
             {
                 SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                yield return new WaitUntil(new Func<bool>(() => AttributeNetworkWrapperV2.NetworkManager.Instance.TransportActive));
-                yield return new WaitUntil(new Func<bool>(() => GlobalsManager.HasLoadedAllInfo ));
+                yield return new WaitUntil(() => AttributeNetworkWrapperV2.NetworkManager.Instance.TransportActive);
+                yield return new WaitUntil(() => GlobalsManager.HasLoadedAllInfo);
             }
         }
         
@@ -674,7 +693,7 @@ public partial class ChallengeManager : MonoBehaviour
                 StartCoroutine(GetSongData(vgLevel));
             }
             
-            yield return new WaitUntil(new Func<bool>(() => _songData.Count >= 6));
+            yield return new WaitUntil(() => _songData.Count >= 6);
             
             timer.Stop();
             PAM.Logger.LogDebug($"took {timer.ElapsedMilliseconds}ms to get level data");
@@ -952,7 +971,7 @@ public partial class VoterCell : MonoBehaviour
     public void SetLevelData(VGLevel level)
     {
         Level = level;
-      
+       
         if (level.AlbumArt)
         {
             transform.GetChild(1).GetChild(0).GetComponent<Image>().sprite = level.AlbumArt;

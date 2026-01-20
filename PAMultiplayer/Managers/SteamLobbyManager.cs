@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
+using PaApi;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Steamworks;
@@ -63,7 +64,7 @@ public class SteamLobbyManager : MonoBehaviour
 
     private void OnChatMessage(Lobby lobby, Friend friend, string message)
     {
-        if (!DataManager.inst.GetSettingBool("MpChatEnabled", true))
+        if (!Settings.Chat.Value)
         {
             return;
         }
