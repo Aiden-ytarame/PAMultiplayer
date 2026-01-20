@@ -4,6 +4,7 @@ using DiscordRPC;
 using DiscordRPC.Logging;
 using DiscordRPC.Message;
 using Steamworks;
+using Steamworks.Data;
 using UnityEngine;
 using EventType = DiscordRPC.EventType;
 
@@ -76,8 +77,10 @@ public class MultiplayerDiscordManager : MonoBehaviour
 			if (ulong.TryParse(joinSecret.Secret, out ulong id))
 			{
 				PAM.Logger.LogInfo("Attempting to join lobby from discord invite.");
+				
 				GlobalsManager.IsHosting = false;
 				GlobalsManager.IsMultiplayer = true;
+				
 				SteamMatchmaking.JoinLobbyAsync(id);
 			}
 			else

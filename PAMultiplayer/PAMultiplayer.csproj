@@ -69,7 +69,7 @@
     </Reference>
 			  
     <Reference Include="PaApi">
-      <HintPath>..\..\..\..\..\..\home\aiden\.local\share\Steam\steamapps\common\Project Arrhythmia\BepInEx\plugins\PaApi.dll</HintPath>
+      <HintPath>lib\PaApi.dll</HintPath>
     </Reference>
     <Reference Include="Rewired_Core">
       <HintPath>lib\Rewired_Core.dll</HintPath>
@@ -132,8 +132,4 @@
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MpPluginFolder)" />
     </Target>
-
-  <Target Name="Hash" AfterTargets="PostBuild">
-    <Exec Command="sha256sum '$(TargetPath)' | awk '{print toupper($1)}' &gt; '$(MpPluginFolder)/ReleaseHash.sha256' " />
-  </Target>
 </Project>

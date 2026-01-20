@@ -39,8 +39,9 @@ public class MenuSelectionManager : MonoBehaviour
             Menu.HideAllInstant();
             GeneralUILoader.Inst?.LeaveSaveUI?.Invoke();
             LobbyQuery query = new LobbyQuery();
-            var lobbies = await query.WithMaxResults(1).RequestAsync();
+            var lobbies = await query.WithMaxResults(1).WithKeyValue("AlphaMultiplayer", "true").RequestAsync();
 
+            
             if (lobbies != null && lobbies.Length > 0)
             {
                 GlobalsManager.IsHosting = false;
@@ -103,7 +104,7 @@ public class MenuSelectionManager : MonoBehaviour
             UIStateManager.Inst.RefreshTextCache(LobbyCount, "...");
             
             LobbyQuery query = new LobbyQuery();
-            var lobbies = await query.WithMaxResults(10).RequestAsync();
+            var lobbies = await query.WithMaxResults(10).WithKeyValue("AlphaMultiplayer", "true").RequestAsync();
 
             if (!LobbyCount)
             {

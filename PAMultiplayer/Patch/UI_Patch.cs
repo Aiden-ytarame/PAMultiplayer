@@ -377,18 +377,7 @@ namespace PAMultiplayer.Patch
             button.onClick = new Button.ButtonClickedEvent();
             button.onClick.AddListener(() =>
             {
-                if (_isUpdating || _updated)
-                {
-                    return;
-                }
-
-                _isUpdating = true;
-
-                const string downloadingStr = "<sprite name=info> Updating Multiplayer...";
-                updateText.text = downloadingStr;
-                UIStateManager.Inst.RefreshTextCache(updateText, downloadingStr);
-
-                DataManager.inst.StartCoroutine(DownloadGithubRelease(updateText));
+               Application.OpenURL("https://www.github.com/Aiden-ytarame/PAMultiplayer/releases/latest");
             });
             
             
@@ -397,107 +386,7 @@ namespace PAMultiplayer.Patch
                 .Add(updateMod.GetComponent<UI_Button>());
         }
 
-        static IEnumerator DownloadGithubRelease(TextMeshProUGUI button)
-        {
-            string hash;
-            
-            UnityWebRequest hashRequest =
-                UnityWebRequest.Get("https://github.com/Aiden-ytarame/PAMultiplayer/releases/latest/download/ReleaseHash.sha256");
-            try
-            {
-                yield return hashRequest.SendWebRequest();
-            
-                if (hashRequest.result != UnityWebRequest.Result.Success)
-                {
-                    PAM.Logger.LogError("Failed to download Github Release, oof");
-                    PAM.Logger.LogError(hashRequest.error); ;
-                    Fail();
-                    yield break;
-                }
-
-                hash = hashRequest.downloadHandler.text.Trim();
-            }
-            finally
-            {
-                hashRequest.Dispose();
-            }
-            
-            UnityWebRequest downloadRequest =
-                UnityWebRequest.Get("https://github.com/Aiden-ytarame/PAMultiplayer/releases/latest/download/PAMultiplayer.dll");
-            try
-            {
-                yield return downloadRequest.SendWebRequest();
-            
-                if (downloadRequest.result != UnityWebRequest.Result.Success)
-                {
-                    PAM.Logger.LogError("Failed to download Github Release, oof");
-                    PAM.Logger.LogError(downloadRequest.error);
-                    Fail();
-                    yield break;
-                }
-
-                string fileHash;
-            
-                using (SHA256 sha256 = SHA256.Create())
-                {
-                    byte[] bytes = sha256.ComputeHash(downloadRequest.downloadHandler.data);
-                    fileHash = BitConverter.ToString(bytes).Replace("-","");
-                }
-
-                if (fileHash != hash)
-                {
-                    PAM.Logger.LogError("Release Hash Mismatch!");
-                    PAM.Logger.LogError(hash);
-                    PAM.Logger.LogError(fileHash);
-                    Fail();
-                    yield break;
-                }
-            
-                string fullPath = Assembly.GetExecutingAssembly().Location;
-            
-                try
-                {
-                    File.Move(fullPath, Path.GetDirectoryName(fullPath) + "\\PAMultiplayerOld.dll");
-                }
-                catch (Exception e)
-                {
-                    PAM.Logger.LogError(e);
-                    Fail();
-                    yield break;
-                }
-
-                try
-                {
-                    File.WriteAllBytesAsync(Path.GetDirectoryName(fullPath) + "\\PAMultiplayer.dll", downloadRequest.downloadHandler.data); //async throws everytime due to bepinex
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
-            }
-            finally
-            {
-                downloadRequest.Dispose();  
-            }
-         
-            _updated = true;
-            if (button)
-            {
-                button.text = RestartStr;
-                UIStateManager.Inst.RefreshTextCache(button, RestartStr);
-            }
-            yield break;
-
-            void Fail()
-            {
-                _isUpdating = false;
-                if (button)
-                {
-                    button.text = FailedStr;
-                    UIStateManager.Inst.RefreshTextCache(button,  FailedStr);
-                }
-            }
-        }
+        
     }
     /// <summary>
     /// prevents the changelog button from destroying itself, so we can copy it for the Update Button

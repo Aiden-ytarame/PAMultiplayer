@@ -71,6 +71,12 @@ public class SteamManager : MonoBehaviour
     
     private void OnGameLobbyJoinRequested(Lobby lobby, SteamId steamId)
     {
+        if (lobby.GetData("AlphaMultiplayer") != "true")
+        {
+            PAM.Logger.LogError($"Tried to join invalid lobby [{lobby.Id.ToString()}]");
+            return;
+        }
+        
         GlobalsManager.IsHosting = false;
         GlobalsManager.IsMultiplayer = true;
         PAM.Logger.LogInfo($"Joining friend's lobby owned by [{steamId}]");

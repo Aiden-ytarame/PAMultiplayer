@@ -224,10 +224,22 @@ public class SteamLobbyManager : MonoBehaviour
 
     private void OnLobbyEntered(Lobby lobby)
     {
+        if (lobby.GetData("AlphaMultiplayer") != "true")
+        {
+            lobby.Leave();
+            SceneLoader.Inst.manager.ClearLoadingTasks();
+            SceneLoader.inst.LoadSceneGroup("Menu");
+            SteamManager.Inst.EndClient();
+            PAM.Logger.LogInfo($"Tried to join invalid lobby by [{lobby.Owner.Name}]");
+            return;
+        }
+        
         PAM.Logger.LogInfo($"Joined Lobby hosted by [{lobby.Owner.Name}]");
         PAM.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
+        
         CurrentLobby = lobby;
         InLobby = true;
+        
         int _playerAmount = 0;
 
         if (lobby.Owner.Id.IsLocalPlayer())
@@ -346,10 +358,12 @@ public class SteamLobbyManager : MonoBehaviour
         {
             PAM.Logger.LogError($"Failed to create lobby : Result [{result}]");
             lobby.Leave();
+            SteamManager.Inst.EndServer();
             SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.inst.LoadSceneGroup("Menu");
             return;
         }
+        
         PAM.Logger.LogInfo($"Lobby Created!");
         
         _loadedPlayers = new();
@@ -369,6 +383,7 @@ public class SteamLobbyManager : MonoBehaviour
         
         VGLevel currentLevel = ArcadeManager.Inst.CurrentArcadeLevel;
         GlobalsManager.LevelId = currentLevel.SteamInfo != null ?  currentLevel.SteamInfo.ItemID.Value.ToString() : currentLevel.name;
+        lobby.SetData("AlphaMultiplayer", "true");
         lobby.SetData("LevelId", GlobalsManager.LevelId);
         lobby.SetData("seed", RandSeed.ToString());
 
@@ -410,6 +425,11 @@ public class SteamLobbyManager : MonoBehaviour
     
     public void LeaveLobby()
     {
+        if (!InLobby)
+        {
+            return;
+        }
+        
         InLobby = false;
         CurrentLobby.Leave();
     }

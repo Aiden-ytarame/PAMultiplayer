@@ -122,20 +122,23 @@ public class LobbyScreenManager : MonoBehaviour
             return;
         }
 
-        var playerEntry = Instantiate<GameObject>(_playerPrefab, _playersList.transform).transform;
+        var playerEntry = Instantiate(_playerPrefab, _playersList.transform).transform;
 
         if (SpecialColors.TryGetValue(player, out var hex))
         {
             playerName = $"<color=#{hex}>{playerName}";
         }
 
-        playerEntry.GetComponentInChildren<TextMeshProUGUI>().text = playerName;
+        var text = playerEntry.GetComponentInChildren<TextMeshProUGUI>();
+        text.text = playerName;
+        UIStateManager.Inst.RefreshTextCache(text, playerName);
+
         playerEntry.GetComponent<UI_Text>().ShowCustom(0.2f);
         _playerList.Add(player, playerEntry);
-        
+
         if (GlobalsManager.IsHosting)
         {
-            SetButtonActive(SteamLobbyManager.Inst.IsEveryoneLoaded); 
+            SetButtonActive(SteamLobbyManager.Inst.IsEveryoneLoaded);
         }
     }
 
