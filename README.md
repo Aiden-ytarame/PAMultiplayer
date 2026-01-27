@@ -12,25 +12,25 @@ Syncs random seed and speed/health modifiers.
 
 Press Tab on keyboard, L1/LB on controller to show player names in game if youre lost.
 
-Uses BepInEx.
-
 ## Installation
 **(WIP)**
 
-* Download the latest [BepInEx 6.0.0 il2cpp for Win x64 games build](https://builds.bepinex.dev/projects/bepinex_be/704/BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.704%2B6b38cee.zip).
+### r2modman (recommended)
+
+* Download the [r2modman](https://thunderstore.io/package/ebkr/r2modman/) mod manager.
+* Search for **Project Arrhythmia** and go the **Online** tab, look for **Project Arrhythmia Multiplayer**W and download.
+* Then click **Start Modded** in the top left of r2modman and youre all set.
+
+### Manual
+* Download bepinex from [BepInEx 5.4](https://thunderstore.io/c/project-arrhythmia/p/BepInEx/BepInExPack/).
 * Extract the files from the BepInEx zip into your game's exe folder (this can be found by right clicking PA on your steam library and going "manage->browse local files").
   * Note: Extract the zip contents into the PA folder like the image below, not a new folder.
   
 <img src="https://github.com/user-attachments/assets/7d57b1cf-39cf-4441-8841-e23ad77ed3e6" width="50%">
 
-* Open the game, a terminal should show up. just wait for the game to open.
-  
-> [!NOTE]\
-> The first time you open the game after every game update, it'll take a while to open.
-
-* Close the game and download the [PAMultiplayer.dll](https://github.com/Aiden-ytarame/PAMultiplayer/releases/latest/download/PAMultiplayer.dll) from latest release of the Multiplayer mod.
-  * Your browser might block the download due to it being a .dll, click "Download Unverified File"
-* In your game's folder there will be a new folder called "bepinex". Put PAMultiplayer.dll inside the generated **/bepinex/plugins/** folder.
+* Download the [Project Arrhythmia Multiplayer mod]() from latest release available on thunderstore.
+* In your game's folder there will be a new folder called "bepinex". Merge the Bepinex folder on the Multiplayer zip file with the one in your game's folder.
+* Download [PaApi]() from the latest release available on thunderstore and follow the same installation steps from above.
 * Open the game and enjoy!
 
 ## How to use
@@ -80,22 +80,16 @@ The invite also shows the level you're hosting!
 The mod adds a few Multiplayer specific settings you should check out in the in-game settings menu.
 
 A few settings that you should note are:
-* Player Hit SFX - Changes which players triggers the hit sound.
-* Player Hit Warp SFX - Changes which players triggers the warp effect on the song when a player is hit.
-* Transparent Nanos - Makes every player other than yourself transparent to make it easier to see yourself.
+* Player Hit SFX - Changes which players triggers the hit sound, available in the Audio tab.
+* Player Hit Warp SFX - Changes which players triggers the warp effect on the song when a player is hit, available in the Audio tab.
+* Transparent Nanos - Makes every player other than yourself transparent to make it easier to see yourself, available in the Multiplayer tab.
 
-### Update Button
-
-When a new Multiplayer update is available a "Update Multiplayer" button will appear in the main menu, clicking it will automatically update the mod.
 
 ## Building
-To build the mod from source, make a "lib" folder where the csproj is and put get all the assemblies required from the interop folder bepinex generates with the exception of 3 assemblies. For these exception you can either use the ones available in any Multiplayer release, or:
-* Facepunch.Steamworks.Win64 - you have build it yourself from the Facepunch.Steamworks source.
-> [!NOTE]\
-> You have to build **Facepunch.Steamworks** yourself, the Facepunch.Steamworks release does not work.
-
-* steam_api64 - You can use the steam_api64 available in Facepunch.Steamworks source as well.
-* DiscordRPC - Use the latest release of Lachee's discord-rpc-csharp.
+To build the mod from source, make a "lib" folder where the csproj is and put all the assemblies required from the **Project Arrhythmia_Data/Managed** folder bepinex generates with the exception of 5 assemblies. For these exception you can either use the ones available in any Multiplayer release, or:
+* Facepunch.Steamworks.Win64 - Version 2.4.1 available in their github, taken from the unity package folder.
+* steam_api64 - You can use the steam_api64 available in Facepunch.Steamworks release as well.
+* DiscordRPC - Use version 1.6.1 of Lachee's discord-rpc-csharp available on Github.
 
 
 ## Thanks!
@@ -103,6 +97,6 @@ Pidge! for helping me and showing some of the source :)
 
 Cozm for the logo!
 
-Reimnop for some help!
+Reimnop amd Enchart for some help!
 
 Vyrmax for helping me test for hours and hours a day :>
