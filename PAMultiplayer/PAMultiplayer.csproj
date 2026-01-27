@@ -68,6 +68,10 @@
       <HintPath>lib\Newtonsoft.Json-publicized.dll</HintPath>
     </Reference>
 			  
+    <Reference Include="OggVorbisEncoder">
+      <HintPath>lib\OggVorbisEncoder.dll</HintPath>
+    </Reference>
+			  
     <Reference Include="PaApi">
       <HintPath>lib\PaApi.dll</HintPath>
     </Reference>

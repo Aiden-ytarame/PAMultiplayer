@@ -3,10 +3,15 @@
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <MpPluginFolder>/home/aiden/.local/share/Steam/steamapps/common/Project Arrhythmia/BepInEx/patchers/PAMultiplayer</MpPluginFolder>
+        <RestoreAdditionalProjectSources>
+        https://api.nuget.org/v3/index.json;
+        https://nuget.bepinex.dev/v3/index.json;
+        </RestoreAdditionalProjectSources>
     </PropertyGroup>
 
+
     <ItemGroup>
-      <PackageReference Include="Mono.Cecil" Version="0.10.4" />
+        <PackageReference Include="BepInEx.Core" Version="5.*" />
     </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">

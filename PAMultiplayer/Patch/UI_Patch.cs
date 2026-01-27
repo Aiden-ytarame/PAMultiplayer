@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using HarmonyLib;
 using AttributeNetworkWrapperV2;
 using Crosstales;
+using PaApi;
 using UnityEngine;
 using PAMultiplayer.Managers;
 using SimpleJSON;
@@ -271,10 +272,9 @@ namespace PAMultiplayer.Patch
         [HarmonyPrefix]
         static bool PostStart(ShowChangeLog __instance)
         {
-            PAM.Logger.LogError("SKIP INTRO");
             UI_Book book = __instance.transform.parent.parent.parent.Find("Settings").GetComponent<UI_Book>();
             
-            void instantiateSlider(GameObject prefab, Transform parent, string label, float value, UnityAction<float> setter)
+            void InstantiateSlider(GameObject prefab, Transform parent, string label, float value, UnityAction<float> setter)
             {
                 GameObject WarpSliderObj = Object.Instantiate(prefab, parent);
             
@@ -290,6 +290,8 @@ namespace PAMultiplayer.Patch
                 slider.OnValueChanged.AddListener(setter);
                
                 UIStateManager.inst.RefreshTextCache(slider.Label, label);
+                slider.SetLocalization(slider.Label, PAM.Guid, label, label);
+                
                 book.Pages[1].SubElements.Add(slider);
             }
             
@@ -302,12 +304,12 @@ namespace PAMultiplayer.Patch
             Object.Destroy(audioParent.GetChild(audioParent.childCount-1).gameObject);
             Object.Destroy(audioParent.GetChild(audioParent.childCount-2).gameObject);
         
-            instantiateSlider(sliderPrefab, audioParent, "Player Hit SFX", Settings.HitSfx.Value, x =>
+            InstantiateSlider(sliderPrefab, audioParent, "Player Hit SFX", Settings.HitSfx.Value, x =>
             {
                 Settings.HitSfx.Value = (int)x;
                 DataManager.inst.UpdateSettingBool("PlayerSFX", x != 2);
             });
-            instantiateSlider(sliderPrefab, audioParent, "Player Hit Warp SFX", Settings.WarpSfx.Value, x =>
+            InstantiateSlider(sliderPrefab, audioParent, "Player Hit Warp SFX", Settings.WarpSfx.Value, x =>
             {
                 Settings.WarpSfx.Value = (int)x;
                 DataManager.inst.UpdateSettingBool("PlayerWarpSFX", x != 2);
@@ -331,10 +333,6 @@ namespace PAMultiplayer.Patch
         }
 
         const string UpdateStr = "<sprite name=info> Update Multiplayer";
-        const string RestartStr = "<sprite name=info> Restart the game";
-        private const string FailedStr = "<sprite name=info> Failed";
-        static bool _isUpdating;
-        static bool _updated;
         static IEnumerator FetchGithubReleases(GameObject changeLog)
         {
             UnityWebRequest request =
@@ -369,9 +367,8 @@ namespace PAMultiplayer.Patch
             updateMod.GetComponent<ShowChangeLog>().enabled = false;
             TextMeshProUGUI updateText = updateMod.GetComponentInChildren<TextMeshProUGUI>();
             
-            string updText = _updated ? RestartStr : UpdateStr;
-            updateText.text = updText;
-            UIStateManager.Inst.RefreshTextCache(updateText, updText);
+            updateText.text = UpdateStr;
+            UIStateManager.Inst.RefreshTextCache(updateText, UpdateStr);
             
             var button = updateMod.GetComponent<MultiElementButton>();
             button.onClick = new Button.ButtonClickedEvent();

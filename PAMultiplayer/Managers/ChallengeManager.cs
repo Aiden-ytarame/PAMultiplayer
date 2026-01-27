@@ -3,9 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using AttributeNetworkWrapperV2;
 using Newtonsoft.Json;
+using OggVorbisEncoder;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Steamworks;
@@ -15,6 +18,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using VGFunctions;
+using CompressionLevel = UnityEngine.CompressionLevel;
 using Random = UnityEngine.Random;
 
 namespace PAMultiplayer.Managers;
@@ -539,10 +543,9 @@ public partial class ChallengeManager : MonoBehaviour
             }
             
         }
-      
+        
         //  clip.UnloadAudioData();
         //  Destroy(clip);
-        
         _songData.Add(level.SteamInfo.ItemID, new Tuple<short[], int, int>(songDataShort, frequency, clip.channels));
     }
     
@@ -649,6 +652,7 @@ public partial class ChallengeManager : MonoBehaviour
         AddLoadingScreenTasks();
         if (!GlobalsManager.IsReloadingLobby)
         {
+            PAM.Logger.LogWarning($"HAHA [{GlobalsManager.IsHosting}");
             if (GlobalsManager.IsHosting)
             {
                 SteamLobbyManager.Inst.CreateLobby();
@@ -706,7 +710,7 @@ public partial class ChallengeManager : MonoBehaviour
             yield break;
         }
         
-        yield return new WaitUntil(new Func<bool>(() => SteamLobbyManager.Inst.IsEveryoneLoaded));
+        yield return new WaitUntil(() => SteamLobbyManager.Inst.IsEveryoneLoaded);
         yield return null;
         SteamLobbyManager.Inst.UnloadAll();
         PauseLobbyPatch.CallRpc_Multi_StartLevel();
@@ -783,7 +787,7 @@ public partial class ChallengeManager : MonoBehaviour
                 }
                 else
                 {
-                    ArraySegment<short> segment = new ArraySegment<short>(songData.Item1, offset,
+                    ArraySegment<short> segment = new(songData.Item1, offset,
                         Mathf.FloorToInt(songData.Item1.Length - offset));
                     CallRpc_Client_AudioData(conn, levelId, songData.Item2, songData.Item3, segment, true);
                     break;

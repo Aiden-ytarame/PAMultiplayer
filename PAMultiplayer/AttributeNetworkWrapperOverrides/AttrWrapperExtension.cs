@@ -54,12 +54,12 @@ public static class AttrWrapperExtension
         writer.BinaryWriter.Write(buffer);
     }
 
-    public static Span<short> readSongData(this NetworkReader reader)
+    public static Span<short> ReadSongData(this NetworkReader reader)
     {
         int count = reader.ReadInt32();
         return MemoryMarshal.Cast<byte, short>(reader.BinaryReader.ReadBytes(count)).ToArray();
     }
-
+    
     public static void WriteVersion(this NetworkWriter writer, Version version)
     {
         writer.Write(version.Major);

@@ -1,5 +1,4 @@
 ﻿using BepInEx;
-using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
@@ -15,7 +14,7 @@ public class PAM : BaseUnityPlugin
     internal new static ManualLogSource Logger;
     
     Harmony harmony;
-    const string Guid = "me.ytarame.Multiplayer";
+    public const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
     public const string Version = "1.1.0";
 
@@ -28,22 +27,21 @@ public class PAM : BaseUnityPlugin
         harmony.PatchAll();
 
         Settings.Initialize(Config);
-        
-        PaApi.SettingsHelper.RegisterModSettings(Guid, "Multiplayer", Config, builder =>
+       
+        PaApi.SettingsHelper.RegisterModSettings(Guid, "Multiplayer", Color.red, Config, builder =>
         {
-            builder.InstantiateLabel("<b>TRANSPARENT NANOS</b> - and related settings");
+            builder.Label("<b>TRANSPARENT NANOS</b> - and related settings");
         
-            builder.InstantiateToggle("Transparent Nanos", Settings.Transparent);
-            builder.InstantiateSlider("Transparent Opacity", Settings.TransparentAlpha, UI_Slider.VisualType.line, "35%", "50%", "85%");
-            builder.InstantiateSpacer();
+            builder.Toggle("Transparent Nanos", Settings.Transparent);
+            builder.Slider("Transparent Opacity", Settings.TransparentAlpha, UI_Slider.VisualType.line, "35%", "50%", "85%");
+            builder.Spacer();
         
-            builder.InstantiateLabel("<b>MISCELLANEOUS</b> - other settings");
+            builder.Label("<b>MISCELLANEOUS</b> - other settings");
         
-            builder.InstantiateSlider("No Repeats in Challenge", Settings.NoRepeat, UI_Slider.VisualType.line, "0 Rounds", "1 Round", "2 Rounds", "3 Rounds", "Infinite");
-            builder.InstantiateToggle("Chat Enabled", Settings.Chat);
-            builder.InstantiateToggle("Linked Health Hit Popup", Settings.Linked);
-            builder.InstantiateToggle("Allow hidden workshop levels", Settings.AllowNonPublicLevels);
-            builder.InstantiateSpacer();
+            builder.Slider("No Repeats in Challenge", Settings.NoRepeat, UI_Slider.VisualType.line, "0 Rounds", "1 Round", "2 Rounds", "3 Rounds", "Infinite");
+            builder.Toggle("Chat Enabled", Settings.Chat);
+            builder.Toggle("Linked Health Hit Popup", Settings.Linked);
+            builder.Toggle("Allow hidden workshop levels", Settings.AllowNonPublicLevels);
         });
         Logger.LogFatal($"Multiplayer has loaded!");
     }

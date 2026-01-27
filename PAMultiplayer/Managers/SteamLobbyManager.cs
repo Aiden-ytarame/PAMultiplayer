@@ -224,7 +224,7 @@ public class SteamLobbyManager : MonoBehaviour
 
     private void OnLobbyEntered(Lobby lobby)
     {
-        if (lobby.GetData("AlphaMultiplayer") != "true")
+        if (!lobby.Owner.Id.IsLocalPlayer() && lobby.GetData("AlphaMultiplayer") != "true")
         {
             lobby.Leave();
             SceneLoader.Inst.manager.ClearLoadingTasks();

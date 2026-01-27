@@ -136,7 +136,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     {
         if (IDToConnection.TryGetValue(connectionId, out var connection))
         {
-            var steamSendType = sendType == SendType.Reliable ? Steamworks.Data.SendType.Reliable : Steamworks.Data.SendType.Unreliable;
+            var steamSendType = sendType == SendType.Reliable ? Steamworks.Data.SendType.Reliable | Steamworks.Data.SendType.NoNagle : Steamworks.Data.SendType.Unreliable | Steamworks.Data.SendType.NoDelay;
             
             connection?.SendMessage(data.Array, data.Offset, data.Count, steamSendType);
         }
