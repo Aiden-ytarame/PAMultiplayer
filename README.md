@@ -28,9 +28,9 @@ Press Tab on keyboard, L1/LB on controller to show player names in game if youre
   
 <img src="https://github.com/user-attachments/assets/7d57b1cf-39cf-4441-8841-e23ad77ed3e6" width="50%">
 
-* Download the [Project Arrhythmia Multiplayer mod]() from latest release available on thunderstore.
+* Download the [Project Arrhythmia Multiplayer mod](https://thunderstore.io/c/project-arrhythmia/p/aiden_ytarame/Project_Arrhythmia_Multiplayer/) from latest release available on thunderstore.
 * In your game's folder there will be a new folder called "bepinex". Merge the Bepinex folder on the Multiplayer zip file with the one in your game's folder.
-* Download [PaApi]() from the latest release available on thunderstore and follow the same installation steps from above.
+* Download [PaApi](https://thunderstore.io/c/project-arrhythmia/p/aiden_ytarame/PaApi/) from the latest release available on thunderstore and follow the same installation steps from above.
 * Open the game and enjoy!
 
 ## How to use
