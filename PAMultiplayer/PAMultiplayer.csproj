@@ -16,7 +16,7 @@
     </RestoreAdditionalProjectSources>
     <RootNamespace>PAMultiplayer</RootNamespace>
     <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
-    <MpPluginFolder>/home/aiden/.local/share/Steam/steamapps/common/Project Arrhythmia/BepInEx/plugins/PAMultiplayer</MpPluginFolder>
+    <MpPluginFolder>/home/aiden/.local/share/Steam/steamapps/common/bep/BepInEx/ThunderstoreReleases/PAMP/plugins/PAMultiplayer</MpPluginFolder>
     <Nullable>disable</Nullable>
     <TargetFramework>netstandard2.1</TargetFramework>
   </PropertyGroup>

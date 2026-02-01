@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 using Crosstales;
 using HarmonyLib;
 using PAMultiplayer.Managers;
@@ -140,17 +142,65 @@ public class QueueButton : MonoBehaviour
 public static class LevelEndScreenPatch
 {
     [HarmonyPatch(nameof(LevelEndScreen.CreateUI))]
-    [HarmonyPostfix]
-    static void PostStart(LevelEndScreen __instance)
+    [HarmonyPrefix]
+    static void PreStart(LevelEndScreen __instance)
     {
         if (!GameManager.Inst.IsArcade) return;
         
         Transform buttonsParent = __instance.transform.Find("Content/EndScreen/Buttons");
         
+        MultiElementButton blacklist = Object.Instantiate(buttonsParent.Find("Continue").gameObject, buttonsParent)
+            .GetComponent<MultiElementButton>();
+
+        blacklist.Start();
+        var ui = blacklist.UIElement as UI_Button;
+
+        if (Settings.ChallengeBlacklist.Value.Contains(ArcadeManager.Inst.CurrentArcadeLevel.name))
+        {
+            UIStateManager.Inst.RefreshTextCache(ui!.Text, "Whitelist Level");
+        }
+        else
+        {
+            UIStateManager.Inst.RefreshTextCache(ui!.Text, "Blacklist Level");
+        }
+        
+        __instance.Buttons = __instance.Buttons.AddToArray(blacklist.UIElement);
+      
+        blacklist.onClick = new();
+        blacklist.onClick.AddListener(() =>
+        {
+            string blacklistStr = Settings.ChallengeBlacklist.Value;
+
+            if (!blacklistStr.Contains(ArcadeManager.Inst.CurrentArcadeLevel.name))
+            {
+                Settings.ChallengeBlacklist.Value += $"/{ArcadeManager.Inst.CurrentArcadeLevel.name}";
+                UIStateManager.Inst.RefreshTextCache(ui.Text, "Whitelist Level");
+                ui.Text.text = "Whitelist Level";
+
+            }
+            else
+            {
+                Settings.ChallengeBlacklist.Value = Settings.ChallengeBlacklist.Value.Replace($"/{ArcadeManager.Inst.CurrentArcadeLevel.name}", "");
+                UIStateManager.Inst.RefreshTextCache(ui.Text, "Blacklist Level");
+                ui.Text.text = "Blacklist Level";
+            }
+        });
+    }
+    
+    [HarmonyPatch(nameof(LevelEndScreen.CreateUI))]
+    [HarmonyPostfix]
+    static void PostStart(LevelEndScreen __instance)
+    {
+        if (!GameManager.Inst.IsArcade) return;
+
+        Transform buttonsParent = __instance.transform.Find("Content/EndScreen/Buttons");
+
         buttonsParent.Find("Flair").gameObject.SetActive(false);
 
+
         MultiElementButton nextLevel = buttonsParent.Find("Continue").GetComponent<MultiElementButton>();
-        if ((GlobalsManager.Queue.Count == 0 && !GlobalsManager.IsChallenge)|| (GlobalsManager.IsMultiplayer && !GlobalsManager.IsHosting))
+        if ((GlobalsManager.Queue.Count == 0 && !GlobalsManager.IsChallenge) ||
+            (GlobalsManager.IsMultiplayer && !GlobalsManager.IsHosting))
         {
             __instance.DisableButton(nextLevel);
         }
@@ -159,9 +209,10 @@ public static class LevelEndScreenPatch
             nextLevel.Lock = false;
             nextLevel.interactable = true;
         }
+
         nextLevel.uiElement.Show();
         nextLevel.gameObject.SetActive(true);
-        
+
         //remove all listeners seems broken :c
         nextLevel.onClick = new Button.ButtonClickedEvent();
         nextLevel.onClick.AddListener(() =>
@@ -171,21 +222,23 @@ public static class LevelEndScreenPatch
             {
                 SteamLobbyManager.Inst.UnloadAll();
             }
-            
+
             if (GlobalsManager.IsChallenge)
             {
                 if (GlobalsManager.IsMultiplayer && GlobalsManager.IsHosting)
                 {
                     GameManagerPatch.CallRpc_Multi_OpenChallenge();
                 }
+
                 SceneLoader.Inst.LoadSceneGroup("Challenge");
                 return;
             }
+
             string id = GlobalsManager.Queue[0];
             ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
             GlobalsManager.LevelId = id;
-            
-            
+
+
             SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
             PAM.Logger.LogInfo("Starting next level in queue!");
         });

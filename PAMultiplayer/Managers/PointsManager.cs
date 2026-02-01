@@ -154,7 +154,7 @@ public partial class PointsManager : MonoBehaviour
     private void LevelEnded()
     {
         int score = Settings.Score.Value;
-        if (!GlobalsManager.JoinedMidLevel)
+        if (!GlobalsManager.JoinedMidLevel && !GameManager.Inst.IsPractice)
         {
             score += GetWonChallenges();
         }
@@ -251,7 +251,7 @@ public partial class PointsManager : MonoBehaviour
         }
         
         PAM.Logger.LogError($"data from {steamId}");
-        Inst._playerRanks[steamId] = new PlayerRank(hit, boost, cc, score, midLevel);
+        Inst._playerRanks[steamId] = new PlayerRank(hit, boost, cc, score, midLevel || GameManager.Inst?.IsPractice == true);
         Inst.UpdateEntry(steamId, Inst._playerRanks[steamId]);
     }
     
@@ -310,12 +310,12 @@ public partial class PointsManager : MonoBehaviour
     {
         _playersDead.Remove(playerId);
     }
-    
-    public int GetWonChallenges()
+
+    private int GetWonChallenges()
     {
         List<PointChallenge> challenges = new();
         
-        DataManager.LevelRankType levelRank = !SingletonBase<GameManager>.Inst.IsPractice ? DataManager.LevelRank.GetLevelRankTypeFromHits(_localHits) : DataManager.LevelRankType.N;
+        DataManager.LevelRankType levelRank = DataManager.LevelRank.GetLevelRankTypeFromHits(_localHits);
         switch (levelRank)
         {
             case DataManager.LevelRankType.N:
@@ -486,14 +486,16 @@ public partial class PointsManager : MonoBehaviour
 
         int wonAmount = 0;
         int raw = 0;
+        
         foreach (var challenge in challenges)
         {
             raw += challenge.Points;
             challenge.Points = (int)(challenge.Points * difficultyMult * durationMult);
             wonAmount += challenge.Points;
-            PAM.Logger.LogError(challenge.Name);
+            PAM.Logger.LogInfo(challenge.Name);
         }
-        PAM.Logger.LogFatal($"Raw [{raw}], time and difficulty scaled [{wonAmount}]");
+        
+        PAM.Logger.LogInfo($"Raw [{raw}], time and difficulty scaled [{wonAmount}]");
         return wonAmount;
     }
     //screen side

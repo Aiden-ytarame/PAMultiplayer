@@ -10,21 +10,19 @@ namespace PAMultiplayer;
 [BepInDependency("me.ytarame.PaApi")]
 public class PAM : BaseUnityPlugin
 {
-    public static PAM Inst;
     internal new static ManualLogSource Logger;
-    
-    Harmony harmony;
+
+    private Harmony _harmony;
     public const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "1.1.0";
+    public const string Version = "1.1.1";
 
     private void Awake()
     {
         Logger = base.Logger;
-        Inst = this;
-        
-        harmony = new Harmony(Guid);
-        harmony.PatchAll();
+
+        _harmony = new Harmony(Guid);
+        _harmony.PatchAll();
 
         Settings.Initialize(Config);
        

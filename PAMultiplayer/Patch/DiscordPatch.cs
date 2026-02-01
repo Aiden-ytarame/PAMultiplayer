@@ -1,14 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using DiscordRPC.IO;
 using HarmonyLib;
 using Lachee.Discord;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
-using PAMultiplayer;
 using PAMultiplayer.Managers;
 
 namespace PAMultiplayer.Patch;

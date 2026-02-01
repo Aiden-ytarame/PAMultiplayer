@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <MpPluginFolder>/home/aiden/.local/share/Steam/steamapps/common/Project Arrhythmia/BepInEx/patchers/PAMultiplayer</MpPluginFolder>
+        <MpPluginFolder>/home/aiden/.local/share/Steam/steamapps/common/bep/BepInEx/ThunderstoreReleases/PAMP/patchers/PAMultiplayer</MpPluginFolder>
         <RestoreAdditionalProjectSources>
         https://api.nuget.org/v3/index.json;
         https://nuget.bepinex.dev/v3/index.json;

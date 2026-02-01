@@ -17,13 +17,7 @@ public class MultiplayerDiscordManager : MonoBehaviour
 {
 	public static MultiplayerDiscordManager Instance{get; private set;}
 
-	public static bool IsInitialized
-	{
-		get
-		{
-			return Instance && Instance.client != null && Instance.client.CurrentUser != null;
-		}
-	}
+	public static bool IsInitialized => Instance && Instance.client != null && Instance.client.CurrentUser != null;
 
 	private DiscordRpcClient client = null;
 	private RichPresence presence = null;

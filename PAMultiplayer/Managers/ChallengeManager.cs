@@ -3,12 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
-using System.Runtime.InteropServices;
+using System.Linq;
 using System.Threading.Tasks;
 using AttributeNetworkWrapperV2;
-using Newtonsoft.Json;
-using OggVorbisEncoder;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Steamworks;
@@ -17,8 +14,6 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
-using VGFunctions;
-using CompressionLevel = UnityEngine.CompressionLevel;
 using Random = UnityEngine.Random;
 
 namespace PAMultiplayer.Managers;
@@ -185,28 +180,32 @@ public partial class ChallengeManager : MonoBehaviour
             RecentLevels.Clear();
         }
 
-        List<VGLevel> nonRepeatLevels;
-        if (RecentLevels.Count > 0)
-        {
-            nonRepeatLevels = new(ArcadeLevelDataManager.Inst.ArcadeLevels.Count - RecentLevels.Count);
-            HashSet<string> comparer = new(RecentLevels);
+        string blacklistStr = Settings.ChallengeBlacklist.Value;
 
-            foreach (var arcadeLevel in ArcadeLevelDataManager.Inst.ArcadeLevels)
+        List<VGLevel> nonRepeatLevels = new(ArcadeLevelDataManager.Inst.ArcadeLevels.Count - RecentLevels.Count);
+
+        HashSet<string> comparer = new(RecentLevels);
+        comparer.UnionWith(blacklistStr.Split('/', StringSplitOptions.RemoveEmptyEntries));
+
+        foreach (var arcadeLevel in ArcadeLevelDataManager.Inst.ArcadeLevels)
+        {
+            if (!comparer.Contains(arcadeLevel.name))
             {
-                if (!comparer.Contains(arcadeLevel.name))
-                {
-                    nonRepeatLevels.Add(arcadeLevel);
-                }
+                nonRepeatLevels.Add(arcadeLevel);
             }
         }
-        else
+
+        if (nonRepeatLevels.Count < 6)
         {
-            nonRepeatLevels = new(ArcadeLevelDataManager.Inst.ArcadeLevels.ToArray());
+            PAM.Logger.LogError(
+                $"Not enough non blacklisted levels found, minimum [6], loaded [{ArcadeLevelDataManager.Inst.ArcadeLevels.Count}]");
+            SceneLoader.Inst.manager.ClearLoadingTasks();
+            SceneLoader.Inst.LoadSceneGroup("Menu");
+            yield break;
         }
-        
-        PAM.Logger.LogInfo($"[{RecentLevels.Count}] levels blacklisted");
+
         bool allowNonPublicLevels = Settings.AllowNonPublicLevels.Value;
-        
+
         for (int i = 0; i < 24; i++)
         {
             var level = nonRepeatLevels[Random.Range(0, nonRepeatLevels.Count)];
@@ -279,10 +278,7 @@ public partial class ChallengeManager : MonoBehaviour
                 yield break;
             }
         }
-
-
-
-
+        
         PAM.Logger.LogError(
             "Not enough levels found in too many attempts");
         SceneLoader.Inst.manager.ClearLoadingTasks();
@@ -407,6 +403,7 @@ public partial class ChallengeManager : MonoBehaviour
             {
                 if (!_levelsToVote.Contains(level))
                 {
+                    level.AlbumArt = await AlbumArtManager.LoadAlbumArtAsync(_levelsToVote[0].name, _levelsToVote[0].BaseLevelData.LocalFolder);
                     _levelsToVote.Add(level);
                     _loadedLevels[level] = 2;
                 }
@@ -455,8 +452,8 @@ public partial class ChallengeManager : MonoBehaviour
             PAM.Logger.LogError(e);
         }
     }
-    
-    public bool GetVGLevel(ulong levelId, out Tuple<short[], int, int> songData)
+
+    private bool GetVGLevel(ulong levelId, out Tuple<short[], int, int> songData)
     {
         return _songData.TryGetValue(levelId, out songData);
     }
@@ -565,20 +562,12 @@ public partial class ChallengeManager : MonoBehaviour
     
     IEnumerator ShowLevels()
     {
-        var albumTask = AlbumArtManager.LoadAlbumArtAsync(_levelsToVote[0].name, _levelsToVote[0].BaseLevelData.LocalFolder);
-        yield return new WaitForSeconds(1f);
-
         double timeSinceLastButton = Time.realtimeSinceStartupAsDouble;
         
         for (int i = 0; i < 6; i++)
         {
             var level = _levelsToVote[i];
             var button = _levelButtons[i];
-            
-            yield return new WaitUntil(() => albumTask.IsCompleted);
-            //yield return albumTask; this breaks
-            
-            level.AlbumArt = albumTask.Result;
             
             button.SetLevelData(level);  
             button.Show();
@@ -591,11 +580,6 @@ public partial class ChallengeManager : MonoBehaviour
             if (level.LevelMusic.length > 5)
             {
                 AudioManager.Inst.musicSources[AudioManager.Inst.activeSource].time = level.LevelMusic.length / 2;
-            }
-
-            if (i < 5)
-            {
-                albumTask = AlbumArtManager.LoadAlbumArtAsync(_levelsToVote[i + 1].name, _levelsToVote[i + 1].BaseLevelData.LocalFolder);
             }
            
             timeSinceLastButton += 2.5;

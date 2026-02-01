@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections;
-using System.IO;
 using System.Reflection;
-using System.Security.Cryptography;
 using HarmonyLib;
 using AttributeNetworkWrapperV2;
 using Crosstales;
@@ -374,7 +372,7 @@ namespace PAMultiplayer.Patch
             button.onClick = new Button.ButtonClickedEvent();
             button.onClick.AddListener(() =>
             {
-               Application.OpenURL("https://www.github.com/Aiden-ytarame/PAMultiplayer/releases/latest");
+               Application.OpenURL("https://thunderstore.io/c/project-arrhythmia/p/aiden_ytarame/Project_Arrhythmia_Multiplayer/");
             });
             
             
