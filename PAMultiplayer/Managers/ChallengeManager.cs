@@ -359,9 +359,9 @@ public partial class ChallengeManager : MonoBehaviour
     {
         foreach (var levelButton in _levelButtons)
         {
-            if (levelButton.Level.SteamInfo.ItemID != level)
+            if (levelButton?.Level?.SteamInfo?.ItemID != level)
             {
-                levelButton.Hide();
+                levelButton?.Hide();
             }
         }
     }
@@ -386,7 +386,7 @@ public partial class ChallengeManager : MonoBehaviour
     [MultiRpc]
     private static void Multi_VoteWinner(ulong level)
     {
-        Inst.SetVoteWinner(level);
+        Inst?.SetVoteWinner(level);
     }
     
     #endregion
@@ -403,8 +403,8 @@ public partial class ChallengeManager : MonoBehaviour
             {
                 if (!_levelsToVote.Contains(level))
                 {
-                    level.AlbumArt = await AlbumArtManager.LoadAlbumArtAsync(_levelsToVote[0].name, _levelsToVote[0].BaseLevelData.LocalFolder);
                     _levelsToVote.Add(level);
+                    level.AlbumArt = await AlbumArtManager.LoadAlbumArtAsync(level.name, level.BaseLevelData.LocalFolder);
                     _loadedLevels[level] = 2;
                 }
 
@@ -636,7 +636,6 @@ public partial class ChallengeManager : MonoBehaviour
         AddLoadingScreenTasks();
         if (!GlobalsManager.IsReloadingLobby)
         {
-            PAM.Logger.LogWarning($"HAHA [{GlobalsManager.IsHosting}");
             if (GlobalsManager.IsHosting)
             {
                 SteamLobbyManager.Inst.CreateLobby();
@@ -645,7 +644,7 @@ public partial class ChallengeManager : MonoBehaviour
             else
             {
                 SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                yield return new WaitUntil(() => AttributeNetworkWrapperV2.NetworkManager.Instance.TransportActive);
+                yield return new WaitUntil(() => AttributeNetworkWrapperV2.NetworkManager.Instance!.TransportActive);
                 yield return new WaitUntil(() => GlobalsManager.HasLoadedAllInfo);
             }
         }

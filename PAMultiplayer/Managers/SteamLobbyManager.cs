@@ -246,6 +246,7 @@ public class SteamLobbyManager : MonoBehaviour
 
         if (lobby.Owner.Id.IsLocalPlayer())
         {
+            SetupLobby(lobby);
             AddPlayerToLoadList(lobby.Owner.Id);
             return;
         }
@@ -367,24 +368,15 @@ public class SteamLobbyManager : MonoBehaviour
         }
         
         PAM.Logger.LogInfo($"Lobby Created!");
-        
-        _loadedPlayers = new();
-        CurrentLobby = lobby;
-        InLobby = true;
-        
-        if (LobbyCreationManager.Instance.IsPrivate)
-        {
-            lobby.SetFriendsOnly();
-        }
-        else
-        {
-            lobby.SetPublic();
-        }
+    }
 
-        lobby.SetJoinable(true);
+    private void SetupLobby(Lobby lobby)
+    {
+        _loadedPlayers = new();
         
         VGLevel currentLevel = ArcadeManager.Inst.CurrentArcadeLevel;
         GlobalsManager.LevelId = currentLevel.SteamInfo != null ?  currentLevel.SteamInfo.ItemID.Value.ToString() : currentLevel.name;
+        
         lobby.SetData("AlphaMultiplayer", "true");
         lobby.SetData("LevelId", GlobalsManager.LevelId);
         lobby.SetData("seed", RandSeed.ToString());
@@ -408,8 +400,18 @@ public class SteamLobbyManager : MonoBehaviour
         lobby.SetData("HealthMod", DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0).ToString());
         lobby.SetData("LinkedMod", DataManager.inst.GetSettingBool("mp_linkedHealth", false).ToString());
         lobby.SetData("SpeedMod", DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0).ToString());
+        
+        if (LobbyCreationManager.Instance.IsPrivate)
+        {
+            lobby.SetFriendsOnly();
+        }
+        else
+        {
+            lobby.SetPublic();
+        }
+
+        lobby.SetJoinable(true);
     }
-    
     private void AddPlayerToLoadList(SteamId playerSteamId)
     {
         _loadedPlayers.TryAdd(playerSteamId, false);
