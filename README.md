@@ -89,7 +89,7 @@ A few settings that you should note are:
 To build the mod from source, make a "lib" folder where the csproj is and put all the assemblies required from the **Project Arrhythmia_Data/Managed** folder bepinex generates with the exception of 3 assemblies. For these exception you can either use the ones available in any Multiplayer release, or:
 * Facepunch.Steamworks.Win64 - Version 2.4.1 available in their github, taken from the unity package folder.
 * steam_api64 - You can use the steam_api64 available in Facepunch.Steamworks release as well.
-* DiscordRPC - Use version 1.6.1 of Lachee's discord-rpc-csharp available on Github.
+* DiscordRPC - Build from source, from Lachee's discord-rpc-csharp available on Github.
 * PaApi - Download the latest release available on [github](https://github.com/Aiden-ytarame/Pa-Api)
 
 ## Thanks!
