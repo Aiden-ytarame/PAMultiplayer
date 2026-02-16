@@ -15,7 +15,7 @@ public class PAM : BaseUnityPlugin
     private Harmony _harmony;
     public const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "1.1.2";
+    public const string Version = "1.1.3";
 
     private void Awake()
     {
@@ -41,6 +41,6 @@ public class PAM : BaseUnityPlugin
             builder.Toggle("Linked Health Hit Popup", Settings.Linked);
             builder.Toggle("Allow hidden workshop levels", Settings.AllowNonPublicLevels);
         });
-        Logger.LogFatal($"Multiplayer has loaded!");
+        Logger.LogInfo($"Multiplayer {Version} has loaded!");
     }
 }

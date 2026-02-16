@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using PaApi;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
@@ -350,7 +351,7 @@ public class SteamLobbyManager : MonoBehaviour
         }
 
         GlobalsManager.IsDownloading = true;
-        PAM.Logger.LogError($"You did not have the lobby's level downloaded!, Downloading Level...");
+        PAM.Logger.LogError("You did not have the lobby's level downloaded!, Downloading Level...");
         SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
     }
 
@@ -367,15 +368,17 @@ public class SteamLobbyManager : MonoBehaviour
             return;
         }
         
-        PAM.Logger.LogInfo($"Lobby Created!");
+        PAM.Logger.LogInfo("Lobby Created!");
     }
 
-    private void SetupLobby(Lobby lobby)
+    private async Task SetupLobby(Lobby lobby)
     {
         _loadedPlayers = new();
         
         VGLevel currentLevel = ArcadeManager.Inst.CurrentArcadeLevel;
         GlobalsManager.LevelId = currentLevel.SteamInfo != null ?  currentLevel.SteamInfo.ItemID.Value.ToString() : currentLevel.name;
+
+        await Task.Delay(500); //Hack to stop race condition
         
         lobby.SetData("AlphaMultiplayer", "true");
         lobby.SetData("LevelId", GlobalsManager.LevelId);
@@ -446,9 +449,15 @@ public class SteamLobbyManager : MonoBehaviour
         }
     }
 
-    public bool GetIsPlayerLoaded(SteamId playerSteamId)
+    public bool IsPlayerLoaded(SteamId playerSteamId)
     {
         return _loadedPlayers.GetValueOrDefault(playerSteamId, false);
     }
-    public bool IsEveryoneLoaded => !_loadedPlayers.ContainsValue(false);
+
+    public int LoadedPlayerCount()
+    {
+        return _loadedPlayers.Count(x => x.Value);
+    }
+    
+    public bool  IsEveryoneLoaded => !_loadedPlayers.ContainsValue(false);
 }

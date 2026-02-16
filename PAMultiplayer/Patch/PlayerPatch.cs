@@ -375,48 +375,56 @@ public partial class Player_Patch
             playerWrapper.Find("zen-marker").GetComponent<MeshFilter>().mesh = mesh; //is this needed?
             playerWrapper.Find("boost").GetComponent<MeshFilter>().mesh = mesh;
         }
-            
-        if (!GlobalsManager.IsMultiplayer) return;
 
-        if (Settings.Transparent.Value && !__instance.IsLocalPlayer())
-        {
-            foreach (var trail in __instance.Player_Trail.Trail)
-            {
-                trail.Render_Trail.enabled = false;
-            }
-        }
-        
-        if (__instance.PlayerID < 4)
+        if (!GlobalsManager.IsMultiplayer)
         {
             return;
         }
 
-        if (__instance.PlayerID < 8)
+        if (!__instance.IsLocalPlayer())
         {
-            SetPlayerMesh(__instance, CircleMesh);
+            __instance.Player_Rigidbody.simulated = false;
+            
+            if (Settings.Transparent.Value)
+            {
+                foreach (var trail in __instance.Player_Trail.Trail)
+                {
+                    trail.Render_Trail.enabled = false;
+                }
+            }
         }
-        else if (__instance.PlayerID < 12)
+        
+        switch (__instance.PlayerID)
         {
-            SetPlayerMesh(__instance, TriangleMesh);
+            case < 4:
+                return;
+            case < 8:
+                SetPlayerMesh(__instance, CircleMesh);
+                break;
+            case < 12:
+            {
+                SetPlayerMesh(__instance, TriangleMesh);
                 
-            Vector3 offsetRot = new Vector3(0, 0, -90);
-            Transform player = __instance.Player_Wrapper.transform;
+                Vector3 offsetRot = new Vector3(0, 0, -90);
+                Transform player = __instance.Player_Wrapper.transform;
                 
-            player.Find("core").Rotate(offsetRot);
-            player.Find("zen-marker").Rotate(offsetRot);
-            player.transform.Find("boost").Rotate(offsetRot);
-              
-        }
-        else
-        {
-            SetPlayerMesh(__instance, ArrowMesh);
-            Transform player = __instance.Player_Wrapper.transform;
+                player.Find("core").Rotate(offsetRot);
+                player.Find("zen-marker").Rotate(offsetRot);
+                player.transform.Find("boost").Rotate(offsetRot);
+                break;
+            }
+            default: //id > 12
+            {
+                SetPlayerMesh(__instance, ArrowMesh);
+                Transform player = __instance.Player_Wrapper.transform;
 
-            Vector3 newScale = new Vector3(2, 2, 1);
+                Vector3 newScale = new Vector3(2, 2, 1);
 
-            player.Find("core").localScale = newScale;
-            player.Find("zen-marker").localScale = newScale;
-            player.transform.Find("boost").localScale = newScale;
+                player.Find("core").localScale = newScale;
+                player.Find("zen-marker").localScale = newScale;
+                player.transform.Find("boost").localScale = newScale;
+                break;
+            }
         }
     }
 
@@ -467,12 +475,67 @@ public partial class Player_Patch
     }
 
     static float _holdingBoost = 0;
-    
+    private static bool _revertMoveX = false;
+    private static bool _revertMoveY = false;
+    private static bool _revertBoost = false;
+
+    [HarmonyPatch(nameof(VGPlayer.Update))]
+    [HarmonyPrefix]
+    static void PreUpdate(VGPlayer __instance)
+    {
+        if (!__instance.IsLocalPlayer() || !GlobalsManager.IsMultiplayer || !DebugController.inst.IsOpen)
+        {
+            return;
+        }
+
+        if (__instance.Control_MoveX)
+        {
+            _revertMoveX = true;
+            __instance.Control_MoveX = false;
+        }
+
+        if (__instance.Control_MoveY)
+        {
+            _revertMoveY = true;
+            __instance.Control_MoveY = false;
+        }
+
+        if (__instance.CanBoost)
+        {
+            _revertBoost = true;
+            __instance.CanBoost = false;
+        }
+    }
+
     [HarmonyPatch(nameof(VGPlayer.Update))]
     [HarmonyPostfix]
-    static void PostUpate(VGPlayer __instance)
+    static void PostUpdate(VGPlayer __instance)
     {
-        if (!GameManager.Inst || GameManager.Inst.CurGameState != GameManager.GameState.Playing || __instance.isDead || __instance.RPlayer.id != 0 || !PointsManager.Inst)
+        if (!__instance.IsLocalPlayer())
+        {
+            return;
+        }
+        
+        if (_revertMoveX)
+        {
+            _revertMoveX = false;
+            __instance.Control_MoveX = true;
+        }
+
+        if (_revertMoveY)
+        {
+            _revertMoveY = false;
+            __instance.Control_MoveY = true;
+        }
+
+        if (_revertBoost)
+        {
+            _revertBoost = false;
+            __instance.CanBoost = true;
+        }
+        
+        if (!GameManager.Inst || GameManager.Inst.CurGameState != GameManager.GameState.Playing || 
+            __instance.isDead || !PointsManager.Inst)
         {
             return;
         }
@@ -502,7 +565,7 @@ public partial class Player_Patch
         }
         _holdingBoost = __instance.BoostDuration;
     }
-
+    
     /// <summary>
     /// this returns the player controller depending on your playerId
     /// the controller 0 is the one LocalPlayer controls

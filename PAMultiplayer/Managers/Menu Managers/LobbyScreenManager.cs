@@ -75,7 +75,7 @@ public class LobbyScreenManager : MonoBehaviour
         {
             AddPlayerToLobby(friend.Id, friend.Name);
                 
-            if (SteamLobbyManager.Inst.GetIsPlayerLoaded(friend.Id))
+            if (SteamLobbyManager.Inst.IsPlayerLoaded(friend.Id))
             {
                 SetPlayerLoaded(friend.Id, false);
             }

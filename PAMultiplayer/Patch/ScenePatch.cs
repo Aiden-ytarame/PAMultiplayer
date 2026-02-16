@@ -41,7 +41,13 @@ public static class LoadingTipsPatch
             "The triangle is the simplest shape a computer can render",
             "Make sure to check out the game's official forum!",
             "Meow!",
-            "Some Nanos seem to keep replaying some logs until they master it\nUnsure how productive that may be"
+            "Some Nanos seem to keep replaying some logs until they master it\nUnsure how productive that may be",
+            "Cats rule the world",
+            "Don't die... That's probably a good idea?",
+            "Try to be the top Nano of your generation for once",
+            "lol is is likej sab",
+            "I got a box of chocolates for you! One of them has rat poison.",
+            "Adding more bloom..."
         };
         //thanks Pidge for making this public after I complained lol
         __instance.Tips = customTips.ToArray();
@@ -116,6 +122,8 @@ public static class LoadingTipsPatch
     }
 }
 
+
+// what was I cooking? did il2cpp require this? I am no longer sure but we leave it here 
 [HarmonyPatch(typeof(SceneReference))]
 public static class SceneReferencePatch
 {

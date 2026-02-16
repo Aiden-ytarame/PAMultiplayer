@@ -4,6 +4,7 @@ using HarmonyLib;
 using Newtonsoft.Json;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
+using Steamworks;
 using UnityEngine;
 
 namespace PAMultiplayer.Patch;
@@ -16,6 +17,20 @@ public static class DebugControllerPatch
 
     static void PostAwake(DebugController __instance)
     {
+
+        DebugCommand pingCommand = new("Ping", "Prints current ping (multiplayer mod, any)",
+            () =>
+            {
+                if (!GlobalsManager.IsMultiplayer)
+                {
+                    __instance.AddLog("-1 ms");
+                    return;
+                }
+                
+                __instance.AddLog($"{PaMNetworkManager.PamInstance.GetPing()} ms");
+            });
+        __instance.CommandList.Add(pingCommand);
+        
         DebugCommand killCommand = new("Kill_All", "Kills all players (multiplayer mod, any)", 
             () =>
             {
@@ -280,7 +295,26 @@ public static class DebugControllerPatch
             });
         __instance.CommandList.Add(lobbySizeCommand);
 
-    
+
+        DebugCommand<int> packetLossCommand = new("debug_packet_loss",
+            "sets packet loss 0-100. (multiplayer mod, any)",
+            "int(loss%)",
+            loss =>
+            {
+                SteamNetworkingUtils.FakeRecvPacketLoss = loss;
+                SteamNetworkingUtils.FakeSendPacketLoss = loss;
+            });
+        __instance.CommandList.Add(packetLossCommand);
+        
+        DebugCommand<int> packetDelayCommand = new("debug_set_delay",
+            "sets delay on packets. (multiplayer mod, any)",
+            "int(ms delay)",
+            ms =>
+            {
+                SteamNetworkingUtils.FakeRecvPacketLag = ms;
+                SteamNetworkingUtils.FakeSendPacketLag = ms;
+            });
+        __instance.CommandList.Add(packetDelayCommand);
     }
 
     [HarmonyPatch(nameof(DebugController.HandleInput))]

@@ -1,11 +1,13 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AttributeNetworkWrapperV2;
+using CielaSpike;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using Steamworks;
@@ -15,6 +17,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
+using Task = System.Threading.Tasks.Task;
 
 namespace PAMultiplayer.Managers;
 
@@ -31,7 +34,7 @@ public partial class ChallengeManager : MonoBehaviour
     private readonly List<VGLevel> _levelsToVote = new(6);
     private readonly Dictionary<VGLevel, int> _loadedLevels = new(6);
     private readonly Dictionary<VGPlayer, VGLevel> _votes = new(16);
-    private readonly Dictionary<ulong, Tuple<short[], int, int>> _songData = new(); //struct here crashes bepinex lmao
+    private readonly ConcurrentDictionary<ulong, Tuple<short[], int, int>> _songData = new(); //struct here crashes bepinex lmao
     
     private bool _votingStarted = false;
     public AlbumArtManager AlbumArtManager = new();
@@ -68,7 +71,6 @@ public partial class ChallengeManager : MonoBehaviour
             _levelButtons.Add(cells.GetChild(i).gameObject.AddComponent<VoterCell>());
         }
         VGPlayerManager.Inst.LockPlayerAdding(false);
-        
         
         if (GlobalsManager.IsMultiplayer)
         {
@@ -108,7 +110,7 @@ public partial class ChallengeManager : MonoBehaviour
             VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){PlayerID = 0, ControllerID = 0});
         }
         
-        VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, new Action<int, Vector3>((_,_2) => {}), new Action<Vector3>((_) => {}),new Action<Vector3>((_) => {}), 3);
+        VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, (_,_) => {}, _ => {},_ => {}, 3);
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
         {
             vgPlayerData.PlayerObject.SetColor(ChallengeTheme.GetPlayerColor(vgPlayerData.PlayerID), ChallengeTheme.guiAccent);
@@ -205,6 +207,7 @@ public partial class ChallengeManager : MonoBehaviour
         }
 
         bool allowNonPublicLevels = Settings.AllowNonPublicLevels.Value;
+        List<Task<Sprite>> loadTasks = new();
 
         for (int i = 0; i < 24; i++)
         {
@@ -216,33 +219,13 @@ public partial class ChallengeManager : MonoBehaviour
                 continue;
             }
 
-            if (!GlobalsManager.IsMultiplayer)
+            if (GlobalsManager.IsMultiplayer)
             {
-                if (!level.LevelMusic) //this can mean the user is using the mod LessRam
+                if (level.SteamInfo == null)
                 {
-                    level = ArcadeLevelDataManager.Inst
-                        .GetLocalCustomLevel(level.name); //this triggers song load if thats the case
-
-                    for (int j = 0; j < 316; j++)
-                    {
-                        if (!level.LevelMusic)
-                        {
-                            yield return new WaitForUpdate();
-                        }
-                    }
-
-                    if (!level.LevelMusic) //too long has passed, no song yet. this is bad;
-                    {
-                        continue;
-                    }
+                    continue;
                 }
 
-                RecentLevels.Add(level.name);
-                _levelsToVote.Add(level);
-                nonRepeatLevels.Remove(level);
-            }
-            else if (level.SteamInfo != null)
-            {
                 var task = SteamUGC.QueryFileAsync(level.SteamInfo.ItemID);
                 while (!task.IsCompleted)
                 {
@@ -261,24 +244,64 @@ public partial class ChallengeManager : MonoBehaviour
                 {
                     continue;
                 }
+            }
 
-                if (!level.LevelMusic) //this can mean the user is using the mod LessRam
+            if (!level.LevelMusic) //this can mean the user is using the mod LessRam
+            {
+                level = ArcadeLevelDataManager.Inst
+                    .GetLocalCustomLevel(level.name); //this triggers song load if thats the case
+
+                for (int j = 0; j < 316; j++)
                 {
-                    level = ArcadeLevelDataManager.Inst
-                        .GetLocalCustomLevel(level.name); //this triggers song load if thats the case
+                    if (!level.LevelMusic)
+                    {
+                        yield return new WaitForUpdate();
+                    }
                 }
 
-                RecentLevels.Add(level.name);
-                _levelsToVote.Add(level);
-                nonRepeatLevels.Remove(level);
+                if (!level.LevelMusic) //too long has passed, no song yet. this is bad;
+                {
+                    continue;
+                }
             }
 
-            if (_levelsToVote.Count >= 6)
+            if (!level.AlbumArt)
             {
-                yield break;
+                loadTasks.Add(AlbumArtManager.LoadAlbumArtAsync(level.name, level.BaseLevelData.LocalFolder));
             }
+            else
+            {
+                loadTasks.Add(null);
+            }
+
+            RecentLevels.Add(level.name);
+            _levelsToVote.Add(level);
+            nonRepeatLevels.Remove(level);
+
+            if (_levelsToVote.Count < 6)
+            {
+                continue;
+            }
+            
+            for (var levelIndex = 0; levelIndex < loadTasks.Count; levelIndex++)
+            {
+                var albumTask = loadTasks[levelIndex];
+                if (albumTask == null)
+                {
+                    continue;
+                }
+                    
+                if (!albumTask.IsCompleted)
+                {
+                    yield return new WaitUntil(() => albumTask.IsCompleted);
+                }
+
+                _levelsToVote[levelIndex].AlbumArt = albumTask.Result;
+            }
+
+            yield break;
         }
-        
+
         PAM.Logger.LogError(
             "Not enough levels found in too many attempts");
         SceneLoader.Inst.manager.ClearLoadingTasks();
@@ -482,6 +505,8 @@ public partial class ChallengeManager : MonoBehaviour
     
     IEnumerator GetSongData(VGLevel level)
     {
+       // yield return Ninja.JumpBack;
+        
         string path = "";
         if (File.Exists(level.BaseLevelData.LocalFolder + "/audio.ogg"))
         {
@@ -502,8 +527,8 @@ public partial class ChallengeManager : MonoBehaviour
         }
         catch (Exception e)
         {
-            PAM.Logger.LogError(e);
             webr.Dispose();
+            PAM.Logger.LogError(e);
             yield break;
         }
       
@@ -542,8 +567,13 @@ public partial class ChallengeManager : MonoBehaviour
         }
         
         //  clip.UnloadAudioData();
-        //  Destroy(clip);
-        _songData.Add(level.SteamInfo.ItemID, new Tuple<short[], int, int>(songDataShort, frequency, clip.channels));
+        //  Destroy(clip); leaked?
+        
+        _songData.AddOrUpdate(level.SteamInfo.ItemID, 
+            new Tuple<short[], int, int>(songDataShort, frequency, clip.channels), 
+            (_, tuple) => tuple);
+
+        SceneLoader.Inst?.manager?.UpdateTaskStatus("Setting up chosen levels", $"<color=#FFD000>[ Prepping ]</color> {_songData.Count}/6");
     }
     
     public void SetLevelSong(ulong id, AudioClip clip)
@@ -628,11 +658,11 @@ public partial class ChallengeManager : MonoBehaviour
         
         SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
     }
-    
+
     IEnumerator InitMultiplayer()
     {
         gameObject.AddComponent<NetworkManager>();
-        
+
         AddLoadingScreenTasks();
         if (!GlobalsManager.IsReloadingLobby)
         {
@@ -648,53 +678,55 @@ public partial class ChallengeManager : MonoBehaviour
                 yield return new WaitUntil(() => GlobalsManager.HasLoadedAllInfo);
             }
         }
-        
+
         if (MultiplayerDiscordManager.Instance)
-        { 
-            MultiplayerDiscordManager.Instance.SetChallengePresence();  
+        {
+            MultiplayerDiscordManager.Instance.SetChallengePresence();
         }
 
         GlobalsManager.IsReloadingLobby = false;
-        
-        if (GlobalsManager.IsHosting)
-        {
-            SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)SteamLobbyManager.LobbyState.Challenge).ToString());
-            
-            yield return PickLevelForVoting();
-            
-           // yield return new WaitUntil(new Func<bool>(() => _levelsToVote.Count >= 6));
-            
-            Transform skip = PauseUIManager.Inst.transform.Find("Pause Menu")?.Find("Skip Queue Level");
-            if (skip)
-            {
-                skip.gameObject.SetActive(false);
-            }
-            
-            var timer = new Stopwatch();
-            timer.Start();
 
-            List<ulong> ids = new();
-            foreach (var vgLevel in _levelsToVote)
-            {
-                ids.Add(vgLevel.SteamInfo.ItemID);
-                StartCoroutine(GetSongData(vgLevel));
-            }
-            
-            yield return new WaitUntil(() => _songData.Count >= 6);
-            
-            timer.Stop();
-            PAM.Logger.LogDebug($"took {timer.ElapsedMilliseconds}ms to get level data");
-          
-            CallRpc_Multi_CheckLevelIds(ids);
-            SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
-        }
-        else
+        if (!GlobalsManager.IsHosting)
         {
             yield break;
         }
+
+        SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState",
+            ((ushort)SteamLobbyManager.LobbyState.Challenge).ToString());
+
+        yield return PickLevelForVoting();
+
+        // yield return new WaitUntil(new Func<bool>(() => _levelsToVote.Count >= 6));
+
+        Transform skip = PauseUIManager.Inst.transform.Find("Pause Menu")?.Find("Skip Queue Level");
+        if (skip)
+        {
+            skip.gameObject.SetActive(false);
+        }
+
+        var timer = Stopwatch.StartNew();
         
+        List<ulong> ids = new();
+        foreach (var vgLevel in _levelsToVote)
+        {
+            ids.Add(vgLevel.SteamInfo.ItemID);
+            this.StartCoroutineAsync(GetSongData(vgLevel));
+        }
+
+        yield return new WaitUntil(() => _songData.Count >= 6);
+
+        timer.Stop();
+        PAM.Logger.LogDebug($"took {timer.ElapsedMilliseconds}ms to get level data");
+
+        SceneLoader.Inst?.manager?.ResetTaskStatus("Setting up chosen levels");
+       
+        CallRpc_Multi_CheckLevelIds(ids);
+        SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
+
+
         yield return new WaitUntil(() => SteamLobbyManager.Inst.IsEveryoneLoaded);
-        yield return null;
+        
+        SceneLoader.Inst?.manager?.ClearLoadingTasks();
         SteamLobbyManager.Inst.UnloadAll();
         PauseLobbyPatch.CallRpc_Multi_StartLevel();
         StartVoting();
@@ -846,7 +878,7 @@ public partial class ChallengeManager : MonoBehaviour
                 GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayerId, new PlayerData(newData, SteamClient.Name));
             }
           
-            VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, new Action<int, Vector3>((_,_2) => {}), new Action<Vector3>((_) => {}),new Action<Vector3>((_) => {}), 3);
+            VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, (_,_) => {}, _ => {},_ => {}, 3);
         }
         else
         {
@@ -854,9 +886,10 @@ public partial class ChallengeManager : MonoBehaviour
             {
                 VGPlayerManager.Inst.players.Add(vgPlayerData.Value.VGPlayerData);
             }
-            VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, new Action<int, Vector3>((_,_2) => {}), new Action<Vector3>((_) => {}),new Action<Vector3>((_) => {}), 3);
+            
+            VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, (_,_) => {}, _ => {},_ => {}, 3);
         }
-
+   
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
         {
             vgPlayerData.PlayerObject?.SetColor(ChallengeTheme.GetPlayerColor(vgPlayerData.PlayerID), ChallengeTheme.guiAccent);
@@ -881,38 +914,48 @@ public partial class ChallengeManager : MonoBehaviour
                 {
                     await Task.Delay(100);
                 }
-            })); 
+            }), "<color=#FFD000>[ Prepping ]</color> 0/6"); 
                 
             SceneLoader.Inst.manager.AddToLoadingTasks("Waiting other players", Task.Run(async () =>
             {
                 while (!SteamLobbyManager.Inst.InLobby || !SteamLobbyManager.Inst.IsEveryoneLoaded)
                 {
-                    await Task.Delay(0);
+                    await Task.Delay(100);
                 }
-            }));
+            }), dynamicStatusProvider: () => $"<color=#FFD000>[ Waiting ]</color> {SteamLobbyManager.Inst.LoadedPlayerCount()}/{GlobalsManager.Players.Count}");
         }
         else
         {
+            SceneLoader.Inst.manager.AddToLoadingTasks("Setting Up Levels", Task.Run(async () =>
+            {
+                while (!_votingStarted)
+                {
+                    await Task.Delay(100);
+                }
+            }), "<color=#FFD000>[ Prepping ]</color> 0/6");
+            
             SceneLoader.Inst.manager.AddToLoadingTasks("Waiting other players", Task.Run(async () =>
             {
                 while (!_votingStarted)
                 {
-                    await Task.Delay(0);
+                    await Task.Delay(100);
                 }
-            }));
+            }), dynamicStatusProvider: () => $"<color=#FFD000>[ Waiting ]</color> {SteamLobbyManager.Inst.LoadedPlayerCount()}/{GlobalsManager.Players.Count}");
         }
     }
     
     private bool CheckAllLevelsReady(bool setLoaded = true)
     {
-        foreach (var loadValue in _loadedLevels.Values)
+        int counter = _loadedLevels.Values.Count(x => x == 2);
+        
+        if (counter < 6)
         {
-            if (loadValue != 2)
-            {
-                return false;
-            }
+            SceneLoader.Inst?.manager?.UpdateTaskStatus("Setting up chosen levels", $"<color=#FFD000>[ Prepping ]</color> {counter}/6");
+            return false;
         }
-
+        
+        SceneLoader.Inst?.manager?.ResetTaskStatus("Setting up chosen levels");
+        
         if (setLoaded)
         {
            SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");

@@ -334,7 +334,7 @@ public partial class GameManagerPatch
         //add players to playerManager
         if (GlobalsManager.IsHosting)
         {
-            if (GlobalsManager.Players.Count == 0)
+            if (!GlobalsManager.Players.ContainsKey(GlobalsManager.LocalPlayerId))
             {
                 //player 0 is never added, so we add it here
                 var newData = new VGPlayerManager.VGPlayerData() { PlayerID = 0, ControllerID = 0 };
@@ -355,7 +355,7 @@ public partial class GameManagerPatch
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
             foreach (var vgPlayerData in GlobalsManager.Players)
             {
-                VGPlayerManager.Inst.players.Add(vgPlayerData.Value.VGPlayerData);
+                       VGPlayerManager.Inst.players.Add(vgPlayerData.Value.VGPlayerData);
             }
             
             if (GlobalsManager.LobbyState != LobbyState.Playing)

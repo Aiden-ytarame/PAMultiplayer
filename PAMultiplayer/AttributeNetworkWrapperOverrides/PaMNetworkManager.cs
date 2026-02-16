@@ -128,6 +128,11 @@ public partial class PaMNetworkManager : NetworkManager
         
         PAM.Logger.LogInfo($"Player {connection.Address} left game server.");
     }
+
+    public int GetPing()
+    {
+        return _facepunchtransport?.GetPing() ?? 9999;
+    }
     
     private static int _amountOfInfo;
 

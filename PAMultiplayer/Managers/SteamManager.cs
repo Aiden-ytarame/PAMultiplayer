@@ -17,7 +17,7 @@ public class SteamManager : MonoBehaviour
 
     private void Awake()
     {
-        RpcHandler.TryGetRpcInvoker(1, out var invoker);
+        RpcHandler.TryGetRpcInvoker(1, out var invoker); //this is done to make sure the static constructor runs
         if (Inst)
         {
             Destroy(this);

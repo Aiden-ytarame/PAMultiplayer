@@ -10,8 +10,8 @@ namespace PAMultiplayer.AttributeNetworkWrapperOverrides;
 
 public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionManager
 {
-    private SocketManager server;
-    private ConnectionManager client;
+    private SocketManager _server;
+    private ConnectionManager _client;
     
     internal readonly Dictionary<int, Connection?> IDToConnection = new();
     internal readonly Dictionary<ulong, int> SteamIdToNetId = new();
@@ -78,8 +78,18 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
 
     public void Receive()
     {
-        server?.Receive();
-        client?.Receive();
+        _server?.Receive();
+        _client?.Receive();
+    }
+
+    public int GetPing()
+    {
+        if (IsServer)
+        {
+            return 0;
+        }
+
+        return _client?.Connection.QuickStatus().Ping ?? 9999;
     }
     //Transport
     public override void ConnectClient(string address)
@@ -88,7 +98,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
         SteamIdToNetId.Clear();
         if (ulong.TryParse(address, out var id))
         {
-            client = SteamNetworkingSockets.ConnectRelay(id, 0, this);
+            _client = SteamNetworkingSockets.ConnectRelay(id, 0, this);
             IsActive = true;
             OnClientConnected?.Invoke(new ServerNetworkConnection(id.ToString()));
             return;
@@ -100,21 +110,21 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     public override void StopClient()
     {
         IsActive = false;
-        client?.Close();
+        _client?.Close();
     }
 
     public override void StartServer()
     {
         IDToConnection.Clear();
         SteamIdToNetId.Clear();
-        server = SteamNetworkingSockets.CreateRelaySocket(0, this);
+        _server = SteamNetworkingSockets.CreateRelaySocket(0, this);
         IsActive = true;
     }
 
     public override void StopServer()
     {
         IsActive = false;
-        server?.Close();
+        _server?.Close();
     }
 
     public override void KickConnection(int connectionId)
@@ -129,7 +139,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     {
         var steamSendType = sendType == SendType.Reliable ? Steamworks.Data.SendType.Reliable : Steamworks.Data.SendType.Unreliable;
         
-        client?.Connection.SendMessage(data.Array, data.Offset, data.Count, steamSendType);
+        _client?.Connection.SendMessage(data.Array, data.Offset, data.Count, steamSendType);
     }
 
     public override void SendMessageToClient(int connectionId, ArraySegment<byte> data, SendType sendType = SendType.Reliable)
@@ -144,8 +154,8 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
 
     public override void Shutdown()
     {
-        server?.Close();
-        client?.Close();
+        _server?.Close();
+        _client?.Close();
         IDToConnection.Clear();
         SteamIdToNetId.Clear();
         IsActive = false;

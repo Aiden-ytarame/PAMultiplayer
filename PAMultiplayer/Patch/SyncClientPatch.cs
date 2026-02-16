@@ -99,7 +99,6 @@ public static partial class RewindHandler
         {
             _deathAction = x =>
             {
-                PAM.Logger.LogWarning("Client Dead");
                 //clients do nothing on death, just wait for the server message.
             };
         }

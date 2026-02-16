@@ -84,7 +84,7 @@ public class MultiplayerDiscordManager : MonoBehaviour
 
 			return;
 		}
-		PAM.Logger.LogError("Failed to join lobby from discord, steam wasn't initialized or youre already in a lobby");
+		PAM.Logger.LogError("Failed to join lobby from discord, steam wasn't initialized or you're already in a lobby");
 	}
 
 	private void onReady(object _, ReadyMessage __)
