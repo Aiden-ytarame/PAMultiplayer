@@ -220,8 +220,15 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
         AssureBufferSpace(size);
         Marshal.Copy(data, _buffer, 0, size);
         ArraySegment<byte> dataArr = new ArraySegment<byte>(_buffer, 0, size);
-        
-        OnServerDataReceived?.Invoke(new ClientNetworkConnection(id, identity.SteamId.ToString()), dataArr);
+
+        try
+        {
+            OnServerDataReceived?.Invoke(new ClientNetworkConnection(id, identity.SteamId.ToString()), dataArr);
+        }
+        catch (Exception e)
+        {
+            PAM.Logger.LogError(e);
+        }
     }
     
     
@@ -261,6 +268,13 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
         Marshal.Copy(data, _buffer, 0, size);
         ArraySegment<byte> dataArr = new ArraySegment<byte>(_buffer, 0, size);
         
-        OnClientDataReceived?.Invoke(dataArr);
+        try
+        {
+            OnClientDataReceived?.Invoke(dataArr);
+        }
+        catch (Exception e)
+        {
+            PAM.Logger.LogError(e);
+        }
     }
 }

@@ -62,7 +62,7 @@ public partial class ChallengeManager : MonoBehaviour
         
         CameraDB.Inst.foregroundCamera.orthographicSize = 20;
         CameraDB.Inst.backgroundCamera.orthographicSize = 20;
-        CameraDB.Inst.CamerasParent.position = Vector3.zero;
+        CameraDB.Inst.CamerasRoot.position = Vector3.zero;
         
         var cells = GameObject.Find("Voter/Canvas/Cells").transform;
 
@@ -430,11 +430,8 @@ public partial class ChallengeManager : MonoBehaviour
                     level.AlbumArt = await AlbumArtManager.LoadAlbumArtAsync(level.name, level.BaseLevelData.LocalFolder);
                     _loadedLevels[level] = 2;
                 }
-
-                if (_levelsToVote.Count >= 6)
-                {
-                    CheckAllLevelsReady();
-                }
+                
+                CheckAllLevelsReady();
                 return;
             }
 
@@ -472,7 +469,7 @@ public partial class ChallengeManager : MonoBehaviour
         }
         catch (Exception e)
         {
-            PAM.Logger.LogError(e);
+            PAM.Logger.LogError($"Error Creating Level Entry\n{e}");
         }
     }
 
@@ -492,6 +489,7 @@ public partial class ChallengeManager : MonoBehaviour
             PAM.Logger.LogError(www.error);
             level.AlbumArt = null;
             _loadedLevels[level]++;
+            CheckAllLevelsReady();
             yield break;
         }
         
@@ -505,8 +503,6 @@ public partial class ChallengeManager : MonoBehaviour
     
     IEnumerator GetSongData(VGLevel level)
     {
-       // yield return Ninja.JumpBack;
-        
         string path = "";
         if (File.Exists(level.BaseLevelData.LocalFolder + "/audio.ogg"))
         {
@@ -922,7 +918,7 @@ public partial class ChallengeManager : MonoBehaviour
                 {
                     await Task.Delay(100);
                 }
-            }), dynamicStatusProvider: () => $"<color=#FFD000>[ Waiting ]</color> {SteamLobbyManager.Inst.LoadedPlayerCount()}/{GlobalsManager.Players.Count}");
+            }), dynamicStatusProvider: () => $"<color=#FFD000>[ Waiting ]</color> {SteamLobbyManager.Inst.LoadedPlayerCount()}/{(GlobalsManager.Players.Count == 0 ? 1 : GlobalsManager.Players.Count)}");
         }
         else
         {

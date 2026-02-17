@@ -453,7 +453,12 @@ public partial class GameManagerPatch
             return;
         }
         GlobalsManager.HasLoadedLobbyInfo = true;
-        
+
+        if (!GameManager.Inst)
+        {
+            PAM.Logger.LogError("GameManager is null");
+            return;
+        }
         GameManager.Inst.UnPause();
         
         AudioManager.Inst.CurrentAudioSource.time = currentTime;

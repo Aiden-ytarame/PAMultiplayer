@@ -129,7 +129,7 @@ public partial class Player_Patch
             int hit = Settings.HitSfx.Value;
             if (hit == 0 || (hit == 1 && player.IsLocalPlayer()))
             {
-                AudioManager.Inst.PlaySound("HurtPlayer", 0.6f);
+                AudioManager.Inst.PlaySound("Player_Hurt", 0.6f);
             }
             if(isLocal)
                 player.PlayerHitAnimation(); //this runs the camera shake, annoying in multiplayer

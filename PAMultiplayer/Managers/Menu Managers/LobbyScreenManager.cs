@@ -164,7 +164,7 @@ public class LobbyScreenManager : MonoBehaviour
         {
             if (playSound)
             {
-                AudioManager.Inst?.PlaySound("Add", 1);
+                AudioManager.Inst?.PlaySound("UI_Add", 1);
             }
 
             var loadIcon = value.GetChild(1).GetComponent<TextMeshProUGUI>();

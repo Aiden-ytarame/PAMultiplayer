@@ -15,7 +15,7 @@ public class PAM : BaseUnityPlugin
     private Harmony _harmony;
     public const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "1.1.3";
+    public const string Version = "1.1.4";
 
     private void Awake()
     {
