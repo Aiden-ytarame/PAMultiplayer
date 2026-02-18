@@ -57,8 +57,6 @@ public partial class GameManagerPatch
             });
         }
 
-       
-
         var button = skipButton.GetComponent<MultiElementButton>();
         button.onClick = new();
         button.onClick.AddListener(() =>
@@ -106,28 +104,13 @@ public partial class GameManagerPatch
 
         if (Player_Patch.CircleMesh == null)
         {
-            foreach (var mesh in Resources.FindObjectsOfTypeAll<Mesh>())
-            {
-                if (mesh.name == "circle")
-                {
-                    Player_Patch.CircleMesh = mesh;
-                }
-
-                if (mesh.name == "full_arrow")
-                {
-                    Player_Patch.ArrowMesh = mesh;
-                }
-
-                if (mesh.name == "triangle")
-                {
-                    Player_Patch.TriangleMesh = mesh;
-                }
-            }
+            GetMeshes();
         }
 
+        GlobalsManager.HitsQueue.Clear();
         __instance.gameObject.AddComponent<NetworkManager>();
         __instance.StartCoroutine(FetchExternalData());
-
+        
         //this is for waiting for the Objects to load before initialing the server/client
 
         if (GlobalsManager.IsHosting)
@@ -145,7 +128,7 @@ public partial class GameManagerPatch
         {
             SceneLoader.Inst.manager.AddToLoadingTasks("Connecting to Server", Task.Run(async () =>
             {
-                while (PaMNetworkManager.PamInstance == null || !AttributeNetworkWrapperV2.NetworkManager.Instance.TransportActive)
+                while (PaMNetworkManager.PamInstance == null || AttributeNetworkWrapperV2.NetworkManager.Instance?.TransportActive == false)
                 {
                     await Task.Delay(100);
                 }
@@ -167,6 +150,8 @@ public partial class GameManagerPatch
     [HarmonyPostfix]
     static void PostDestroy()
     {
+        GlobalsManager.HitsQueue.Clear();
+        
         //if you go to next level in a queue and there was a camera parented object on level end, it stays FOREVER.
         //this makes sure that doesnt happen.
         for (int i = 0; i < CameraDB.Inst.CameraParentedRoot.childCount; i++)
@@ -223,7 +208,27 @@ public partial class GameManagerPatch
         GlobalsManager.HasLoadedExternalInfo = true;
     }
 
+    static void GetMeshes()
+    {
+        foreach (var mesh in Resources.FindObjectsOfTypeAll<Mesh>())
+        {
+            if (mesh.name == "circle")
+            {
+                Player_Patch.CircleMesh = mesh;
+            }
 
+            if (mesh.name == "full_arrow")
+            {
+                Player_Patch.ArrowMesh = mesh;
+            }
+
+            if (mesh.name == "triangle")
+            {
+                Player_Patch.TriangleMesh = mesh;
+            }
+        }
+    }
+    
     //wtf is this
     private static bool paused;
     [HarmonyPatch(nameof(GameManager.Pause))]
@@ -459,8 +464,28 @@ public partial class GameManagerPatch
             PAM.Logger.LogError("GameManager is null");
             return;
         }
+        
         GameManager.Inst.UnPause();
         
+        if (DataManager.inst.gameData.beatmapData.checkpoints.Count > 0)
+        {
+            int tmpIndex = -1;
+            
+            for (var i = 0; i < DataManager.inst.gameData.beatmapData.checkpoints.Count; i++)
+            {
+                if (i <= GameManager.Inst.currentCheckpointIndex || DataManager.inst.gameData.beatmapData.checkpoints[i].time > currentTime)
+                {
+                    continue;
+                }
+                
+                tmpIndex = i;
+            }
+
+            if (tmpIndex != -1)
+            {
+                GameManager.Inst.currentCheckpointIndex = tmpIndex;
+            }
+        }
         AudioManager.Inst.CurrentAudioSource.time = currentTime;
         VGPlayerManager.inst.RespawnPlayers();
         

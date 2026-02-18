@@ -249,11 +249,6 @@ namespace PAMultiplayer.Patch
             {
                 LobbyScreenManager.Instance.StartLevel();
             }
-
-            if (ChallengeManager.Inst)
-            {
-                ChallengeManager.Inst.StartVoting_Client();
-            }
         }
     }
     

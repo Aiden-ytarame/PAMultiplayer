@@ -141,9 +141,18 @@ public class QueueButton : MonoBehaviour
 [HarmonyPatch(typeof(LevelEndScreen))]
 public static class LevelEndScreenPatch
 {
+    public static LevelEndScreen Instance;
+    
+    [HarmonyPatch(nameof(LevelEndScreen.Start))]
+    [HarmonyPostfix]
+    static void PostStart(LevelEndScreen __instance)
+    {
+        Instance = __instance;
+    }
+    
     [HarmonyPatch(nameof(LevelEndScreen.CreateUI))]
     [HarmonyPrefix]
-    static void PreStart(LevelEndScreen __instance)
+    static void PreCreateUI(LevelEndScreen __instance)
     {
         if (!GameManager.Inst.IsArcade) return;
         
@@ -189,7 +198,7 @@ public static class LevelEndScreenPatch
     
     [HarmonyPatch(nameof(LevelEndScreen.CreateUI))]
     [HarmonyPostfix]
-    static void PostStart(LevelEndScreen __instance)
+    static void PostCreateUI(LevelEndScreen __instance)
     {
         if (!GameManager.Inst.IsArcade) return;
 

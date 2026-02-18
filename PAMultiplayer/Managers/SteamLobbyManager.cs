@@ -65,17 +65,9 @@ public class SteamLobbyManager : MonoBehaviour
 
     private void OnChatMessage(Lobby lobby, Friend friend, string message)
     {
-        if (!Settings.Chat.Value)
-        {
-            return;
-        }
-        
-        if (!GlobalsManager.Players.TryGetValue(friend.Id, out var player))
-        {
-            return;
-        }
-
-        if (!player.VGPlayerData.PlayerObject.IsValidPlayer())
+        if (!Settings.Chat.Value ||
+            !GlobalsManager.Players.TryGetValue(friend.Id, out var player) ||
+            !player.VGPlayerData.PlayerObject.IsValidPlayer())
         {
             return;
         }
@@ -85,7 +77,6 @@ public class SteamLobbyManager : MonoBehaviour
             message = message.Substring(0, 25);
         }
         
-        //ADD BACK player.VGPlayerData.PlayerObject.SpeechBubble?.DisplayText(message.Replace('_',' '), 5);
         player.VGPlayerData.PlayerObject.Player_Text.DisplayText(message.Replace('_',' '), 5);
     }
 
@@ -125,7 +116,7 @@ public class SteamLobbyManager : MonoBehaviour
     {
         PAM.Logger.LogInfo($"Member Left : [{friend.Name}]");
         
-        AudioManager.Inst?.PlaySound("glitch", 1);
+        AudioManager.Inst?.PlaySound("UI_Glitch", 1);
         
         RemovePlayerFromLoadList(friend.Id);
         
@@ -172,7 +163,7 @@ public class SteamLobbyManager : MonoBehaviour
     {
         PAM.Logger.LogInfo($"Member Joined : [{friend.Name}]");
         
-        AudioManager.Inst?.PlaySound("Subtract", 1);
+        AudioManager.Inst?.PlaySound("UI_Subtract", 1);
         
         AddPlayerToLoadList(friend.Id);
         
@@ -233,7 +224,7 @@ public class SteamLobbyManager : MonoBehaviour
             SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.inst.LoadSceneGroup("Menu");
             SteamManager.Inst.EndClient();
-            PAM.Logger.LogInfo($"Tried to join invalid lobby by [{lobby.Owner.Name}]");
+            PAM.Logger.LogError($"Tried to join invalid lobby by [{lobby.Owner.Name}]");
             return;
         }
         

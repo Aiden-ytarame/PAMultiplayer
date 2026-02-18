@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using HarmonyLib;
 using AttributeNetworkWrapperV2;
 using PaApi;
@@ -67,18 +68,18 @@ public partial class Player_Patch
                     {
                         if (!IsDamageAll)
                         {
-                            CallRpc_Multi_DamageAll(player.Health, GlobalsManager.LocalPlayerId);
+                            CallRpc_Multi_DamageAll(player.Health, GameManager.Inst.currentCheckpointIndex, GlobalsManager.LocalPlayerId);
                             return false;
                         }
                     }
                     else
-                        CallRpc_Multi_PlayerDamaged(GlobalsManager.LocalPlayerId, player.Health);
+                        CallRpc_Multi_PlayerDamaged(GlobalsManager.LocalPlayerId, player.Health, GameManager.Inst.currentCheckpointIndex);
                     
                 }
                 else
                 {
                     if (!linked || !IsDamageAll)
-                        CallRpc_Server_PlayerDamaged(player.Health);
+                        CallRpc_Server_PlayerDamaged(player.Health, GameManager.Inst.currentCheckpointIndex);
                 }
 
                 IsDamageAll = false;
@@ -150,52 +151,88 @@ public partial class Player_Patch
     }
 
     [ServerRpc]
-    private static void Server_PlayerDamaged(ClientNetworkConnection conn, int healthPreHit)
+    private static void Server_PlayerDamaged(ClientNetworkConnection conn, int healthPreHit, int checkpointIndex)
     {
-        if(!conn.TryGetSteamId(out SteamId steamID))
+        if(!GameManager.Inst || GameManager.Inst.currentCheckpointIndex < checkpointIndex || !conn.TryGetSteamId(out SteamId steamID))
         {
             return;
         }
+        
+        //we still call the rpc's even if the hit came from a earlier checkpoint to keep the amount of hits still relatively better synced, even if its discarded
         
         if (DataManager.inst.GetSettingBool("mp_linkedHealth", false))
         {
             if (GlobalsManager.LocalPlayerObj.Health >= healthPreHit)
             {
-                CallRpc_Multi_DamageAll(healthPreHit, steamID);
+                CallRpc_Multi_DamageAll(healthPreHit, checkpointIndex, steamID);
             }
             return;
         }
         
-        CallRpc_Multi_PlayerDamaged(steamID, healthPreHit);
+        CallRpc_Multi_PlayerDamaged(steamID, healthPreHit, checkpointIndex);
     }
     
     [MultiRpc]
-    private static void Multi_PlayerDamaged(SteamId steamID, int healthPreHit)
+    public static void Multi_PlayerDamaged(SteamId steamID, int healthPreHit, int checkpointIndex)
     {
         if (healthPreHit == 1)
         {
             PointsManager.Inst?.PlayerHasDied(steamID);
         }
         
-        PAM.Logger.LogDebug($"Damaging player {steamID}");
+        if (steamID.IsLocalPlayer() || !GameManager.Inst)
+        {
+            return;
+        }
         
-        if (steamID.IsLocalPlayer()) return;
-       
+        if (checkpointIndex < GameManager.Inst.currentCheckpointIndex)
+        {
+            if (LevelEndScreenPatch.Instance)
+            {
+                LevelEndScreenPatch.Instance.OnHit(--healthPreHit, Vector3.zero);
+            }
+            return;
+        }
+        
+        if (checkpointIndex > GameManager.Inst.currentCheckpointIndex)
+        {
+            GlobalsManager.HitsQueue.Add(new (steamID, healthPreHit, checkpointIndex));
+            return;
+        }
+        
         if(GlobalsManager.Players.TryGetValue(steamID, out var player))
         {
             if (!player.VGPlayerData.PlayerObject.IsValidPlayer()) return;
             player.VGPlayerData.PlayerObject.Health = healthPreHit;
             player.VGPlayerData.PlayerObject.PlayerHit();
         }
+        else
+        {
+            if (LevelEndScreenPatch.Instance)
+            {
+                LevelEndScreenPatch.Instance.OnHit(--healthPreHit, Vector3.zero);
+            }
+        }
     }
 
     [MultiRpc]
-    private static void Multi_DamageAll(int healthPreHit, SteamId playerHit)
+    private static void Multi_DamageAll(int healthPreHit, int checkpointIndex, SteamId playerHit)
     {
-        DamageAll(healthPreHit, playerHit);
+        DamageAll(healthPreHit, checkpointIndex, playerHit);
     }
-    static void DamageAll(int healthPreHit, ulong hitPlayerId)
+    public static void DamageAll(int healthPreHit, int checkpointIndex, ulong hitPlayerId)
     {
+        if (!GameManager.Inst)
+        {
+            return;
+        }
+        
+        if (checkpointIndex > GameManager.Inst.currentCheckpointIndex)
+        {
+            GlobalsManager.HitsQueue.Add(new (hitPlayerId, healthPreHit, checkpointIndex, true));
+            return;
+        }
+        
         if (Settings.Linked.Value)
         {
             if (GlobalsManager.Players.TryGetValue(hitPlayerId, out var playerData))
@@ -204,7 +241,6 @@ public partial class Player_Patch
                 VGPlayerManager.Inst.DisplayNotification($"Nano [<color=#{hex}>{playerData.Name}</color>] got hit!", 1f);
             }
         }
-       
         
         foreach (var vgPlayerData in GlobalsManager.Players)
         {
@@ -321,7 +357,7 @@ public partial class Player_Patch
         
         if (GlobalsManager.Players.TryGetValue(steamID, out var player))
         {
-            if (player.VGPlayerData.PlayerObject && !player.VGPlayerData.PlayerObject.isDead)
+            if (player.VGPlayerData.PlayerObject.IsValidPlayer())
             {
                 player.VGPlayerData.PlayerObject.PlayParticles(VGPlayer.ParticleTypes.Boost);
             }
@@ -340,7 +376,7 @@ public partial class Player_Patch
         
         if (GlobalsManager.Players.TryGetValue(steamID, out var player))
         {
-            if (player.VGPlayerData.PlayerObject && !player.VGPlayerData.PlayerObject.isDead)
+            if (player.VGPlayerData.PlayerObject.IsValidPlayer())
             {
                 player.VGPlayerData.PlayerObject.PlayParticles(VGPlayer.ParticleTypes.Boost);
             }
@@ -712,13 +748,15 @@ public static class BeatmapThemePatch
 
 static class PlayerExtensions
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsLocalPlayer(this VGPlayer player)
     {
         return player.PlayerID == GlobalsManager.LocalPlayerObjectId;
     }
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsValidPlayer(this VGPlayer player)
     {
-        return player != null && !player.isDead;
+        return player && !player.isDead;
     }
 }

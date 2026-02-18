@@ -340,8 +340,14 @@ public partial class ChallengeManager : MonoBehaviour
         }
         return level;
     }
-
-    public void StartVoting_Client()
+    
+    void StartVoting()
+    {
+        SpawnPlayers_Multiplayer();
+        StartCoroutine(ShowLevels());
+    }
+    
+    private void StartVoting_Client()
     {
         if (_levelsToVote.Count >= 6 && CheckAllLevelsReady(false))
         {
@@ -351,12 +357,15 @@ public partial class ChallengeManager : MonoBehaviour
         }
     }
     
-    void StartVoting()
+    [MultiRpc]
+    private static void Multi_StartVoting()
     {
-        SpawnPlayers_Multiplayer();
-        StartCoroutine(ShowLevels());
+        if (!GlobalsManager.IsHosting)
+        {
+            Inst?.StartVoting_Client();
+        }
     }
-
+    
     public void PlayerVote(VGPlayer player, VGLevel level)
     {
         _votes[player] = level;
@@ -724,7 +733,7 @@ public partial class ChallengeManager : MonoBehaviour
         
         SceneLoader.Inst?.manager?.ClearLoadingTasks();
         SteamLobbyManager.Inst.UnloadAll();
-        PauseLobbyPatch.CallRpc_Multi_StartLevel();
+        CallRpc_Multi_StartVoting();
         StartVoting();
     }
 

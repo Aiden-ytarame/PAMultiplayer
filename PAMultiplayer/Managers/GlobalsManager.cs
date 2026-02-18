@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Steamworks;
 
 namespace PAMultiplayer.Managers
@@ -12,6 +13,14 @@ namespace PAMultiplayer.Managers
         {
             Name = name;
         }
+    }
+
+    public struct HitInfo(ulong id, int health, int checkpoint, bool all = false)
+    {
+        public ulong Id = id;
+        public bool All = all;
+        public int Health = health;
+        public int Checkpoint = checkpoint;
     }
     
     /// <summary>
@@ -45,5 +54,7 @@ namespace PAMultiplayer.Managers
         public static bool IsChallenge = false;
         
         public static bool JoinedMidLevel = false;
+
+        public static readonly List<HitInfo> HitsQueue = new();
     }
 }

@@ -53,12 +53,39 @@ public static partial class CheckpointHandler
     [MultiRpc]
     private static void Multi_CheckpointHit(int index)
     {
+        if (!GameManager.Inst || index <= GameManager.Inst.currentCheckpointIndex)
+        {
+            return;
+        }
+        
         PAM.Logger.LogInfo($"Checkpoint [{index}] Received");
+        
         GameManager.Inst.playingCheckpointAnimation = true;
         VGPlayerManager.Inst.RespawnPlayers();
         VGPlayerManager.Inst.HealPlayers();
-
+        GameManager.Inst.currentCheckpointIndex = index;
         GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation(index));
+        
+        for (var i = 0; i < GlobalsManager.HitsQueue.Count; i++)
+        {
+            HitInfo  hitInfo = GlobalsManager.HitsQueue[i];
+
+            if (hitInfo.Checkpoint > index)
+            {
+                continue;
+            }
+            
+            if (hitInfo.All)
+            {
+                Player_Patch.DamageAll(hitInfo.Health, hitInfo.Checkpoint, hitInfo.Id);
+            }
+            else
+            {
+                Player_Patch.Multi_PlayerDamaged(hitInfo.Id, hitInfo.Health, hitInfo.Checkpoint);
+            }
+            
+            GlobalsManager.HitsQueue.RemoveAt(i);
+        }
     }
 }
 

@@ -25,7 +25,7 @@ public class SteamManager : MonoBehaviour
         }
         DontDestroyOnLoad(this);
         Inst = this;
-        
+       
         SteamMatchmaking.OnLobbyInvite += OnLobbyInvite;
         SteamFriends.OnGameLobbyJoinRequested += OnGameLobbyJoinRequested;
         InitSteamClient();
