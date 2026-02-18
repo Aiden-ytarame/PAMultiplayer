@@ -101,12 +101,6 @@ public partial class GameManagerPatch
 
         restartButton.gameObject.SetActive(false);
 
-
-        if (Player_Patch.CircleMesh == null)
-        {
-            GetMeshes();
-        }
-
         GlobalsManager.HitsQueue.Clear();
         __instance.gameObject.AddComponent<NetworkManager>();
         __instance.StartCoroutine(FetchExternalData());
@@ -206,27 +200,6 @@ public partial class GameManagerPatch
 
         LobbyScreenManager.SpecialColors = newColors;
         GlobalsManager.HasLoadedExternalInfo = true;
-    }
-
-    static void GetMeshes()
-    {
-        foreach (var mesh in Resources.FindObjectsOfTypeAll<Mesh>())
-        {
-            if (mesh.name == "circle")
-            {
-                Player_Patch.CircleMesh = mesh;
-            }
-
-            if (mesh.name == "full_arrow")
-            {
-                Player_Patch.ArrowMesh = mesh;
-            }
-
-            if (mesh.name == "triangle")
-            {
-                Player_Patch.TriangleMesh = mesh;
-            }
-        }
     }
     
     //wtf is this
@@ -442,21 +415,26 @@ public partial class GameManagerPatch
         LevelEndScreen.ActionMoment actionMoment = new();  
         actionMoment.position = Vector3.zero;
         actionMoment.time = currentTime;
-        
-        var endScreen = Object.FindFirstObjectByType<LevelEndScreen>();//.Hits
+
+        var endScreen = LevelEndScreenPatch.Instance;
         if (!endScreen)
         {
             return;
         }
-        for (int i = 0; i < hitCount; i++)
+
+        if (endScreen.Hits != null)
         {
-            endScreen.Hits.Add(actionMoment);
+            for (int i = 0; i < hitCount; i++)
+            {
+                endScreen.Hits.Add(actionMoment);
+            }
         }
         
         if (GlobalsManager.HasLoadedLobbyInfo)
         {
             return;
         }
+        
         GlobalsManager.HasLoadedLobbyInfo = true;
 
         if (!GameManager.Inst)
@@ -496,10 +474,13 @@ public partial class GameManagerPatch
 
             if (GlobalsManager.Players.TryGetValue(id, out var player))
             {
-                player.VGPlayerData.PlayerObject.Health = health;
-                if (health <= 0)
+                if (player.VGPlayerData.PlayerObject.IsValidPlayer())
                 {
-                    Object.Destroy(player.VGPlayerData.PlayerObject);
+                    player.VGPlayerData.PlayerObject.Health = health;
+                    if (health <= 0)
+                    {
+                        Object.Destroy(player.VGPlayerData.PlayerObject);
+                    }
                 }
             }
         }
@@ -702,6 +683,7 @@ public partial class GameManagerPatch
              }
              
              PAM.Logger.LogError(Random.seed.ToString());
+             
              SteamLobbyManager.Inst.RandSeed = Random.seed;
              ObjectManager.inst.seed = Random.seed;
              RNGSync.Seed = SteamLobbyManager.Inst.RandSeed;

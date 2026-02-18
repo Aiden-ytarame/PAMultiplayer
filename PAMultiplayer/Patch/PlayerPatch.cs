@@ -387,7 +387,7 @@ public partial class Player_Patch
     public static Mesh CircleMesh;
     public static Mesh ArrowMesh;
     public static Mesh TriangleMesh;
-        
+
     /// <summary>
     /// changes the nano's shape if there's more than 4 players
     /// </summary>
@@ -395,21 +395,28 @@ public partial class Player_Patch
     [HarmonyPostfix]
     static void PostSpawn(ref VGPlayer __instance)
     {
-        if (__instance.RPlayer.id == 0 && PointsManager.Inst)
+        if (__instance.RPlayer?.id == 0 && PointsManager.Inst)
         {
             __instance.CloseCallEvent += _ => PointsManager.Inst.AddCloseCall();
             __instance.HitEvent += (_, _) => PointsManager.Inst.AddHit();
             __instance.DeathEvent += _ => PointsManager.Inst.AddDeath();
             _holdingBoost = 0;
         }
-        
+
         void SetPlayerMesh(VGPlayer player, Mesh mesh)
         {
-            Transform playerWrapper = player.transform.GetChild(2);
-            
-            playerWrapper.Find("core").GetComponent<MeshFilter>().mesh = mesh;
-            playerWrapper.Find("zen-marker").GetComponent<MeshFilter>().mesh = mesh; //is this needed?
-            playerWrapper.Find("boost").GetComponent<MeshFilter>().mesh = mesh;
+            try
+            {
+                Transform playerWrapper = player.transform.Find("Player");
+                
+                playerWrapper.GetChild(0).GetComponent<MeshFilter>().mesh = mesh;
+                playerWrapper.GetChild(1).GetComponent<MeshFilter>().mesh = mesh; //is this needed?
+                playerWrapper.GetChild(3).GetComponent<MeshFilter>().mesh = mesh;
+            }
+            catch (Exception e)
+            {
+                PAM.Logger.LogError(e);
+            }
         }
 
         if (!GlobalsManager.IsMultiplayer)
@@ -420,7 +427,7 @@ public partial class Player_Patch
         if (!__instance.IsLocalPlayer())
         {
             __instance.Player_Rigidbody.simulated = false;
-            
+
             if (Settings.Transparent.Value)
             {
                 foreach (var trail in __instance.Player_Trail.Trail)
@@ -428,6 +435,11 @@ public partial class Player_Patch
                     trail.Render_Trail.enabled = false;
                 }
             }
+        }
+
+        if (CircleMesh == null)
+        {
+            GetMeshes();
         }
         
         switch (__instance.PlayerID)
@@ -440,26 +452,46 @@ public partial class Player_Patch
             case < 12:
             {
                 SetPlayerMesh(__instance, TriangleMesh);
-                
+
                 Vector3 offsetRot = new Vector3(0, 0, -90);
-                Transform player = __instance.Player_Wrapper.transform;
+                Transform player = __instance.transform.Find("Player");
                 
-                player.Find("core").Rotate(offsetRot);
-                player.Find("zen-marker").Rotate(offsetRot);
-                player.transform.Find("boost").Rotate(offsetRot);
+                player.GetChild(0).Rotate(offsetRot);
+                player.GetChild(1).Rotate(offsetRot);
+                player.GetChild(3).Rotate(offsetRot);
                 break;
             }
             default: //id > 12
             {
                 SetPlayerMesh(__instance, ArrowMesh);
-                Transform player = __instance.Player_Wrapper.transform;
-
+                Transform player = __instance.transform.Find("Player");
                 Vector3 newScale = new Vector3(2, 2, 1);
 
-                player.Find("core").localScale = newScale;
-                player.Find("zen-marker").localScale = newScale;
-                player.transform.Find("boost").localScale = newScale;
+                player.GetChild(0).localScale = newScale;
+                player.GetChild(1).localScale = newScale;
+                player.GetChild(3).localScale = newScale;
                 break;
+            }
+        }
+    }
+
+    static void GetMeshes()
+    {
+        foreach (var mesh in Resources.FindObjectsOfTypeAll<Mesh>())
+        {
+            if (mesh.name == "circle")
+            {
+                CircleMesh = mesh;
+            }
+
+            if (mesh.name == "full_arrow")
+            {
+                ArrowMesh = mesh;
+            }
+
+            if (mesh.name == "triangle")
+            {
+                TriangleMesh = mesh;
             }
         }
     }

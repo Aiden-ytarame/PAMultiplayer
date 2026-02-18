@@ -43,7 +43,6 @@ public static partial class CheckpointHandler
             
             if (tmpIndex != -1)
             {
-                __instance.currentCheckpointIndex = tmpIndex;
                 CallRpc_Multi_CheckpointHit(tmpIndex);
             }
         }

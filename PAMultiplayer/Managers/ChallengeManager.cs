@@ -931,7 +931,7 @@ public partial class ChallengeManager : MonoBehaviour
         }
         else
         {
-            SceneLoader.Inst.manager.AddToLoadingTasks("Setting Up Levels", Task.Run(async () =>
+            SceneLoader.Inst.manager.AddToLoadingTasks("Setting up chosen levels", Task.Run(async () =>
             {
                 while (!_votingStarted)
                 {
