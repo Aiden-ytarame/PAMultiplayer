@@ -113,7 +113,6 @@ public partial class GameManagerPatch
             {
                 while (!SteamLobbyManager.Inst.InLobby)
                 {
-                    PAM.Logger.LogError("waiting");
                     await Task.Delay(100);
                 }
             }));
@@ -231,7 +230,6 @@ public partial class GameManagerPatch
     {
         if(!GlobalsManager.IsMultiplayer) return;
         
-        GameManager.Inst.CurGameState = GameManager.GameState.Playing;
         paused = false;
     }
 

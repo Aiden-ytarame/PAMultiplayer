@@ -1038,15 +1038,18 @@ public partial class VoterCell : MonoBehaviour
         if (_playerCounter == 0)
         {
             SetSelected(true);
-            AudioManager.Inst.PlayMusic(Level.LevelMusic);
+            if (AudioManager.Inst.CurrentAudioClip != Level.LevelMusic)
+            {
+                AudioManager.Inst.PlayMusic(Level.LevelMusic);
 
-            if (Level.PreviewStart <= 0)
-            {
-                AudioManager.Inst.musicSources[AudioManager.Inst.activeSource].time = Level.LevelMusic.length / 2;
-            }
-            else
-            {
-                AudioManager.Inst.musicSources[AudioManager.Inst.activeSource].time = Level.PreviewStart;
+                if (Level.PreviewStart <= 0)
+                {
+                    AudioManager.Inst.musicSources[AudioManager.Inst.activeSource].time = Level.LevelMusic.length / 2;
+                }
+                else
+                {
+                    AudioManager.Inst.musicSources[AudioManager.Inst.activeSource].time = Level.PreviewStart;
+                }
             }
         }
         
