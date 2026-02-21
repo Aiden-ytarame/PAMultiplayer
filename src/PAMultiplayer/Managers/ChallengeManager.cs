@@ -858,7 +858,7 @@ public partial class ChallengeManager : MonoBehaviour
     {
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
         {
-            if(vgPlayerData.PlayerObject)
+            if(vgPlayerData.PlayerObject.IsValidPlayer())
                 vgPlayerData.PlayerObject.PlayerDeath(0);
         }
         VGPlayerManager.Inst.players.Clear();
@@ -1035,10 +1035,22 @@ public partial class VoterCell : MonoBehaviour
             return;
         }
 
+        if (_playerCounter == 0)
+        {
+            SetSelected(true);
+            AudioManager.Inst.PlayMusic(Level.LevelMusic);
+
+            if (Level.PreviewStart <= 0)
+            {
+                AudioManager.Inst.musicSources[AudioManager.Inst.activeSource].time = Level.LevelMusic.length / 2;
+            }
+            else
+            {
+                AudioManager.Inst.musicSources[AudioManager.Inst.activeSource].time = Level.PreviewStart;
+            }
+        }
+        
         _playerCounter++;
-        SetSelected(true);
-        AudioManager.Inst.PlayMusic(Level.LevelMusic);
-        AudioManager.Inst.musicSources[AudioManager.Inst.activeSource].time = Level.LevelMusic.length / 2;
 
         if (!GlobalsManager.IsMultiplayer || GlobalsManager.IsHosting)
         {

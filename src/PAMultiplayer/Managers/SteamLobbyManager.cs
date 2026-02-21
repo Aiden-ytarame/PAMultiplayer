@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -229,8 +230,6 @@ public class SteamLobbyManager : MonoBehaviour
         }
         
         PAM.Logger.LogInfo($"Joined Lobby hosted by [{lobby.Owner.Name}]");
-        PAM.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
-        
         CurrentLobby = lobby;
         InLobby = true;
         
@@ -238,11 +237,13 @@ public class SteamLobbyManager : MonoBehaviour
 
         if (lobby.Owner.Id.IsLocalPlayer())
         {
-            SetupLobby(lobby);
             AddPlayerToLoadList(lobby.Owner.Id);
+            SetupLobby(lobby);
             return;
         }
 
+        PAM.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
+        
         foreach (var lobbyMember in lobby.Members)
         {
             VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
@@ -362,18 +363,11 @@ public class SteamLobbyManager : MonoBehaviour
         PAM.Logger.LogInfo("Lobby Created!");
     }
 
-    private async Task SetupLobby(Lobby lobby)
+    private void SetupLobby(Lobby lobby)
     {
         _loadedPlayers = new();
         
-        VGLevel currentLevel = ArcadeManager.Inst.CurrentArcadeLevel;
-        GlobalsManager.LevelId = currentLevel.SteamInfo != null ?  currentLevel.SteamInfo.ItemID.Value.ToString() : currentLevel.name;
-
-        await Task.Delay(500); //Hack to stop race condition
-        
         lobby.SetData("AlphaMultiplayer", "true");
-        lobby.SetData("LevelId", GlobalsManager.LevelId);
-        lobby.SetData("seed", RandSeed.ToString());
 
         if (GlobalsManager.IsChallenge)
         {
@@ -381,6 +375,11 @@ public class SteamLobbyManager : MonoBehaviour
         }
         else
         {
+            VGLevel currentLevel = ArcadeManager.Inst.CurrentArcadeLevel;
+            GlobalsManager.LevelId = currentLevel.SteamInfo != null ?  currentLevel.SteamInfo.ItemID.Value.ToString() : currentLevel.name;
+            
+            lobby.SetData("LevelId", GlobalsManager.LevelId);
+            lobby.SetData("seed", RandSeed.ToString());
             lobby.SetData("LobbyState", ((ushort)LobbyState.Lobby).ToString());
         }
 

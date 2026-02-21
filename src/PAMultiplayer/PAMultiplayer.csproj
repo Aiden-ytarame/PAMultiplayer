@@ -16,12 +16,10 @@
     </RestoreAdditionalProjectSources>
     <RootNamespace>PAMultiplayer</RootNamespace>
     <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
-    <MpPluginFolder>/home/aiden/.local/share/Steam/steamapps/common/bep/BepInEx/ThunderstoreReleases/PAMP/plugins/PAMultiplayer</MpPluginFolder>
     <Nullable>disable</Nullable>
     <TargetFramework>netstandard2.1</TargetFramework>
   </PropertyGroup>
-
-
+    
     <ItemGroup>
         <PackageReference Include="AttributeNetworkWrapperV2.Generator" Version="1.0.0" />
         <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
@@ -33,9 +31,12 @@
     <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
         <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
     </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\PAMultiplayer.Preloader\PAMultiplayer.Preloader.csproj" />
+    </ItemGroup>
     
     <ItemGroup>
-			  
     <Reference Include="Assembly-CSharp">
       <HintPath>lib\Assembly-CSharp.dll</HintPath>
     </Reference>
@@ -133,7 +134,33 @@
         
     </ItemGroup>
 
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MpPluginFolder)" />
+
+    <PropertyGroup>
+        <RootDir>../../</RootDir>
+        <ReleaseDir>$(RootDir)Release/</ReleaseDir>
+        <PluginDir>$(ReleaseDir)plugins/$(MSBuildProjectName)/</PluginDir>
+        <PatcherDir>$(ReleaseDir)patchers/$(MSBuildProjectName).Preloader/</PatcherDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <AdditionalFiles Include="$(RootDir)thunderstore/README.md" />
+        <AdditionalFiles Include="$(RootDir)thunderstore/CHANGELOG.md" />
+        <AdditionalFiles Include="$(RootDir)thunderstore/manifest.json" />
+        <AdditionalFiles Include="$(RootDir)thunderstore/icon.png" Visible="false" />
+        
+        <AdditionalPluginsFiles Include="$(TargetDir)AttributeNetworkWrapperV2.dll" />
+
+        <AdditionalPatchersFiles Include="$(TargetDir)DiscordRPC.dll" />
+        <AdditionalPatchersFiles Include="$(TargetDir)Facepunch.Steamworks.Win64.dll" />
+        <AdditionalPatchersFiles Include="lib/steam_api64.dll" />
+    </ItemGroup>
+    
+    <Target Name="PackageProduct" AfterTargets="PostBuildEvent">
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginDir)" />
+        <Copy SourceFiles="@(AdditionalPluginsFiles)" DestinationFolder="$(PluginDir)" />
+        <Copy SourceFiles="@(AdditionalPatchersFiles)" DestinationFolder="$(PatcherDir)" />
+        <Copy SourceFiles="@(AdditionalFiles)" DestinationFolder="$(ReleaseDir)" ContinueOnError="true" />
+
+        <ZipDirectory SourceDirectory="$(ReleaseDir)" DestinationFile="$(RootDir)$(MSBuildProjectName)--$(Configuration).zip" Overwrite="true" />
     </Target>
 </Project>

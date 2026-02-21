@@ -2,7 +2,6 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <MpPluginFolder>/home/aiden/.local/share/Steam/steamapps/common/bep/BepInEx/ThunderstoreReleases/PAMP/patchers/PAMultiplayer</MpPluginFolder>
         <RestoreAdditionalProjectSources>
         https://api.nuget.org/v3/index.json;
         https://nuget.bepinex.dev/v3/index.json;
@@ -14,7 +13,11 @@
         <PackageReference Include="BepInEx.Core" Version="5.*" />
     </ItemGroup>
 
+    <PropertyGroup>
+        <PatcherDir>../../Release/patchers/$(MSBuildProjectName)/</PatcherDir>
+    </PropertyGroup>
+    
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MpPluginFolder)" />
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PatcherDir)" />
     </Target>
 </Project>

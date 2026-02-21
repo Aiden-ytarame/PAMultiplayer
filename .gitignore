@@ -1,11 +1,12 @@
 lib/
 Bin/
 obj/
+Release/
+*.zip
 **/costura**/
 .vs/
 .md
 *.bak
 .idea/
-Folder.DotSettings.user
 *.user
-PAMultiplayer/Folder.DotSettings.user
+*.DotSettings

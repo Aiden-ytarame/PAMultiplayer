@@ -240,6 +240,11 @@ namespace PAMultiplayer.Patch
         [MultiRpc]
         public static void Multi_StartLevel()
         {
+            if (GameManager.Inst)
+            {
+                GameManager.Inst.CurGameState = GameManager.GameState.Playing;
+            }
+            
             if (GlobalsManager.IsHosting)
             {
                 return;

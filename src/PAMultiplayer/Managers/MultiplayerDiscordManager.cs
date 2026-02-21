@@ -121,7 +121,7 @@ public class MultiplayerDiscordManager : MonoBehaviour
 				};
 				presence.Secrets = new Secrets()
 				{
-					JoinSecret = id
+					Join = id
 				};
 
 				presence.Buttons = null;
@@ -188,7 +188,7 @@ public class MultiplayerDiscordManager : MonoBehaviour
 			};
 			presence.Secrets = new Secrets()
 			{
-				JoinSecret = id
+				Join = id
 			};
 
 			presence.Buttons = null;

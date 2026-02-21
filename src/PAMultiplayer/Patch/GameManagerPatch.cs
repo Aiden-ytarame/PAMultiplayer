@@ -231,6 +231,7 @@ public partial class GameManagerPatch
     {
         if(!GlobalsManager.IsMultiplayer) return;
         
+        GameManager.Inst.CurGameState = GameManager.GameState.Playing;
         paused = false;
     }
 
@@ -361,7 +362,7 @@ public partial class GameManagerPatch
     }
 
     [ServerRpc]
-    private async static void Server_RequestLobbyState(ClientNetworkConnection conn)
+    private static async void Server_RequestLobbyState(ClientNetworkConnection conn)
     {
         try
         {

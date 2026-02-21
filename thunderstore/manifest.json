@@ -1,0 +1,10 @@
+{
+  "name": "Project_Arrhythmia_Multiplayer",
+  "version_number": "1.2.1",
+  "website_url": "https://github.com/Aiden-ytarame/PAMultiplayer/",
+  "description": "Adds Multiplayer to the game, along with other functionality like Queues and the Challenge mode",
+  "dependencies": [
+    "BepInEx-BepInExPack-5.4.2304",
+    "aiden_ytarame-PaApi-1.0.0"
+  ]
+}
