@@ -8,8 +8,11 @@
     "name": "Pidge"
   },
   "76561199141999343": {
-    "color": "0cfdc6",
-    "color2": "8fffe5",
+    "colors": [
+      "0cfdc6",
+      "b0ffed",
+      "0cfdc6",
+    ],
     "name": "Aiden"
   },
   "76561199088465180": {
