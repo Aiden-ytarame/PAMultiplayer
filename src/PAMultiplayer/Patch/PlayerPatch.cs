@@ -740,6 +740,17 @@ public static class TrailPatch
     }
 }
 
+[HarmonyPatch(typeof(PlayerText))]
+public static class PlayerTextPatch
+{
+    [HarmonyPatch(nameof(PlayerText.DisplayText), typeof(string), typeof(float))]
+    [HarmonyPrefix]
+    static void PreDisplay(PlayerText __instance)
+    {
+        __instance.text.richText = true; //player display name disables this
+    }
+}
+
 [HarmonyPatch(typeof(MeshDeformation))]
 public static class MeshDeformationPatch
 {

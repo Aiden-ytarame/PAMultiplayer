@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using AttributeNetworkWrapperV2;
 using HarmonyLib;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
@@ -156,6 +157,7 @@ public class SystemManagerPatch
 
 public static class SteamIdLocalExtension
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsLocalPlayer(this SteamId id)
     {
         return id == GlobalsManager.LocalPlayerId;

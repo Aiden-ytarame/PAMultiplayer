@@ -17,7 +17,7 @@ namespace PAMultiplayer.Managers;
 public class LobbyScreenManager : MonoBehaviour
 {
     public static LobbyScreenManager Instance { get; private set; }
-    public static Dictionary<ulong, string> SpecialColors = new();
+    public static Dictionary<ulong, Color[]> SpecialColors = new();
 
     public UI_Menu LobbyMenu;
     
@@ -124,15 +124,27 @@ public class LobbyScreenManager : MonoBehaviour
 
         var playerEntry = Instantiate(_playerPrefab, _playersList.transform).transform;
 
-        if (SpecialColors.TryGetValue(player, out var hex))
-        {
-            playerName = $"<color=#{hex}>{playerName}";
-        }
-
         var text = playerEntry.GetComponentInChildren<TextMeshProUGUI>();
         text.text = playerName;
-        UIStateManager.Inst.RefreshTextCache(text, playerName);
+        text.richText = !Settings.DisableRichText.Value;
 
+        UIStateManager.Inst.RefreshTextCache(text, playerName);
+        
+        if (SpecialColors.TryGetValue(player, out var colors))
+        {
+            if (colors.Length >= 1)
+            {
+                if (colors.Length >= 2)
+                {
+                    text.OnPreRenderText += info => MPUtility.SetFullTextGradient(info, colors[0], colors[1]);
+                }
+                else
+                {
+                    text.color = colors[0];
+                }
+            }
+        }
+        
         playerEntry.GetComponent<UI_Text>().ShowCustom(0.2f);
         _playerList.Add(player, playerEntry);
 

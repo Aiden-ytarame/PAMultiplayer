@@ -15,7 +15,7 @@ public class PAM : BaseUnityPlugin
     private Harmony _harmony;
     public const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "1.2.1";
+    public const string Version = "1.2.2";
 
     private void Awake()
     {
@@ -38,6 +38,7 @@ public class PAM : BaseUnityPlugin
         
             builder.Slider("No Repeats in Challenge", Settings.NoRepeat, UI_Slider.VisualType.line, "0 Rounds", "1 Round", "2 Rounds", "3 Rounds", "Infinite");
             builder.Toggle("Chat Enabled", Settings.Chat);
+            builder.Toggle("Disable Rich Text", Settings.DisableRichText);
             builder.Toggle("Linked Health Hit Popup", Settings.Linked);
             builder.Toggle("Allow hidden workshop levels", Settings.AllowNonPublicLevels);
         });

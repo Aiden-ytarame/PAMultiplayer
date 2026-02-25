@@ -156,11 +156,13 @@
     </ItemGroup>
     
     <Target Name="PackageProduct" AfterTargets="PostBuildEvent">
+        <RemoveDir Directories="$(ReleaseDir)" />
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginDir)" />
+        <Copy SourceFiles="$(TargetDir)/$(AssemblyName).pdb" DestinationFolder="$(PluginDir)" Condition="'$(Configuration)' == 'Debug'" />
         <Copy SourceFiles="@(AdditionalPluginsFiles)" DestinationFolder="$(PluginDir)" />
         <Copy SourceFiles="@(AdditionalPatchersFiles)" DestinationFolder="$(PatcherDir)" />
         <Copy SourceFiles="@(AdditionalFiles)" DestinationFolder="$(ReleaseDir)" ContinueOnError="true" />
-
+        
         <ZipDirectory SourceDirectory="$(ReleaseDir)" DestinationFile="$(RootDir)$(MSBuildProjectName)--$(Configuration).zip" Overwrite="true" />
     </Target>
 </Project>

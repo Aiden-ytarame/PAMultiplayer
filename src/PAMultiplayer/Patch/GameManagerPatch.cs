@@ -178,26 +178,36 @@ public partial class GameManagerPatch
             PAM.Logger.LogError("Failed to fetch external data :(");
             yield break;
         }
-
+        
         JSONNode nameColors = JSON.Parse(webRequest.downloadHandler.text);
-        Dictionary<ulong, string> newColors = new();
-
+        LobbyScreenManager.SpecialColors.Clear();
+        
         foreach (var playerColor in nameColors)
         {
             if (!ulong.TryParse(playerColor.Key, out var id))
             {
                 continue;
             }
-
-            string color = playerColor.Value["color"];
-            if (color != null)
+            
+            if (playerColor.Value.HasKey("color"))
             {
-                PAM.Logger.LogInfo($"Loaded custom color for { playerColor.Value["name"].Value}");
-                newColors.Add(id, color);
+                string colorHex = playerColor.Value["color"];
+                string colorHex2 = playerColor.Value["color2"];
+                if (!string.IsNullOrEmpty(colorHex) && ColorUtility.TryParseHtmlString($"#{colorHex}", out var color))
+                {
+                    PAM.Logger.LogInfo($"Loaded custom color for { playerColor.Value["name"].Value}");
+                
+                    if (!string.IsNullOrEmpty(colorHex2) && ColorUtility.TryParseHtmlString($"#{colorHex2}", out var color2))
+                    {
+                        LobbyScreenManager.SpecialColors.Add(id, [color, color2]);
+                        continue;
+                    }
+                
+                    LobbyScreenManager.SpecialColors.Add(id, [color]);
+                }
             }
         }
-
-        LobbyScreenManager.SpecialColors = newColors;
+        
         GlobalsManager.HasLoadedExternalInfo = true;
     }
     

@@ -165,6 +165,7 @@ namespace PAMultiplayer.Patch
         {
             //stupid hack lmao
             yield return new WaitForUpdate();
+            yield return new WaitForUpdate();
             
             foreach (var currentLobbyMember in SteamLobbyManager.Inst.CurrentLobby.Members)
             {
@@ -172,12 +173,7 @@ namespace PAMultiplayer.Patch
                 {
                     string text = currentLobbyMember.Name;
 
-                    if (LobbyScreenManager.SpecialColors.TryGetValue(currentLobbyMember.Id, out var hex))
-                    {
-                        text = $"<color=#{hex}>{currentLobbyMember.Name}";
-                    }
-
-                    if (currentLobbyMember.Id == GlobalsManager.LocalPlayerId)
+                    if (currentLobbyMember.Id.IsLocalPlayer())
                     {
                         text = "YOU";
                         if (!ChallengeManager.Inst && player.VGPlayerData.PlayerObject)
@@ -188,9 +184,37 @@ namespace PAMultiplayer.Patch
 
                     //band-aid fix for an error here
 
-                    if (player.VGPlayerData.PlayerObject && player.VGPlayerData.PlayerObject.Player_Text)
+                    PlayerText pt = player.VGPlayerData?.PlayerObject?.Player_Text;
+                    if (!pt)
                     {
-                        player.VGPlayerData.PlayerObject.Player_Text.DisplayText(text, 3);
+                        continue;
+                    }
+                    
+                    pt.text.richText = !Settings.DisableRichText.Value;
+                    pt.StopCoroutine("HideTextAfterTime");
+                    pt.DisplayText(text);
+                    pt.StartCoroutine(pt.HideTextAfterTime(3));
+
+                    if (currentLobbyMember.Id.IsLocalPlayer() ||
+                        !LobbyScreenManager.SpecialColors.TryGetValue(currentLobbyMember.Id, out var colors))
+                    {
+                        continue;
+                    }
+
+                    switch (colors.Length)
+                    {
+                        case 1:
+                            pt.text.color = colors[0];
+                            break;
+                        case 2:
+                            void SetGradient(TMP_TextInfo info)
+                            {
+                                pt.text.OnPreRenderText -= SetGradient;
+                                MPUtility.SetFullTextGradient(info, colors[0], colors[1]);
+                            }
+
+                            pt.text.OnPreRenderText += SetGradient;
+                            break;
                     }
                 }
             }

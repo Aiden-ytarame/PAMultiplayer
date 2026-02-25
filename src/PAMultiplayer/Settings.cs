@@ -12,6 +12,7 @@ internal static class Settings
     public static ConfigEntry<int> TransparentAlpha {get; private set;}
     public static ConfigEntry<int> NoRepeat {get; private set;}
     public static ConfigEntry<bool> Chat {get; private set;}
+    public static ConfigEntry<bool> DisableRichText {get; private set;}
     public static ConfigEntry<bool> Linked {get; private set;}
     public static ConfigEntry<bool> AllowNonPublicLevels {get; private set;}
     public static ConfigEntry<int> Score {get; private set;}
@@ -31,6 +32,7 @@ internal static class Settings
         TransparentAlpha = config.Bind(new ConfigDefinition("General", "Transparent Alpha"), 0);
         NoRepeat = config.Bind(new ConfigDefinition("General", "No Repeat"), 0);
         Chat = config.Bind(new ConfigDefinition("General", "Chat Enabled"), true);
+        DisableRichText = config.Bind(new ConfigDefinition("General", "Disable Rich Text"), false);
         Linked = config.Bind(new ConfigDefinition("General", "Linked Health Popup"), true);
         AllowNonPublicLevels = config.Bind(new ConfigDefinition("General", "Allow Private Levels"), false);
         Score = config.Bind(new ConfigDefinition("General", "Score"), 0, new ConfigDescription("I know you\'re thinking about it, dont do it... be legitimate..."));
