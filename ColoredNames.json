@@ -1,7 +1,7 @@
 {
   "76561198895041739": {
-    "color": "ffd000",
-    "color2": "bb00ff",
+    "color": "bb00ff",
+    "color2": "ffd000",
     "name": "Maxine"
   },
   "76561198040724652": {
@@ -67,6 +67,7 @@
   },
   "76561198253055045" {
     "color": "bda4ff",
+    "color2": "e1d6ff",
     "name": "Coda"
   }
 }
