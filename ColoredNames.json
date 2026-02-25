@@ -1,6 +1,7 @@
 {
   "76561198895041739": {
-    "color": "ffd000>Max<color=#bb00ff>ine<color=#00000000><cspace=-0.6>",
+    "color": "bb00ff",
+    "color2": "ffd000",
     "name": "Maxine"
   },
   "76561198040724652": {
@@ -9,6 +10,7 @@
   },
   "76561199141999343": {
     "color": "0cfdc6",
+    "color2": "e3fcf7",
     "name": "Aiden"
   },
   "76561199088465180": {
@@ -62,6 +64,11 @@
   "76561198746206155": {
     "color": "ffb300",
     "name": "Laguun fan"
+  },
+  "76561198253055045" {
+    "color": "bda4ff",
+    "color2": "e1d6ff",
+    "name": "Coda"
   }
 }
 
