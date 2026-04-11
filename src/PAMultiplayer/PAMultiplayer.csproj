@@ -156,7 +156,7 @@
     </ItemGroup>
     
     <Target Name="PackageProduct" AfterTargets="PostBuildEvent">
-        <RemoveDir Directories="$(ReleaseDir)" />
+        <RemoveDir Directories="$(PluginDir)" />
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PluginDir)" />
         <Copy SourceFiles="$(TargetDir)/$(AssemblyName).pdb" DestinationFolder="$(PluginDir)" Condition="'$(Configuration)' == 'Debug'" />
         <Copy SourceFiles="@(AdditionalPluginsFiles)" DestinationFolder="$(PluginDir)" />

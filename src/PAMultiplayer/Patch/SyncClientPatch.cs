@@ -25,10 +25,10 @@ public static partial class CheckpointHandler
         
         float songTime = __instance.CurrentSongTimeSmoothed;
      
+      
         if (DataManager.inst.gameData.beatmapData.checkpoints.Count > 0)
         {
             int tmpIndex = -1;
-            
             for (var i = 0; i < DataManager.inst.gameData.beatmapData.checkpoints.Count; i++)
             {
                 if(i <= __instance.currentCheckpointIndex)

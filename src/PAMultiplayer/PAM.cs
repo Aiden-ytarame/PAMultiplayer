@@ -15,7 +15,7 @@ public class PAM : BaseUnityPlugin
     private Harmony _harmony;
     public const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
-    public const string Version = "1.2.2";
+    public const string Version = "1.2.4";
 
     private void Awake()
     {
@@ -30,7 +30,7 @@ public class PAM : BaseUnityPlugin
         {
             builder.Label("<b>TRANSPARENT NANOS</b> - and related settings");
         
-            builder.Toggle("Transparent Nanos", Settings.Transparent);
+            builder.Toggle("Transparent Nanos", "Makes remote players transparent", Settings.Transparent);
             builder.Slider("Transparent Opacity", Settings.TransparentAlpha, UI_Slider.VisualType.line, "35%", "50%", "85%");
             builder.Spacer();
         

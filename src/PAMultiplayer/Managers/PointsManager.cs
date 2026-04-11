@@ -5,6 +5,7 @@ using AttributeNetworkWrapperV2;
 using Crosstales;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using Steamworks;
+using Steamworks.Data;
 using TMPro;
 using UnityEngine;
 using VGFunctions;
@@ -53,6 +54,9 @@ public partial class PointsManager : MonoBehaviour
 
     }
 
+    private Leaderboard? leaderboard;
+    private int _currentPoint = 0;
+    
     public static PointsManager Inst;
     private float _levelDuration = 0;
 
@@ -83,7 +87,7 @@ public partial class PointsManager : MonoBehaviour
 
     private static readonly string[] PlayerShapes = ["■", "▲", "<size=60>●", "<size=50><voffset=-15>^"];
 
-    private void Awake()
+    private async void Awake()
     {
         if (Inst)
         {
@@ -107,6 +111,18 @@ public partial class PointsManager : MonoBehaviour
         _playerList = _menu.transform.Find("PlayersList");
         
         _playerEntryPrefab = _pointsBundle.LoadAsset("assets/playerentry.prefab") as GameObject;
+
+        leaderboard = await SteamUserStats.FindOrCreateLeaderboardAsync("MP_MOD_Points", LeaderboardSort.Descending,
+            LeaderboardDisplay.Numeric);
+
+        if (leaderboard.HasValue)
+        {
+            var entry = await leaderboard.Value.GetScoresForUsersAsync([SteamClient.SteamId]);
+            if (entry.Length > 0)
+            {
+                _currentPoint = entry[0].Score;
+            }
+        }
     }
 
     private void OnDestroy()
@@ -154,12 +170,24 @@ public partial class PointsManager : MonoBehaviour
     private void LevelEnded()
     {
         int score = Settings.Score.Value;
+        if (_currentPoint > score)
+        {
+            score = _currentPoint;
+        }
+        
         if (!GlobalsManager.JoinedMidLevel && !GameManager.Inst.IsPractice)
         {
             score += GetWonChallenges();
         }
 
         Settings.Score.Value = score;
+        _currentPoint = score;
+
+        if (leaderboard.HasValue)
+        {
+            leaderboard.Value.SubmitScoreAsync(score);
+        }
+        
         if (GlobalsManager.IsMultiplayer)
         {
             CallRpc_Client_SendResults(_localHits, _localBoosts, _localCc, score, GlobalsManager.JoinedMidLevel);

@@ -1,3 +1,4 @@
-* fixed 'invalid lobby' when hosting challenge
-* fixed level vote sfx playing too many times
-* level vote preview song now plays the creator set preview time if available
+* Added gradient names
+* Added setting to disable rich text on player names/chat (had to be you ench)
+
+If you find a good level that can cause massive desync because of triggers let me know
