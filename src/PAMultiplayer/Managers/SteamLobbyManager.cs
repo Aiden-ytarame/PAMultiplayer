@@ -2,10 +2,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AttributeNetworkWrapperV2;
 using Newtonsoft.Json;
 using PaApi;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
+using PAMultiplayer.UI;
 using Steamworks;
 using Steamworks.Data;
 using Systems.SceneManagement;
@@ -17,13 +19,14 @@ namespace PAMultiplayer.Managers;
 /// <summary>
 /// handles the steam lobby callbacks
 /// </summary>
-public class SteamLobbyManager : MonoBehaviour
+public partial class SteamLobbyManager : MonoBehaviour
 {
     public enum LobbyState : ushort
     {
         Lobby,
         Playing,
-        Challenge
+        Challenge,
+        Max
     }
     
     public Lobby CurrentLobby;
@@ -66,9 +69,7 @@ public class SteamLobbyManager : MonoBehaviour
 
     private void OnChatMessage(Lobby lobby, Friend friend, string message)
     {
-        if (!Settings.Chat.Value ||
-            !GlobalsManager.Players.TryGetValue(friend.Id, out var player) ||
-            !player.VGPlayerData.PlayerObject.IsValidPlayer())
+        if (!Settings.Chat.Value)
         {
             return;
         }
@@ -77,8 +78,21 @@ public class SteamLobbyManager : MonoBehaviour
         {
             message = message.Substring(0, 25);
         }
+
+        string messageFix = message.Replace('_', ' ');
+
+        if (!friend.IsMe)
+        {
+            DebugController.inst.AddLog($"<b>{friend.Name}:</b> {messageFix}");
+        }
         
-        player.VGPlayerData.PlayerObject.Player_Text.DisplayText(message.Replace('_',' '), 5);
+        if (!GlobalsManager.Players.TryGetValue(friend.Id, out var player) ||
+            !player.VGPlayerData.PlayerObject.IsValidPlayer())
+        {
+            return;
+        }
+        
+        player.VGPlayerData.PlayerObject.Player_Text.DisplayText(messageFix, 5);
     }
 
     private void OnLobbyDataChanged(Lobby lobby)
@@ -87,19 +101,8 @@ public class SteamLobbyManager : MonoBehaviour
         {
             LobbyScreenManager.Instance.UpdateQueue();
         }
-        
-        if (bool.TryParse(lobby.GetData("LinkedMod"), out var linkedMod))
-        {
-            DataManager.inst.UpdateSettingBool("mp_linkedHealth", linkedMod);
-        }
-        
-        if (ushort.TryParse(lobby.GetData("LobbyState"), out var lobbyState))
-        {
-            GlobalsManager.LobbyState = (LobbyState)lobbyState;
-        }
-        
     }
-
+    
     private void OnLobbyMemberDataChanged(Lobby lobby, Friend friend)
     {
         //data changed always means loaded
@@ -217,7 +220,7 @@ public class SteamLobbyManager : MonoBehaviour
 
     private void OnLobbyEntered(Lobby lobby)
     {
-        //lobby.Refresh();
+        lobby.Refresh();
         
         if (!lobby.Owner.Id.IsLocalPlayer() && lobby.GetData("AlphaMultiplayer") != "true")
         {
@@ -225,6 +228,8 @@ public class SteamLobbyManager : MonoBehaviour
             SceneLoader.Inst.manager.ClearLoadingTasks();
             SceneLoader.inst.LoadSceneGroup("Menu");
             SteamManager.Inst.EndClient();
+            ErrorScreen.CreateErrorScreen($"Tried to join invalid Lobby [<b>{lobby.Id}</b>] by [<b>{lobby.Owner.Name}</b>]!\n\nTry again in a few seconds, if it doesnt work it may be a different MP version, or another mod");
+
             PAM.Logger.LogError($"Tried to join invalid lobby by [{lobby.Owner.Name}]");
             return;
         }
@@ -233,7 +238,7 @@ public class SteamLobbyManager : MonoBehaviour
         CurrentLobby = lobby;
         InLobby = true;
         
-        int _playerAmount = 0;
+        int playerAmount = 0;
 
         if (lobby.Owner.Id.IsLocalPlayer())
         {
@@ -241,109 +246,29 @@ public class SteamLobbyManager : MonoBehaviour
             SetupLobby(lobby);
             return;
         }
-
-        PAM.Logger.LogInfo($"Level Id [{lobby.GetData("LevelId")}]");
         
         foreach (var lobbyMember in lobby.Members)
         {
-            VGPlayerManager.VGPlayerData NewData = new VGPlayerManager.VGPlayerData();
-            NewData.PlayerID = _playerAmount; //by the way, this can cause problems
-            NewData.ControllerID = _playerAmount;
+            VGPlayerManager.VGPlayerData newData = new VGPlayerManager.VGPlayerData();
+            newData.PlayerID = playerAmount; //by the way, this can cause problems
+            newData.ControllerID = playerAmount;
 
-            GlobalsManager.Players.Add(lobbyMember.Id, new PlayerData(NewData, lobbyMember.Name));
+            GlobalsManager.Players.Add(lobbyMember.Id, new PlayerData(newData, lobbyMember.Name));
 
             AddPlayerToLoadList(lobbyMember.Id);
             if(CurrentLobby.GetMemberData(lobbyMember, "IsLoaded") == "1")
             {
                 SetLoaded(lobbyMember.Id);
             }
-            _playerAmount++;
+            playerAmount++;
         }
 
         GlobalsManager.HasLoadedExternalInfo = false;
         GlobalsManager.HasLoadedBasePlayerIds = false;
+        GlobalsManager.HasLoadedMainLobbyInfo = false;
+        GlobalsManager.HasLoadedMidLobbyInfo = false;
         
-        if (ushort.TryParse(lobby.GetData("LobbyState"), out var lobbyState))
-        {
-            GlobalsManager.LobbyState = (LobbyState)lobbyState;
-        }
-        else
-        {
-            CurrentLobby.Leave();
-            PAM.Logger.LogFatal("No lobby state specified!");
-            return;
-        }
-
-        if (GlobalsManager.LobbyState != LobbyState.Challenge)
-        {
-            string levelId = lobby.GetData("LevelId");
-            if (!string.IsNullOrEmpty(levelId))
-            {
-                GlobalsManager.LevelId = levelId;
-            }
-            else
-            {
-                CurrentLobby.Leave();
-                PAM.Logger.LogFatal("Invalid LevelId! something went very wrong.");
-                return;
-            }
-        }
-        
-        //modifiers
-        if (int.TryParse(lobby.GetData("HealthMod"), out var healthMod))
-        {
-            DataManager.inst.UpdateSettingEnum("ArcadeHealthMod", healthMod);
-        }
-        else
-        {
-            DataManager.inst.UpdateSettingEnum("ArcadeHealthMod", 0);
-            PAM.Logger.LogInfo("No Health Mod specified.");
-        }
-        //
-        if (int.TryParse(lobby.GetData("SpeedMod"), out var speedMod))
-        {
-            DataManager.inst.UpdateSettingEnum("ArcadeSpeedMod", speedMod);
-        }
-        else
-        {
-            DataManager.inst.UpdateSettingEnum("ArcadeSpeedMod", 0);
-            PAM.Logger.LogInfo("No Speed Mod specified.");
-        }
-        //
-        if (bool.TryParse(lobby.GetData("LinkedMod"), out var linkedMod))
-        {
-            DataManager.inst.UpdateSettingBool("mp_linkedHealth", linkedMod);
-        }
-        else
-        {
-            DataManager.inst.UpdateSettingBool("mp_linkedHealth", false);
-            PAM.Logger.LogInfo("No Linked Mod specified.");
-        }
-     
-        
-        if(int.TryParse(lobby.GetData("seed"), out int seed))
-        {
-            RandSeed = seed;
-        }
-        else
-        {
-            RandSeed = Random.seed;
-            PAM.Logger.LogFatal("Failed to parse random seed.");
-        }
-        PAM.Logger.LogInfo($"SEED : {RandSeed}");
-
         GlobalsManager.Queue.Clear();
-
-        var level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId);
-        if (level != null)
-        {
-            ArcadeManager.Inst.CurrentArcadeLevel = level;
-            SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-            return;
-        }
-
-        GlobalsManager.IsDownloading = true;
-        PAM.Logger.LogError("You did not have the lobby's level downloaded!, Downloading Level...");
         SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
     }
 
@@ -352,7 +277,9 @@ public class SteamLobbyManager : MonoBehaviour
     {
         if (result != Result.OK)
         {
-            PAM.Logger.LogError($"Failed to create lobby : Result [{result}]");
+            PAM.Logger.LogError($"Failed to create lobby.. Result [{result}]");
+            ErrorScreen.CreateErrorScreen($"Failed to create lobby\nSteam result: {result}");
+
             lobby.Leave();
             SteamManager.Inst.EndServer();
             SceneLoader.Inst.manager.ClearLoadingTasks();
@@ -372,6 +299,7 @@ public class SteamLobbyManager : MonoBehaviour
         if (GlobalsManager.IsChallenge)
         {
             lobby.SetData("LobbyState", ((ushort)LobbyState.Challenge).ToString());
+            PaMNetworkManager.CallRpc_Multi_UpdateLobbyState((byte)LobbyState.Challenge);
         }
         else
         {
@@ -381,15 +309,10 @@ public class SteamLobbyManager : MonoBehaviour
             lobby.SetData("LevelId", GlobalsManager.LevelId);
             lobby.SetData("seed", RandSeed.ToString());
             lobby.SetData("LobbyState", ((ushort)LobbyState.Lobby).ToString());
+            PaMNetworkManager.CallRpc_Multi_UpdateLobbyState((byte)LobbyState.Lobby);
         }
-
-        List<string> levelNames = new();
-        foreach (var id in GlobalsManager.Queue)
-        {
-            VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-            levelNames.Add(level.TrackName);
-        }
-        lobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
+      
+        lobby.SetData("LevelQueue", JsonConvert.SerializeObject(GlobalsManager.GetQueueLevelNames()));
         lobby.SetData("HealthMod", DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0).ToString());
         lobby.SetData("LinkedMod", DataManager.inst.GetSettingBool("mp_linkedHealth", false).ToString());
         lobby.SetData("SpeedMod", DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0).ToString());

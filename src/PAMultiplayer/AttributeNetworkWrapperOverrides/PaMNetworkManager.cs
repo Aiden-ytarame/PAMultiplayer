@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using AttributeNetworkWrapperV2;
 using BepInEx.Bootstrap;
 using PAMultiplayer.Managers;
+using PAMultiplayer.UI;
 using Steamworks;
 using Systems.SceneManagement;
 using NetworkManager = AttributeNetworkWrapperV2.NetworkManager;
@@ -105,7 +106,15 @@ public partial class PaMNetworkManager : NetworkManager
     public override void OnServerClientConnected(ClientNetworkConnection connection)
     {
         base.OnServerClientConnected(connection);
+
+        if (!ulong.TryParse(GlobalsManager.LevelId, out var level))
+        {
+            PAM.Logger.LogError("Tried to send local level to client");
+            ErrorScreen.CreateErrorScreen("Tried to send local level to client, disconnecting...\n\nHost another level and try again");
+            connection.Disconnect();
+        }
         
+        CallRpc_Client_SetMainLobbyData(connection, level, SteamLobbyManager.Inst.RandSeed, (byte)GlobalsManager.LobbyState, (byte)DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0), (byte)DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0), DataManager.inst.GetSettingBool("mp_linkedHealth", false));
         foreach (var keyValuePair in GlobalsManager.Players)
         {
             CallRpc_Client_RegisterPlayerId(connection, keyValuePair.Key, keyValuePair.Value.VGPlayerData.PlayerID, GlobalsManager.Players.Count);
@@ -199,6 +208,59 @@ public partial class PaMNetworkManager : NetworkManager
         }
     }
 
+    [ClientRpc]
+    private static void Client_SetMainLobbyData(ulong levelId, int seed, byte state, byte healthMod, byte speedMod, bool linked)
+    {
+        if (state < (byte)SteamLobbyManager.LobbyState.Max)
+        {
+            GlobalsManager.LobbyState = (SteamLobbyManager.LobbyState)state;
+        }
+
+        if (GlobalsManager.LobbyState != SteamLobbyManager.LobbyState.Challenge)
+        {
+            GlobalsManager.LevelId = levelId.ToString();
+        }
+        
+        //modifiers
+        DataManager.inst.UpdateSettingEnum("ArcadeHealthMod", healthMod);
+        DataManager.inst.UpdateSettingEnum("ArcadeSpeedMod", speedMod);
+        DataManager.inst.UpdateSettingBool("mp_linkedHealth", linked);
+        SteamLobbyManager.Inst.RandSeed = seed;
+        PAM.Logger.LogInfo($"SEED : {seed}");
+
+        GlobalsManager.HasLoadedMainLobbyInfo = true;
+    }
+    
+    [MultiRpc]
+    public static void Multi_UpdateLobbyState(byte state)
+    {
+        if (state < (ushort)SteamLobbyManager.LobbyState.Max)
+        {
+            GlobalsManager.LobbyState = (SteamLobbyManager.LobbyState)state;
+        }
+    }
+    
+    [MultiRpc]
+    public static void Multi_UpdateModifier(byte modifier, byte value)
+    {
+        switch (modifier)
+        {
+            case 0:
+                DataManager.inst.UpdateSettingEnum("ArcadeHealthMod", value);
+                break;
+            case 1:
+                DataManager.inst.UpdateSettingEnum("ArcadeSpeedMod", value);
+                break;
+            case 2:
+                DataManager.inst.UpdateSettingBool("mp_linkedHealth", value == 1);
+                break;
+            default:
+                PAM.Logger.LogError($"");
+                break;
+        }
+    }
+
+    
     [MultiRpc]
     private static void Multi_PlayerLeft(SteamId steamId)
     {
@@ -245,7 +307,8 @@ public partial class PaMNetworkManager : NetworkManager
     public static void Client_MissingMod(string modGuid)
     {
         PAM.Logger.LogError($"Mod [{modGuid}] is missing or has incorrect version, host requested client to disconnect");
-        
+        ErrorScreen.CreateErrorScreen($"Required mod missing, GUID: {modGuid}\n\nDisconnecting...");
+
         PamInstance.Shutdown();
         PamInstance = null;
         

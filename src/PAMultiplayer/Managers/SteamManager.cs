@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using AttributeNetworkWrapperV2;
 using HarmonyLib;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
+using PAMultiplayer.UI;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -45,10 +46,20 @@ public class SteamManager : MonoBehaviour
         EndServer();
         EndClient();
     }
+    
     public void InitSteamClient()
     {
         if (SteamClient.IsValid)
+        {
+            SteamNetworkingUtils.ConnectionTimeout = 5000;
+            SteamNetworkingUtils.Timeout = 6000;
+            SteamNetworkingUtils.SendRateMax = 524288;
+            SteamNetworkingUtils.SendBufferSize = 10485760;
+            GlobalsManager.LocalPlayerId = SteamClient.SteamId;
+            PAM.Logger.LogWarning("Steam was already Initialized");
             return;
+        }
+        
             
         try
         {
@@ -66,20 +77,20 @@ public class SteamManager : MonoBehaviour
         {
             PAM.Logger.LogError("failed to initialize steam");
         }
-        
     }
 
     
     private void OnGameLobbyJoinRequested(Lobby lobby, SteamId steamId)
     {
-        //tylobby.Refresh();
-        
+        lobby.Refresh(); //stupid hack
+
         if (lobby.GetData("AlphaMultiplayer") != "true")
         {
             PAM.Logger.LogError($"Tried to join invalid lobby [{lobby.Id.ToString()}]");
+            ErrorScreen.CreateErrorScreen($"Tried to join invalid Lobby [<b>{lobby.Id}</b>] by [<b>{lobby.Owner.Name}</b>]!\n\nTry again in a few seconds, if it doesnt work it may be a different MP version, or another mod");
             return;
         }
-        
+
         GlobalsManager.IsHosting = false;
         GlobalsManager.IsMultiplayer = true;
         PAM.Logger.LogInfo($"Joining friend's lobby owned by [{steamId}]");
@@ -109,7 +120,8 @@ public class SteamManager : MonoBehaviour
         GlobalsManager.IsMultiplayer = false;
         GlobalsManager.IsHosting = false;
         GlobalsManager.JoinedMidLevel = false;
-        GlobalsManager.HasLoadedLobbyInfo = true;
+        GlobalsManager.HasLoadedMidLobbyInfo = true;
+        GlobalsManager.HasLoadedMainLobbyInfo = true;
         
         SteamLobbyManager.Inst.LeaveLobby();
         WrapperNetworkManager.Instance?.Disconnect();

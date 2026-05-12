@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Crosstales;
 using Newtonsoft.Json;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using Steamworks;
 using Systems.SceneManagement;
 using TMPro;
@@ -24,11 +25,9 @@ public class LobbyScreenManager : MonoBehaviour
     readonly Dictionary<ulong, Transform> _playerList = new();
     
     Transform _playersList;
-    GameObject _playerPrefab;
 
     Transform _queueList;
-    GameObject _queueEntryPrefab;
-
+    
     private MultiElementButton ResumeButton;
     private MultiElementButton QuitButton;
 
@@ -38,20 +37,10 @@ public class LobbyScreenManager : MonoBehaviour
         Instance = this;
         VGCursor.Inst.ShowCursor();
 
-        Transform UiManager = PauseUIManager.Inst.transform.parent;
-        GameObject lobbyGo;
-            
-        using (var stream = Assembly.GetExecutingAssembly()
-                   .GetManifestResourceStream("PAMultiplayer.Assets.lobbymenuv2"))
-        {
-            var lobbyBundle = AssetBundle.LoadFromMemory(stream!.CTReadFully());
-            lobbyGo = Instantiate(lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[0]) as GameObject, UiManager.transform);
-            _playerPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[1]) as GameObject;
-            _queueEntryPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[2]) as GameObject;
-          
-            lobbyBundle.Unload(false);
-        }
-        
+        Transform uiManager = PauseUIManager.Inst.transform.parent;
+
+
+        var lobbyGo = Instantiate(PAM.LobbyScreenPrefab, uiManager.transform);
         lobbyGo.name = "PAM_Lobby";
         LobbyMenu = lobbyGo.GetComponent<UI_Menu>();
         
@@ -122,7 +111,7 @@ public class LobbyScreenManager : MonoBehaviour
             return;
         }
 
-        var playerEntry = Instantiate(_playerPrefab, _playersList.transform).transform;
+        var playerEntry = Instantiate(PAM.LobbyPlayerEntryPrefab, _playersList.transform).transform;
 
         var text = playerEntry.GetComponentInChildren<TextMeshProUGUI>();
         text.text = playerName;
@@ -209,6 +198,7 @@ public class LobbyScreenManager : MonoBehaviour
                 
         VGPlayerManager.Inst.RespawnPlayers();
         
+        PaMNetworkManager.CallRpc_Multi_UpdateLobbyState((byte)SteamLobbyManager.LobbyState.Playing);
         SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)SteamLobbyManager.LobbyState.Playing).ToString());
         GlobalsManager.HasStarted = true;
         
@@ -243,7 +233,7 @@ public class LobbyScreenManager : MonoBehaviour
         
         foreach (var queueEntry in queue)
         {
-            var entry = Instantiate(_queueEntryPrefab, _queueList);
+            var entry = Instantiate(PAM.LobbyQueueEntryPrefab, _queueList);
             entry.GetComponentInChildren<TextMeshProUGUI>().text = queueEntry;
         }
     }

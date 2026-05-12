@@ -25,7 +25,7 @@ namespace PAMultiplayer.Managers
     
     /// <summary>
     /// Holds global variables like Local player steamId and Player list
-    /// Most of this could be moved to PamNetworkManager, but we're too far in ig
+    /// This class should not exist, but refactoring would take a lot of my time and I gain nothing from it
     /// </summary>
     public static class GlobalsManager
     {
@@ -36,6 +36,23 @@ namespace PAMultiplayer.Managers
         public static readonly Dictionary<int, SteamId> ConnIdToSteamId = new();
         
         public static List<string> Queue = new();
+
+        public static List<string> GetQueueLevelNames()
+        {
+            List<string> levelNames = new();
+            for (var i = 0; i < Queue.Count; i++)
+            {
+                if (i > 9 && Queue.Count != 11)
+                {
+                    levelNames.Add($"+{Queue.Count - i} Levels");
+                    break;
+                }
+                VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(Queue[i]);
+                levelNames.Add(level.TrackName);
+            }
+            
+            return levelNames;
+        }
         
         public static string LevelId;
         public static bool IsMultiplayer = false;
@@ -46,8 +63,12 @@ namespace PAMultiplayer.Managers
 
         public static bool HasLoadedExternalInfo;
         public static bool HasLoadedBasePlayerIds;
-        public static bool HasLoadedLobbyInfo = true;
+
+        public static bool HasLoadedAllLobbyInfo => HasLoadedMainLobbyInfo && HasLoadedMidLobbyInfo;
         
+        public static bool HasLoadedMidLobbyInfo = true;
+        public static bool HasLoadedMainLobbyInfo = true;
+
         public static bool IsReloadingLobby = false;
         public static bool HasStarted = false;
         public static bool IsDownloading = false;

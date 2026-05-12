@@ -67,9 +67,9 @@ public static partial class CheckpointHandler
         
         for (var i = 0; i < GlobalsManager.HitsQueue.Count; i++)
         {
-            HitInfo  hitInfo = GlobalsManager.HitsQueue[i];
+            HitInfo hitInfo = GlobalsManager.HitsQueue[i];
 
-            if (hitInfo.Checkpoint > index)
+            if (hitInfo.Checkpoint != index)
             {
                 continue;
             }
@@ -104,11 +104,9 @@ public static partial class RewindHandler
         {
             _deathAction = x =>
             {
-                //if any player is alive don't rewind
-                foreach (var vgPlayerData in VGPlayerManager.Inst.players)
+                if (!GameManager.Inst.AreAllPlayersDead())
                 {
-                   if(vgPlayerData.PlayerObject.IsValidPlayer()) //if player object exist
-                       return; //dont rewind
+                    return;
                 }
 
                 int index = 0;
@@ -133,10 +131,12 @@ public static partial class RewindHandler
     [MultiRpc]
     public static void Multi_RewindToCheckpoint(int index)
     {
-        if (!GlobalsManager.HasLoadedLobbyInfo)
+        if (!GlobalsManager.HasLoadedAllLobbyInfo)
         {
             return;
         }
+
+        GlobalsManager.HitsQueue.Clear();
         
         PAM.Logger.LogInfo($"Rewind to Checkpoint [{index}] Received");
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)

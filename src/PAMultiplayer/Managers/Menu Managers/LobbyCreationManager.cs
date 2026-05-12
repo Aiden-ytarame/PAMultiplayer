@@ -1,4 +1,5 @@
 using System;
+using PAMultiplayer.UI;
 using Steamworks.Data;
 using Systems.SceneManagement;
 using UnityEngine;
@@ -54,6 +55,7 @@ public class LobbyCreationManager : MonoBehaviour
                     SceneLoader.Inst.LoadSceneGroup("Challenge");
                     return;
                 }
+                
                 PublishedFileId id = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID;
                 if (!GlobalsManager.Queue.Contains(id.ToString()))
                     GlobalsManager.Queue.Add(id.ToString());
@@ -77,7 +79,7 @@ public class LobbyCreationManager : MonoBehaviour
         
         LobbyCreationMenu.ShowBase();
         LobbyCreationMenu.SwapView("main");
-        LobbyCreationMenu.AllViews["main"].PossibleFirstButtons[0].Select();
+        //LobbyCreationMenu.AllViews["main"].PossibleFirstButtons[0].Select();
         CameraDB.Inst.SetUIVolumeWeightIn(0.2f);
     }
 

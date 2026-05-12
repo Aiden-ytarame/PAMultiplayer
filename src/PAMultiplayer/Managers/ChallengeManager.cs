@@ -10,6 +10,7 @@ using AttributeNetworkWrapperV2;
 using CielaSpike;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
+using PAMultiplayer.UI;
 using Steamworks;
 using Systems.SceneManagement;
 using TMPro;
@@ -23,6 +24,19 @@ namespace PAMultiplayer.Managers;
 
 public partial class ChallengeManager : MonoBehaviour
 {
+    class LoadState
+    {
+        public bool AudioLoaded = false;
+        public bool ImageLoaded = false;
+
+        public LoadState(bool audio = false, bool image = false)
+        {
+            AudioLoaded = audio;
+            ImageLoaded = image;
+        }
+
+        public bool Loaded => AudioLoaded && ImageLoaded;
+    }
     public static ChallengeManager Inst { get; private set; }
     public static readonly List<string> RecentLevels = new();
     
@@ -32,7 +46,7 @@ public partial class ChallengeManager : MonoBehaviour
     
     private readonly List<VoterCell> _levelButtons = new(6);
     private readonly List<VGLevel> _levelsToVote = new(6);
-    private readonly Dictionary<VGLevel, int> _loadedLevels = new(6);
+    private readonly Dictionary<VGLevel, LoadState> _loadedLevels = new(6);
     private readonly Dictionary<VGPlayer, VGLevel> _votes = new(16);
     private readonly ConcurrentDictionary<ulong, Tuple<short[], int, int>> _songData = new(); //struct here crashes bepinex lmao
     
@@ -70,10 +84,10 @@ public partial class ChallengeManager : MonoBehaviour
         {
             _levelButtons.Add(cells.GetChild(i).gameObject.AddComponent<VoterCell>());
         }
-        VGPlayerManager.Inst.LockPlayerAdding(false);
         
         if (GlobalsManager.IsMultiplayer)
         {
+            VGPlayerManager.Inst.LockPlayerAdding(false);
             StartCoroutine(InitMultiplayer());
             return;
         }
@@ -437,7 +451,7 @@ public partial class ChallengeManager : MonoBehaviour
                 {
                     _levelsToVote.Add(level);
                     level.AlbumArt = await AlbumArtManager.LoadAlbumArtAsync(level.name, level.BaseLevelData.LocalFolder);
-                    _loadedLevels[level] = 2;
+                    _loadedLevels[level] = new(true, true);
                 }
                 
                 CheckAllLevelsReady();
@@ -453,7 +467,7 @@ public partial class ChallengeManager : MonoBehaviour
             };
             
             _levelsToVote.Add(level);
-            _loadedLevels.TryAdd(level, 0);
+            _loadedLevels.TryAdd(level, new());
             
             var result = await SteamUGC.QueryFileAsync(id);
             if (!result.HasValue || result.Value.Result != Result.OK)
@@ -466,6 +480,8 @@ public partial class ChallengeManager : MonoBehaviour
                     SteamManager.Inst.EndClient();
                 }
            
+                ErrorScreen.CreateErrorScreen($"Host tried to send level {id} which is not available on workshop, disconnecting...");
+
                 SceneLoader.Inst.manager.ClearLoadingTasks();
                 SceneLoader.Inst.LoadSceneGroup("Menu");
                 return;
@@ -497,7 +513,7 @@ public partial class ChallengeManager : MonoBehaviour
         {
             PAM.Logger.LogError(www.error);
             level.AlbumArt = null;
-            _loadedLevels[level]++;
+            _loadedLevels[level].ImageLoaded = true;
             CheckAllLevelsReady();
             yield break;
         }
@@ -505,7 +521,7 @@ public partial class ChallengeManager : MonoBehaviour
         var texture = DownloadHandlerTexture.GetContent(www);
 
         level.AlbumArt = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
-        _loadedLevels[level]++;
+        _loadedLevels[level].ImageLoaded = true;
 
         CheckAllLevelsReady();
     }
@@ -587,7 +603,7 @@ public partial class ChallengeManager : MonoBehaviour
         if (level)
         {
             level.LevelMusic = clip;
-            _loadedLevels[level]++;
+            _loadedLevels[level].AudioLoaded = true;
         }
 
         CheckAllLevelsReady();
@@ -696,6 +712,7 @@ public partial class ChallengeManager : MonoBehaviour
             yield break;
         }
 
+        PaMNetworkManager.CallRpc_Multi_UpdateLobbyState((byte)SteamLobbyManager.LobbyState.Challenge);
         SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState",
             ((ushort)SteamLobbyManager.LobbyState.Challenge).ToString());
 
@@ -951,7 +968,7 @@ public partial class ChallengeManager : MonoBehaviour
     
     private bool CheckAllLevelsReady(bool setLoaded = true)
     {
-        int counter = _loadedLevels.Values.Count(x => x == 2);
+        int counter = _loadedLevels.Values.Count(x => x.Loaded);
         
         if (counter < 6)
         {

@@ -3,6 +3,7 @@ using BepInEx;
 using DiscordRPC;
 using DiscordRPC.Logging;
 using DiscordRPC.Message;
+using PAMultiplayer.UI;
 using Steamworks;
 using Steamworks.Data;
 using UnityEngine;
@@ -79,11 +80,15 @@ public class MultiplayerDiscordManager : MonoBehaviour
 			}
 			else
 			{
+				ErrorScreen.CreateErrorScreen("Tried to join discord invite which didnt contain lobby data");
+
 				PAM.Logger.LogError("Failed to parse secret.");
 			}
 
 			return;
 		}
+		ErrorScreen.CreateErrorScreen($"Failed to Join lobby from discord, Was Already In Lobby[{GlobalsManager.IsMultiplayer}], Steam Initialized [{SteamClient.IsValid}]");
+
 		PAM.Logger.LogError("Failed to join lobby from discord, steam wasn't initialized or you're already in a lobby");
 	}
 

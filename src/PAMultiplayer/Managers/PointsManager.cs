@@ -4,10 +4,12 @@ using System.Reflection;
 using AttributeNetworkWrapperV2;
 using Crosstales;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
+using PAMultiplayer.Patch;
 using Steamworks;
 using Steamworks.Data;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using VGFunctions;
 
 namespace PAMultiplayer.Managers;
@@ -82,6 +84,7 @@ public partial class PointsManager : MonoBehaviour
 
     private AssetBundle _pointsBundle;
     private UI_Menu _menu;
+    private MultiElementButton _closeButton;
     private Transform _playerList;
     private GameObject _playerEntryPrefab;
 
@@ -91,6 +94,7 @@ public partial class PointsManager : MonoBehaviour
     {
         if (Inst)
         {
+            PAM.Logger.LogWarning("Tried to instantiate a second PointManager");
             Destroy(this);
         }
 
@@ -109,7 +113,28 @@ public partial class PointsManager : MonoBehaviour
             .GetComponent<UI_Menu>();
         
         _playerList = _menu.transform.Find("PlayersList");
-        
+
+        _closeButton = _menu.transform.Find("Pause Menu/Resume").GetComponent<MultiElementButton>();
+        _closeButton.onClick.AddListener(() =>
+        {
+            if (LevelEndScreenPatch.Instance)
+            {
+                LevelEndScreen end = LevelEndScreenPatch.Instance;
+
+                if (end.ContinueButton && !end.ContinueButton.IsLocked)
+                {
+                    end.ContinueButton.Select();
+                }
+                else if (end.RestartLevelButton && !end.RestartLevelButton.IsLocked)
+                {
+                    end.RestartLevelButton.Select();
+                }
+                else
+                {
+                    end.BackToArcadeButton.Select();
+                }
+            }
+        });
         _playerEntryPrefab = _pointsBundle.LoadAsset("assets/playerentry.prefab") as GameObject;
 
         leaderboard = await SteamUserStats.FindOrCreateLeaderboardAsync("MP_MOD_Points", LeaderboardSort.Descending,
@@ -118,7 +143,8 @@ public partial class PointsManager : MonoBehaviour
         if (leaderboard.HasValue)
         {
             var entry = await leaderboard.Value.GetScoresForUsersAsync([SteamClient.SteamId]);
-            if (entry.Length > 0)
+            
+            if (entry != null && entry.Length > 0)
             {
                 _currentPoint = entry[0].Score;
             }
@@ -202,6 +228,7 @@ public partial class PointsManager : MonoBehaviour
         _menu.SwapView("main");
         CameraDB.Inst.SetUIVolumeWeightIn(0.2f);
         
+        _closeButton.Select();
         foreach (var keyValuePair in GlobalsManager.Players)
         {
             GenerateEntry(keyValuePair.Key, keyValuePair.Value);

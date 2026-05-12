@@ -25,6 +25,7 @@
         <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
         <PackageReference Include="BepInEx.Core" Version="5.*" />
         <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+        <PackageReference Include="System.Text.Json" Version="11.0.0-preview.4.26230.115" />
         <PackageReference Include="UnityEngine.Modules" Version="2021.3.45" IncludeAssets="compile" />
     </ItemGroup>
 
@@ -53,6 +54,10 @@
       <HintPath>lib\DiscordRPC-publicized.dll</HintPath>
     </Reference>
 			  
+    <Reference Include="DOTween">
+      <HintPath>lib\DOTween.dll</HintPath>
+    </Reference>
+			  
     <Reference Include="Eflatun.SceneReference">
       <HintPath>lib\Eflatun.SceneReference-publicized.dll</HintPath>
     </Reference>
@@ -63,6 +68,10 @@
 			  
     <Reference Include="IEVO.uGUIDirectedNavigation.Runtime">
       <HintPath>lib\IEVO.uGUIDirectedNavigation.Runtime.dll</HintPath>
+    </Reference>
+			  
+    <Reference Include="LeanPool">
+      <HintPath>lib\LeanPool.dll</HintPath>
     </Reference>
 			  
     <Reference Include="Newtonsoft.Json">

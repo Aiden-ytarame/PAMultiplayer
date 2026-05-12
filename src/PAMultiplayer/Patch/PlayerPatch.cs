@@ -79,7 +79,7 @@ public partial class Player_Patch
                 else
                 {
                     if (!linked || !IsDamageAll)
-                        CallRpc_Server_PlayerDamaged(player.Health, GameManager.Inst.currentCheckpointIndex);
+                        CallRpc_Server_PlayerDamaged(player.Health, GameManager.Inst.currentCheckpointIndex, GameManager.Inst.CurrentSongTime);
                 }
 
                 IsDamageAll = false;
@@ -151,9 +151,9 @@ public partial class Player_Patch
     }
 
     [ServerRpc]
-    private static void Server_PlayerDamaged(ClientNetworkConnection conn, int healthPreHit, int checkpointIndex)
+    private static void Server_PlayerDamaged(ClientNetworkConnection conn, int healthPreHit, int checkpointIndex, float time)
     {
-        if(!GameManager.Inst || GameManager.Inst.currentCheckpointIndex < checkpointIndex || !conn.TryGetSteamId(out SteamId steamID))
+        if(!GameManager.Inst || GameManager.Inst.currentCheckpointIndex < checkpointIndex || GameManager.Inst.CurGameState != GameManager.GameState.Playing|| GameManager.inst.CurrentSongTime < time || !conn.TryGetSteamId(out SteamId steamID))
         {
             return;
         }
@@ -194,7 +194,7 @@ public partial class Player_Patch
             return;
         }
         
-        if (checkpointIndex > GameManager.Inst.currentCheckpointIndex)
+        if (checkpointIndex > GameManager.Inst.currentCheckpointIndex || GameManager.Inst.CurGameState == GameManager.GameState.Reversing)
         {
             GlobalsManager.HitsQueue.Add(new (steamID, healthPreHit, checkpointIndex));
             return;
@@ -678,7 +678,7 @@ public static class PlayerManagerPatch
             {
                 if (vgPlayerData.PlayerObject.Health == 1)
                 {
-                    PointsManager.Inst.AddCheckpointWithOneHealth();
+                    PointsManager.Inst?.AddCheckpointWithOneHealth();
                 }
             }
         }

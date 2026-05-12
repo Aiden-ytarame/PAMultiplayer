@@ -18,6 +18,8 @@
     </PropertyGroup>
     
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <RemoveDir Directories="$(PatcherDir)" />
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PatcherDir)" />
+        <Copy SourceFiles="$(TargetDir)/$(AssemblyName).pdb" DestinationFolder="$(PatcherDir)" Condition="'$(Configuration)' == 'Debug'" />
     </Target>
 </Project>

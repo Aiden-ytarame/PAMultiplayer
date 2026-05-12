@@ -1,10 +1,11 @@
 using System;
-using System.Collections.Generic;
 using HarmonyLib;
 using Newtonsoft.Json;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
+using PAMultiplayer.UI;
 using Steamworks;
+using Steamworks.Data;
 using UnityEngine;
 
 namespace PAMultiplayer.Patch;
@@ -17,7 +18,6 @@ public static class DebugControllerPatch
 
     static void PostAwake(DebugController __instance)
     {
-
         DebugCommand pingCommand = new("Ping", "Prints current ping (multiplayer mod, any)",
             () =>
             {
@@ -31,7 +31,77 @@ public static class DebugControllerPatch
             });
         __instance.CommandList.Add(pingCommand);
         
-        DebugCommand killCommand = new("Kill_All", "Kills all players (multiplayer mod, any)", 
+        DebugCommand<int> leaderboardCommand = new("MPLeaderboard", "Top 10 leaderboard, page starts at 0 (multiplayer mod, any)", "int(page)",
+            async void (page) =>
+            {
+                try
+                {
+                    var leaderboard = await SteamUserStats.FindOrCreateLeaderboardAsync("MP_MOD_Points",
+                        LeaderboardSort.Descending,
+                        LeaderboardDisplay.Numeric);
+
+                    if (!leaderboard.HasValue)
+                    {
+                        __instance.AddLog($"Failed to get leaderboard");
+                        return;
+                    }
+
+                    var top = await leaderboard.Value.GetScoresAsync(10, 1 + 10 * page);
+                    if (top == null)
+                    {
+                        __instance.AddLog($"Failed to get leaderboard");
+                        return;
+                    }
+                    
+                    for (var i = 0; i < top.Length; i++)
+                    {
+                        var entry = top[i];
+                        __instance.AddLog($"{entry.GlobalRank}. {entry.User.Name} // {entry.Score}");
+                    }
+                }
+                catch (Exception e)
+                {
+                    PAM.Logger.LogError(e);
+                }
+            });
+        __instance.CommandList.Add(leaderboardCommand);
+        
+        DebugCommand selfLeaderboardCommand = new("SelfMPLeaderboard", "your leaderboard (multiplayer mod, any)",
+            async void () =>
+            {
+                try
+                {
+                    var leaderboard = await SteamUserStats.FindOrCreateLeaderboardAsync("MP_MOD_Points",
+                        LeaderboardSort.Descending,
+                        LeaderboardDisplay.Numeric);
+
+                    if (!leaderboard.HasValue)
+                    {
+                        __instance.AddLog($"Failed to get leaderboard");
+                        return;
+                    }
+
+                    var top = await leaderboard.Value.GetScoresAroundUserAsync(-5, 5);
+                    if (top == null)
+                    {
+                        __instance.AddLog($"Failed to get leaderboard");
+                        return;
+                    }
+                    
+                    for (var i = 0; i < top.Length; i++)
+                    {
+                        var entry = top[i];
+                        __instance.AddLog($"{entry.GlobalRank}. {entry.User.Name} // {entry.Score}");
+                    }
+                }
+                catch (Exception e)
+                {
+                    PAM.Logger.LogError(e);
+                }
+            });
+        __instance.CommandList.Add(selfLeaderboardCommand);
+        
+        DebugCommand killCommand = new("KillAll", "Kills all players (multiplayer mod, any)", 
             () =>
             {
                 if (GlobalsManager.IsMultiplayer)
@@ -73,7 +143,7 @@ public static class DebugControllerPatch
             });
         __instance.CommandList.Add(killCommand);
         
-        DebugCommand disconnectCommand = new("Force_Disconnect", "Disconnects you from the lobby (multiplayer mod, any)", 
+        DebugCommand disconnectCommand = new("ForceDisconnect", "Disconnects you from the lobby (multiplayer mod, any)", 
             () =>
             {
                 __instance.AddLog("Attempting to disconnect from the lobby.");
@@ -95,11 +165,11 @@ public static class DebugControllerPatch
                     __instance.AddLog("Not currently in a lobby.");
                     return;
                 }
-
-                __instance.AddLog($"Sending message: [{message}]");
+                
+                PAM.Logger.LogInfo($"Sending message: [{message}]");
                 if (message.Length > 25)
                 {
-                    __instance.AddLog("Message is longer than 25 characters. Cutting message.");
+                    PAM.Logger.LogInfo("Message is longer than 25 characters. Cutting message.");
                     message = message.Substring(0, 25);
                 }
 
@@ -118,7 +188,7 @@ public static class DebugControllerPatch
         );
         __instance.CommandList.Add(chatCommand2);
         
-        DebugCommand<string> queueCommand = new("add_queue",
+        DebugCommand<string> queueCommand = new("AddQueue",
             "Adds a level to the queue, the level has to be downloaded. (multiplayer mod, host)",
             "string(level_id)",
             levelId =>
@@ -131,26 +201,19 @@ public static class DebugControllerPatch
 
                 if (ArcadeLevelDataManager.Inst.GetLocalCustomLevel(levelId.ToString()))
                 {
+                    GlobalsManager.Queue.Insert(0, ArcadeManager.Inst.CurrentArcadeLevel.TrackName);
                     GlobalsManager.Queue.Add(levelId);
                     __instance.AddLog($"Adding level with id [{levelId}] to queue.");
-                        
-                    List<string> levelNames = new();
-                    levelNames.Add(ArcadeManager.Inst.CurrentArcadeLevel.name);
-                        
-                    foreach (var id in GlobalsManager.Queue)
-                    {
-                        VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-                        levelNames.Add(level.TrackName);
-                    }
-                    SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
-                        
+                  
+                    SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(GlobalsManager.GetQueueLevelNames()));
+                    GlobalsManager.Queue.RemoveAt(0);
                     return;
                 }
                 __instance.AddLog($"Level with id [{levelId}] wasn't found downloaded.");
             });
         __instance.CommandList.Add(queueCommand);
         
-        DebugCommand toggleTransparencyCommand = new("toggle_transparency",
+        DebugCommand toggleTransparencyCommand = new("ToggleTransparency",
             "toggles Transparent Nanos. (multiplayer mod, any)",
             () =>
             {
@@ -180,7 +243,7 @@ public static class DebugControllerPatch
             });
         __instance.CommandList.Add(toggleTransparencyCommand);
         
-        DebugCommand toggleLinkedHealthCommand = new("toggle_linked",
+        DebugCommand toggleLinkedHealthCommand = new("ToggleLinked",
             "Toggles the modifier Linked Health. (multiplayer mod, host)",
             () =>
             {
@@ -190,12 +253,13 @@ public static class DebugControllerPatch
                 if (GlobalsManager.IsMultiplayer)
                 {
                     SteamLobbyManager.Inst.CurrentLobby.SetData("LinkedMod", isLinked.ToString());
+                    PaMNetworkManager.CallRpc_Multi_UpdateModifier(2, (byte)(isLinked ? 1 : 0));
                 }
                 __instance.AddLog($"Toggle Linked Health to [{isLinked}].");
             });
         __instance.CommandList.Add(toggleLinkedHealthCommand);
         
-        DebugCommand playerListCommand = new("player_list",
+        DebugCommand playerListCommand = new("PlayerList",
             "shows all player ids. (multiplayer mod, any)",
             () =>
             {
@@ -222,7 +286,7 @@ public static class DebugControllerPatch
             });
         __instance.CommandList.Add(playerListCommand);
         
-        DebugCommand<int> kickPlayerCommand = new("kick",
+        DebugCommand<int> kickPlayerCommand = new("Kick",
             "attempts to kick a player from the lobby. (multiplayer mod, host)",
             "int(player_id)",
             playerId =>
@@ -238,7 +302,7 @@ public static class DebugControllerPatch
             });
         __instance.CommandList.Add(kickPlayerCommand);
         
-        DebugCommand<string> privateCommand = new("set_Lobby_Privacy",
+        DebugCommand<string> privateCommand = new("SetLobbyPrivacy",
             "set the lobby privacy setting. (multiplayer mod, host)",
             "bool(private)",
             isPrivateStr =>
@@ -269,7 +333,7 @@ public static class DebugControllerPatch
             });
         __instance.CommandList.Add(privateCommand);
         
-        DebugCommand<int> lobbySizeCommand = new("set_lobby_size",
+        DebugCommand<int> lobbySizeCommand = new("SetLobbySize",
             "attempts to change the lobby size. (multiplayer mod, host) | 1 - 4 players. | 2 - 8 players. | 3 - 12 players. | 4 - 16 players.",
             "int(player_count)",
             playerCount =>
@@ -295,8 +359,13 @@ public static class DebugControllerPatch
             });
         __instance.CommandList.Add(lobbySizeCommand);
 
+        DebugCommand<string> testErrorCommand = new("DebugErrorScreen",
+            "Creates a error screen with the desired message. (multiplayer mod, any)",
+            "string(errorMessage)",
+            ErrorScreen.CreateErrorScreen);
+        __instance.CommandList.Add(testErrorCommand);
 
-        DebugCommand<int> packetLossCommand = new("debug_packet_loss",
+        DebugCommand<int> packetLossCommand = new("DebugPacketLoss",
             "sets packet loss 0-100. (multiplayer mod, any)",
             "int(loss%)",
             loss =>
@@ -306,7 +375,7 @@ public static class DebugControllerPatch
             });
         __instance.CommandList.Add(packetLossCommand);
         
-        DebugCommand<int> packetDelayCommand = new("debug_set_delay",
+        DebugCommand<int> packetDelayCommand = new("DebugSetPacketDelay",
             "sets delay on packets. (multiplayer mod, any)",
             "int(ms delay)",
             ms =>
@@ -315,6 +384,8 @@ public static class DebugControllerPatch
                 SteamNetworkingUtils.FakeSendPacketLag = ms;
             });
         __instance.CommandList.Add(packetDelayCommand);
+        
+        
     }
 
     [HarmonyPatch(nameof(DebugController.HandleInput))]

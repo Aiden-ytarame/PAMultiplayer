@@ -47,7 +47,9 @@ public static class LoadingTipsPatch
             "Try to be the top Nano of your generation for once",
             "lol is is likej sab",
             "I got a box of chocolates for you! One of them has rat poison.",
-            "Adding more bloom..."
+            "Adding more bloom...",
+            "Wait... what multiplayer?",
+            "Afterbeat multiplayer...? Too long... BeatMultiplayer... Beat Toget-\nLets keep it at Project Arrhythmia Multiplayer"
         };
         //thanks Pidge for making this public after I complained lol
         __instance.Tips = customTips.ToArray();

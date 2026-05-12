@@ -8,6 +8,7 @@ using PAMultiplayer.Managers;
 using Systems.SceneManagement;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Action = System.Action;
 using Object = UnityEngine.Object;
@@ -48,10 +49,13 @@ public static class ArcadeMenuPatch
             GameObject icon = Object.Instantiate(QueueIconPrefab, button);
  
             _queueButtons.Add(icon.AddComponent<QueueButton>());
+
+            var buttonElement = icon.GetComponent<MultiElementButton>();
+            buttonElement.navigation = buttonElement.navigation with { mode = Navigation.Mode.None };
         }
     }
     
-    [HarmonyPatch(nameof(ArcadeMenu.SelectPage), new[]{typeof(int), typeof(bool)})]
+    [HarmonyPatch(nameof(ArcadeMenu.SelectPage), typeof(int), typeof(bool))]
     [HarmonyPostfix]
     static void PostRenderLevelButtons(ArcadeMenu __instance)
     {
@@ -69,12 +73,31 @@ public static class ArcadeMenuPatch
             }
         }
     }
+
+    [HarmonyPatch(nameof(ArcadeMenu.Update))]
+    [HarmonyPostfix]
+    static void PostUpdate(ArcadeMenu __instance)
+    {
+        if ((Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(KeyCode.JoystickButton3)) && EventSystem.current)
+        {
+            var selected = EventSystem.current.currentSelectedGameObject;
+            for (var i = 0; i < __instance.LevelButtons.Count; i++)
+            {
+                if (__instance.LevelButtons[i].Button.gameObject == selected)
+                {
+                    _queueButtons[i].OnClick();
+                    _queueButtons[i].UIQueueButton.Show();
+                    break;
+                }
+            }
+        }
+    }
 }
 
 
 public class QueueButton : MonoBehaviour
 {
-    private UI_Button queueButton;
+    public UI_Button UIQueueButton { get; private set; }
     private TextMeshProUGUI queueText;
 
     private string currentLevel = "";
@@ -98,8 +121,8 @@ public class QueueButton : MonoBehaviour
         if (newIndex > 0 && newIndex != queueIndex)
         {
             queueIndex = newIndex;
-            queueButton.Show();
-            queueText.text =newIndex.ToString();
+            UIQueueButton.Show();
+            queueText.text = newIndex.ToString();
         }
     }
     public void OnClick()
@@ -121,15 +144,15 @@ public class QueueButton : MonoBehaviour
 
     public void SetLevel(string level)
     {
-        if (queueButton == null)
+        if (UIQueueButton == null)
         {
-            queueButton = gameObject.GetComponent<UI_Button>();
+            UIQueueButton = gameObject.GetComponent<UI_Button>();
             queueText = gameObject.GetComponentInChildren<TextMeshProUGUI>();
-            queueButton.GetComponent<MultiElementButton>().onClick.AddListener(OnClick);
+            UIQueueButton.GetComponent<MultiElementButton>().onClick.AddListener(OnClick);
         }
 
-        queueButton = gameObject.GetComponent<UI_Button>();
-        queueButton.Show();
+        UIQueueButton = gameObject.GetComponent<UI_Button>();
+        UIQueueButton.Show();
         
         currentLevel = level;
 

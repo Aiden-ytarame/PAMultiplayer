@@ -1,12 +1,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using HarmonyLib;
 using AttributeNetworkWrapperV2;
+using IEVO.UI.uGUIDirectedNavigation;
 using Newtonsoft.Json;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
+using PAMultiplayer.UI;
 using SimpleJSON;
 using Steamworks;
 using Steamworks.Data;
@@ -88,6 +91,11 @@ public partial class GameManagerPatch
             PAM.Logger.LogInfo("Skipping to next level in queue!");
         });
 
+        var nav = skipButton.GetComponent<DirectedNavigation>();
+        if (nav)
+        {
+            nav.ConfigUp.Type = DirectedNavigationType.Value.Automatic;
+        }
 
         skipButton.gameObject.SetActive(GlobalsManager.Queue.Count >= 2 || GlobalsManager.IsChallenge);
 
@@ -265,7 +273,7 @@ public partial class GameManagerPatch
                 string levelCover = "null_level";
                 if (item.HasValue && item.Value.Result == Result.OK)
                 {
-                   levelCover= item.Value.PreviewImageUrl;
+                   levelCover = item.Value.PreviewImageUrl;
                 }
               
                 MultiplayerDiscordManager.Instance.SetLevelPresence(state, $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}", levelCover);
@@ -347,7 +355,7 @@ public partial class GameManagerPatch
             
             if (GlobalsManager.LobbyState != LobbyState.Playing)
             {
-                GlobalsManager.HasLoadedLobbyInfo = true;
+                GlobalsManager.HasLoadedMidLobbyInfo = true;
                 VGPlayerManager.Inst.RespawnPlayers();
             }
             else
@@ -439,12 +447,12 @@ public partial class GameManagerPatch
             }
         }
         
-        if (GlobalsManager.HasLoadedLobbyInfo)
+        if (GlobalsManager.HasLoadedMidLobbyInfo)
         {
             return;
         }
         
-        GlobalsManager.HasLoadedLobbyInfo = true;
+        GlobalsManager.HasLoadedMidLobbyInfo = true;
 
         if (!GameManager.Inst)
         {
@@ -519,16 +527,20 @@ public partial class GameManagerPatch
          {
              if (GlobalsManager.IsHosting)
              {
+                 GlobalsManager.HasLoadedMidLobbyInfo = true;
+                 GlobalsManager.HasLoadedMainLobbyInfo = true;
+                 GlobalsManager.LobbyState = LobbyState.Lobby;
+                 
                  SteamLobbyManager.Inst.CreateLobby();
                  yield return new WaitUntil(() => SteamLobbyManager.Inst.InLobby);
-
-                 GlobalsManager.HasLoadedLobbyInfo = true;
+                 
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)LobbyState.Lobby).ToString());
              }
              else
              {
                  SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
                  yield return new WaitUntil(() => AttributeNetworkWrapperV2.NetworkManager.Instance!.TransportActive);
+                 yield return new WaitUntil(() => GlobalsManager.HasLoadedMainLobbyInfo);
                  yield return new WaitUntil(() => GlobalsManager.HasLoadedAllInfo);
                  
                  if (GlobalsManager.LobbyState == LobbyState.Challenge)
@@ -542,18 +554,20 @@ public partial class GameManagerPatch
                          }
                      }));
                      
-                     yield return new WaitUntil(() => GlobalsManager.LobbyState != LobbyState.Challenge);
+                     GlobalsManager.HasLoadedMidLobbyInfo = true;
+                     
+                     yield return new WaitUntil(() => GlobalsManager.LobbyState != LobbyState.Challenge); //what?
                      
                      yield break;
                  }
                  
                  if (GlobalsManager.LobbyState == LobbyState.Playing)
                  {
-                     GlobalsManager.HasLoadedLobbyInfo = false;
+                     GlobalsManager.HasLoadedMidLobbyInfo = false;
                      GlobalsManager.JoinedMidLevel = true;
                      SceneLoader.Inst.manager.AddToLoadingTasks("Lobby State", Task.Run(async () =>
                      {
-                         while (!GlobalsManager.HasLoadedLobbyInfo)
+                         while (!GlobalsManager.HasLoadedMidLobbyInfo)
                          {
                              await Task.Delay(100);
                          }
@@ -561,67 +575,64 @@ public partial class GameManagerPatch
                  }
                  else
                  {
+                     GlobalsManager.HasLoadedMidLobbyInfo = true;
                      GlobalsManager.JoinedMidLevel = false;
                  }
              }
          }
         
-         if (GlobalsManager.IsDownloading)
+         VGLevel levelTest;
+         do
          {
-             VGLevel levelTest;
-             do
-             {
-                 levelTest = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId);
-                 if (levelTest)
-                 {
-                     break;
-                 }
-
-                 yield return new WaitForSeconds(1);
-             } while (SteamWorkshopFacepunch.inst.isLoadingLevels);
-                 
+             levelTest = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId);
              if (levelTest)
              {
-                 GlobalsManager.IsDownloading = false;
-                 _level = levelTest;
+                 break;
              }
-             else
-             {
-                 //loading screen
-                 SceneLoader.Inst.manager.AddToLoadingTasks("Downloading Level", Task.Run(async () =>
-                 {
-                     while (GlobalsManager.IsDownloading)
-                     {
-                         await Task.Delay(100);
-                     }
-                 }));
-                 
-                 var item = DownloadLevel();
-                 
-                 yield return new WaitUntil(() => !GlobalsManager.IsDownloading);
-                 
-                 var result = item.Result;
 
-                 if (result.Id == 0)
-                 {
-                     yield break; //this prob doesnt need to be here
-                 }
-                 
-                 VGLevel vgLevel = ScriptableObject.CreateInstance<VGLevel>();
-                 
-                 vgLevel.InitArcadeData(result.Directory);
-                 InitSteamInfo(ref vgLevel, result.Id, result.Directory, result);
-                 
-                 ArcadeLevelDataManager.Inst.ArcadeLevels.Add(vgLevel);
-                 
-                 yield return gm.StartCoroutine(FileManager.inst.LoadAlbumArt(result.Id.ToString(), result.Directory));
-                 yield return gm.StartCoroutine(FileManager.inst.LoadMusic(result.Id.ToString(), result.Directory));
-                 
-                 _level = vgLevel; 
-                 
-                 ArcadeManager.Inst.CurrentArcadeLevel = vgLevel;
+             yield return new WaitForSeconds(1);
+         } while (SteamWorkshopFacepunch.inst.isLoadingLevels);
+
+         if (!levelTest)
+         {
+             GlobalsManager.IsDownloading = true;
+             
+             //loading screen
+             SceneLoader.Inst.manager.AddToLoadingTasks("Downloading Level", Task.Run(async () =>
+             {
+                 await new WaitUntil(() => !GlobalsManager.IsDownloading);
+             }));
+
+             var item = DownloadLevel();
+
+             yield return new WaitUntil(() => !GlobalsManager.IsDownloading);
+
+             var result = item.Result;
+
+             if (result.Id == 0)
+             {
+                 yield break; //this prob doesnt need to be here
              }
+
+             VGLevel vgLevel = ScriptableObject.CreateInstance<VGLevel>();
+
+             vgLevel.InitArcadeData(result.Directory);
+             InitSteamInfo(ref vgLevel, result.Id, result.Directory, result);
+
+             ArcadeLevelDataManager.Inst.ArcadeLevels.Add(vgLevel);
+
+             yield return gm.StartCoroutine(FileManager.inst.LoadAlbumArt(result.Id.ToString(), result.Directory));
+             yield return gm.StartCoroutine(FileManager.inst.LoadMusic(result.Id.ToString(), result.Directory));
+
+             _level = vgLevel;
+
+             ArcadeManager.Inst.CurrentArcadeLevel = vgLevel;
          }
+         else
+         {
+             _level = levelTest;
+         }
+         
          gm.LoadMetadata(_level);
          
          yield return gm.StartCoroutine(gm.LoadAudio(_level));
@@ -700,18 +711,12 @@ public partial class GameManagerPatch
              {
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LevelId", GlobalsManager.LevelId);
                  SteamLobbyManager.Inst.CurrentLobby.SetData("seed", SteamLobbyManager.Inst.RandSeed.ToString());
+                 PaMNetworkManager.CallRpc_Multi_UpdateLobbyState((byte)LobbyState.Lobby);
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)LobbyState.Lobby).ToString());
 
                  if (!GlobalsManager.IsChallenge)
                  {
-                     List<string> levelNames = new();
-                     foreach (var id in GlobalsManager.Queue)
-                     {
-                         VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-                         levelNames.Add(level.TrackName);
-                     }
-
-                     SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(levelNames));
+                     SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(GlobalsManager.GetQueueLevelNames()));
                  }
 
                  PAM.Logger.LogError(SteamLobbyManager.Inst.RandSeed);
@@ -748,12 +753,9 @@ public partial class GameManagerPatch
              SceneLoader.Inst.LoadSceneGroup("Menu");
              yield break;
          }
-     
-
+         
          yield return gm.StartCoroutine(gm.LoadBackgrounds(_level));
          yield return gm.StartCoroutine(gm.LoadObjects(_level));
-         
-         
          yield return gm.StartCoroutine(gm.LoadTweens());
          
          var comparision = new Comparison<DataManager.GameData.BeatmapData.Checkpoint>((x, y) => x.time.CompareTo(y.time));
@@ -763,6 +765,7 @@ public partial class GameManagerPatch
          {
              VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){PlayerID = 0, ControllerID = 0});
          }
+      
          gm.PlayGame();
     }
 
@@ -780,7 +783,7 @@ public partial class GameManagerPatch
         SteamLobbyManager.Inst.RandSeed = seed;
         GlobalsManager.IsReloadingLobby = true;
         GlobalsManager.LobbyState = LobbyState.Lobby;
-        GlobalsManager.HasLoadedLobbyInfo = true;
+        GlobalsManager.HasLoadedMidLobbyInfo = true;
         
         DataManager.inst.StartCoroutine(NextQueueLevelIEnu(levelID, seed)); //task crashes game here 
     }
@@ -813,7 +816,7 @@ public partial class GameManagerPatch
         
         SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "0");
         GlobalsManager.IsReloadingLobby = true;
-        GlobalsManager.HasLoadedLobbyInfo = true;
+        GlobalsManager.HasLoadedMidLobbyInfo = true;
         SceneLoader.Inst.manager.ClearLoadingTasks();
         SceneLoader.Inst.LoadSceneGroup("Challenge");
     }
@@ -839,6 +842,8 @@ public partial class GameManagerPatch
         void FailLoad(string errorMessage)
         {
             PAM.Logger.LogError(errorMessage);
+            ErrorScreen.CreateErrorScreen($"Failed to download the lobby's level, reason:\n\n{errorMessage}");
+
             GlobalsManager.IsDownloading = false;
            
             SceneLoader.Inst.manager.ClearLoadingTasks();
@@ -896,7 +901,6 @@ public partial class GameManagerPatch
         return level;
     }
     
-    //this is patched manually in Plugin.cs
     [HarmonyPrefix]
     [HarmonyPatch(nameof(GameManager.LoadGame))]
     public static bool OverrideLoadGame(ref IEnumerator __result)
@@ -907,7 +911,7 @@ public partial class GameManagerPatch
             return true;
         }
 
-        GameManager.Inst.StartCoroutine(CustomLoadGame(ArcadeManager.Inst.CurrentArcadeLevel));
+        __result = CustomLoadGame(ArcadeManager.Inst.CurrentArcadeLevel);
         return false;
     }
 }
