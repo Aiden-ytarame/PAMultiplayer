@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AttributeNetworkWrapperV2;
 using CielaSpike;
+using DG.Tweening;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Patch;
 using PAMultiplayer.UI;
@@ -49,6 +50,9 @@ public partial class ChallengeManager : MonoBehaviour
     private readonly Dictionary<VGLevel, LoadState> _loadedLevels = new(6);
     private readonly Dictionary<VGPlayer, VGLevel> _votes = new(16);
     private readonly ConcurrentDictionary<ulong, Tuple<short[], int, int>> _songData = new(); //struct here crashes bepinex lmao
+
+    private Image _bgSlider;
+    private Sequence _sequence = DOTween.Sequence();
     
     private bool _votingStarted = false;
     public AlbumArtManager AlbumArtManager = new();
@@ -79,6 +83,15 @@ public partial class ChallengeManager : MonoBehaviour
         CameraDB.Inst.CamerasRoot.position = Vector3.zero;
         
         var cells = GameObject.Find("Voter/Canvas/Cells").transform;
+        _bgSlider = GameObject.Find("Voter/Canvas/BGBar").GetComponent<Image>();
+        _bgSlider.rectTransform.localScale = Vector3.one with { y = 0 };
+        _bgSlider.color = _bgSlider.color with { a = 0.08f };
+        
+        _sequence.Append(DOTween.ToAlpha(() => _bgSlider.color, x => _bgSlider.color = x, 0.15f, 0.05f)
+            .SetEase(Ease.OutExpo));
+        _sequence.Append(DOTween.ToAlpha(() => _bgSlider.color, x => _bgSlider.color = x, 0f, 1.4f)
+            .SetEase(Ease.InSine));
+        _sequence.Pause();
 
         for (int i = 0; i < cells.childCount; i++)
         {
@@ -638,17 +651,27 @@ public partial class ChallengeManager : MonoBehaviour
            //Used instead of waitForSeconds to account for lag
         }
 
+        timeSinceLastButton += 5;
+        
         foreach (var levelButton in _levelButtons)
         {
             levelButton.EnableVoting();
         }
+
+        Vector3 scale = Vector3.one;
+        do
+        {
+            scale.y = (float)(1.0 - (timeSinceLastButton - Time.realtimeSinceStartupAsDouble) / 5.0);
+            _bgSlider.rectTransform.localScale = scale;
+            yield return new WaitForUpdate();
+        } while (timeSinceLastButton > Time.realtimeSinceStartupAsDouble);
+
+        _sequence.Play();
         
         if (GlobalsManager.IsMultiplayer && !GlobalsManager.IsHosting)
         {
             yield break;
         }
-        
-        yield return new WaitForSecondsRealtime(5f);
         
         VGLevel nextLevel = PickLevel();
         

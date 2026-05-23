@@ -66,6 +66,43 @@ public static class DebugControllerPatch
             });
         __instance.CommandList.Add(leaderboardCommand);
         
+         
+        DebugCommand leaderboardFriendCommand = new("MPFriendLeaderboard", "Top 10 friends only leaderboard, page starts at 0 (multiplayer mod, any)", 
+            async void () =>
+            {
+                try
+                {
+                    var leaderboard = await SteamUserStats.FindOrCreateLeaderboardAsync("MP_MOD_Points",
+                        LeaderboardSort.Descending,
+                        LeaderboardDisplay.Numeric);
+
+                    if (!leaderboard.HasValue)
+                    {
+                        __instance.AddLog($"Failed to get leaderboard");
+                        return;
+                    }
+
+                    var top = await leaderboard.Value.GetScoresFromFriendsAsync();
+                    if (top == null)
+                    {
+                        __instance.AddLog($"Failed to get leaderboard");
+                        return;
+                    }
+                    
+                    for (var i = 0; i < top.Length; i++)
+                    {
+                        var entry = top[i];
+                        __instance.AddLog($"{entry.GlobalRank}. {entry.User.Name} // {entry.Score}");
+                    }
+                }
+                catch (Exception e)
+                {
+                    PAM.Logger.LogError(e);
+                }
+            });
+        __instance.CommandList.Add(leaderboardFriendCommand);
+
+        
         DebugCommand selfLeaderboardCommand = new("SelfMPLeaderboard", "your leaderboard (multiplayer mod, any)",
             async void () =>
             {
@@ -359,10 +396,9 @@ public static class DebugControllerPatch
             });
         __instance.CommandList.Add(lobbySizeCommand);
 
-        DebugCommand<string> testErrorCommand = new("DebugErrorScreen",
-            "Creates a error screen with the desired message. (multiplayer mod, any)",
-            "string(errorMessage)",
-            ErrorScreen.CreateErrorScreen);
+        DebugCommand testErrorCommand = new("DebugErrorScreen",
+            "Creates a error screen. (multiplayer mod, any)",
+            () => ErrorScreen.CreateErrorScreen("Test error Screen, Test error message.\n\nFun fact: I have no idea what I am doing anymore"));
         __instance.CommandList.Add(testErrorCommand);
 
         DebugCommand<int> packetLossCommand = new("DebugPacketLoss",

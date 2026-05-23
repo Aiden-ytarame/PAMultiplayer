@@ -25,7 +25,6 @@
         <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
         <PackageReference Include="BepInEx.Core" Version="5.*" />
         <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
-        <PackageReference Include="System.Text.Json" Version="11.0.0-preview.4.26230.115" />
         <PackageReference Include="UnityEngine.Modules" Version="2021.3.45" IncludeAssets="compile" />
     </ItemGroup>
 
@@ -158,7 +157,7 @@
         <AdditionalFiles Include="$(RootDir)thunderstore/icon.png" Visible="false" />
         
         <AdditionalPluginsFiles Include="$(TargetDir)AttributeNetworkWrapperV2.dll" />
-
+      
         <AdditionalPatchersFiles Include="$(TargetDir)DiscordRPC.dll" />
         <AdditionalPatchersFiles Include="$(TargetDir)Facepunch.Steamworks.Win64.dll" />
         <AdditionalPatchersFiles Include="lib/steam_api64.dll" />

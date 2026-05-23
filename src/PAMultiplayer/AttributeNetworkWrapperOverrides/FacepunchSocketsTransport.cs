@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using AttributeNetworkWrapperV2;
+using PAMultiplayer.UI;
 using Steamworks;
 using Steamworks.Data;
 using SendType = AttributeNetworkWrapperV2.SendType;
@@ -131,7 +132,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     {
         if (IDToConnection.TryGetValue(connectionId, out var connection))
         {
-            connection?.Close();
+            connection?.Close(false, 3100);
         }
     }
 
@@ -236,7 +237,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
 
     public void OnConnecting(ConnectionInfo info)
     {
-       
+      
     }
 
     public void OnConnected(ConnectionInfo info)
@@ -248,6 +249,17 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     {
         IsActive = false;
         OnClientDisconnected?.Invoke();
+
+        if (info.State == ConnectionState.Dead)
+        {
+            if ((int)info.EndReason == 3100)
+            {
+                ErrorScreen.CreateErrorScreen("You were kicked from the lobby.");
+                return;
+            }
+            
+            ErrorScreen.CreateErrorScreen("Connection lost");
+        }
     }
 
     public void OnMessage(IntPtr data, int size, long messageNum, long recvTime, int channel)

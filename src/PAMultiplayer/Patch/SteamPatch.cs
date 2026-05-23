@@ -1,5 +1,7 @@
+using System.Threading.Tasks;
 using HarmonyLib;
 using Steamworks;
+using Steamworks.Data;
 
 namespace PAMultiplayer.Patch;
 
