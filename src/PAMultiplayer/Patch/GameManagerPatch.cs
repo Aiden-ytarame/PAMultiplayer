@@ -631,6 +631,7 @@ public partial class GameManagerPatch
          else
          {
              _level = levelTest;
+             ArcadeManager.Inst.CurrentArcadeLevel = _level;
          }
          
          gm.LoadMetadata(_level);

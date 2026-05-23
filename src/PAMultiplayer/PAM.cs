@@ -36,11 +36,11 @@ public class PAM : BaseUnityPlugin
                    .GetManifestResourceStream("PAMultiplayer.Assets.lobbymenuv2"))
         {
             var lobbyBundle = AssetBundle.LoadFromMemory(stream!.CTReadFully());
-
+            
             ErrorScreenPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[0]) as GameObject;
-            LobbyScreenPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[1]) as GameObject;
-            LobbyPlayerEntryPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[2]) as GameObject;
-            LobbyQueueEntryPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[3]) as GameObject;
+            LobbyScreenPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[2]) as GameObject;
+            LobbyPlayerEntryPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[3]) as GameObject;
+            LobbyQueueEntryPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[4]) as GameObject;
           
             lobbyBundle.Unload(false);
         }

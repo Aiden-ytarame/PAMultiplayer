@@ -132,7 +132,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     {
         if (IDToConnection.TryGetValue(connectionId, out var connection))
         {
-            connection?.Close(false, 3100);
+            connection?.Close(false, 1111);
         }
     }
 
@@ -250,15 +250,19 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
         IsActive = false;
         OnClientDisconnected?.Invoke();
 
-        if (info.State == ConnectionState.Dead)
+        if (info.State == ConnectionState.ClosedByPeer)
         {
-            if ((int)info.EndReason == 3100)
+            if (info.EndReason == (NetConnectionEnd)1111)
             {
                 ErrorScreen.CreateErrorScreen("You were kicked from the lobby.");
                 return;
             }
-            
-            ErrorScreen.CreateErrorScreen("Connection lost");
+            ErrorScreen.CreateErrorScreen("Server has been closed.");
+        }
+        
+        if (info.State is ConnectionState.Dead or ConnectionState.ProblemDetectedLocally)
+        {
+            ErrorScreen.CreateErrorScreen("Connection lost.");
         }
     }
 
