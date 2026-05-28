@@ -29,6 +29,20 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch(typeof(GameManager))]
 public partial class GameManagerPatch
 {
+    [HarmonyPatch(nameof(GameManager.Start))]
+    [HarmonyPrefix]
+    static void PreStart(GameManager __instance)
+    {
+        if (StoryLevelLoader.Inst)
+        {
+            __instance.IsArcade = StoryLevelLoader.Inst.IsArcade;
+        }
+        else
+        {
+            __instance.IsArcade = true;
+        }
+    }
+    
     //sets the loading screen awaits
     [HarmonyPatch(nameof(GameManager.Start))]
     [HarmonyPostfix]
@@ -906,6 +920,11 @@ public partial class GameManagerPatch
     [HarmonyPatch(nameof(GameManager.LoadGame))]
     public static bool OverrideLoadGame(ref IEnumerator __result)
     {
+        if (GlobalsManager.IsMultiplayer && !GameManager.Inst.IsArcade)
+        {
+            ErrorScreen.CreateErrorScreen("Tried to create a lobby outside of arcade. how did this happen?\n\nTry again, if issue persists report the issue.");
+            return true;
+        }
         
         if (!GameManager.Inst.IsArcade || !GlobalsManager.IsMultiplayer)
         {

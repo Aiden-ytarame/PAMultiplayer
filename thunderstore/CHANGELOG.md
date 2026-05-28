@@ -1,3 +1,7 @@
+## 1.3.1
+* Fixed bug from latest alpha where MP would not work due to IsArcade not being set to true quickly enough
+
+## 1.3.0
 * Another player no longer gets added on singleplayer challenge 
 * Multiplayer End Screen now has better controller support
 * Added Debug command to check MP points leaderboards
@@ -9,6 +13,7 @@
 * Challenge mode level selection is now a little prettier
 * Fixed a race condition that softlocked you if a level loaded too fast
 * Queue on lobby now shows how many levels are left past the screen, example "+10 levels"
+
 
 This update changes how loading works, if theres any bugs please report on discord or gitgub
 

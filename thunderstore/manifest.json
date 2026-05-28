@@ -1,6 +1,6 @@
 {
   "name": "Project_Arrhythmia_Multiplayer",
-  "version_number": "1.3.0",
+  "version_number": "1.3.1",
   "website_url": "https://github.com/Aiden-ytarame/PAMultiplayer/",
   "description": "Adds Multiplayer to the game, along with other functionality like Queues and the Challenge mode",
   "dependencies": [

@@ -9,8 +9,8 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch]
 public static class LoadPatches
 {
-    [HarmonyPatch(typeof(Sequence), nameof(Sequence.StableSortSequencedObjs))]
-    [HarmonyPrefix]
+    //[HarmonyPatch(typeof(Sequence), nameof(Sequence.StableSortSequencedObjs))]
+    //[HarmonyPrefix]
     private static bool StableSortSequencedObjs(List<ABSSequentiable> list)
     {
         if (list.Count < 200)
