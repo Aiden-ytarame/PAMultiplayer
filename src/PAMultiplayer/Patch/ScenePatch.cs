@@ -55,6 +55,19 @@ public static class LoadingTipsPatch
         __instance.Tips = customTips.ToArray();
         
         AddChallengeScene();
+
+        SceneManager.sceneLoaded += (scene, _) =>
+        {
+            if (scene.name == "Menu")
+            {
+                ShowChangeLog show = Object.FindObjectOfType<ShowChangeLog>();
+                if (show)
+                {
+                    PAM.Logger.LogFatal("GOT IT");
+                    UpdateModButtonPatches.HandleMenuCreation(show);
+                }
+            }
+        };
     }
 
     static void AddChallengeScene()
@@ -101,12 +114,13 @@ public static class LoadingTipsPatch
                 if (scene.name == "Arcade" || scene.name == "Menu")
                 {
                     ChallengeManager.RecentLevels.Clear();
+                    GlobalsManager.IsChallenge = false;
+                    GlobalsManager.LocalPlayerObjectId = 0;
+                    GlobalsManager.Players.Clear();
+                    VGPlayerManager.Inst.players.Clear();
+                    VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){ControllerID = 0, PlayerID = 0});
                     
-                    if (GlobalsManager.IsMultiplayer)
-                    {
-                        SteamManager.Inst.EndServer();
-                        SteamManager.Inst.EndClient();
-                    }
+                    SteamManager.Inst.DisconnectAll();
                 }
              
                 if (scene.name != "Challenge")

@@ -277,18 +277,9 @@ namespace PAMultiplayer.Managers
 
         private void OnDestroy()
         {
-            GlobalsManager.HasStarted = false;
+            PaMNetworkManager.PamInstance?.LobbyInfo.HasStarted = false;
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "0");
             _playerPrediction.Clear();
-            
-            if (GlobalsManager.IsReloadingLobby) return;
-            
-            GlobalsManager.LocalPlayerObjectId = 0;
-            SteamManager.Inst.EndServer();
-            SteamManager.Inst.EndClient();
-            GlobalsManager.Players.Clear();
-            VGPlayerManager.Inst.players.Clear();
-            VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){ControllerID = 0, PlayerID = 0});
         }
         
     }

@@ -22,7 +22,7 @@ public partial class PointsManager : MonoBehaviour
         public int Points = points;
     }
 
-    private struct PlayerRank(int hits, int boosts, int cc, int score, bool disqualify)
+    public struct PlayerRank(int hits, int boosts, int cc, int score, bool disqualify)
     {
         public readonly int Hits = hits;
         public readonly int Boosts = boosts;
@@ -201,7 +201,7 @@ public partial class PointsManager : MonoBehaviour
             score = _currentPoint;
         }
         
-        if (!GlobalsManager.JoinedMidLevel && !GameManager.Inst.IsPractice)
+        if (PaMNetworkManager.PamInstance?.LobbyInfo.JoinedMidLevel == false && !GameManager.Inst.IsPractice)
         {
             score += GetWonChallenges();
         }
@@ -216,11 +216,15 @@ public partial class PointsManager : MonoBehaviour
         
         if (GlobalsManager.IsMultiplayer)
         {
-            CallRpc_Client_SendResults(_localHits, _localBoosts, _localCc, score, GlobalsManager.JoinedMidLevel);
+            CallRpc_Client_SendResults(_localHits, _localBoosts, _localCc, score, PaMNetworkManager.PamInstance?.LobbyInfo.JoinedMidLevel == true);
             ShowEndScreen();
         }
     }
 
+    public PlayerRank GetLocalRank()
+    {
+        return new(_localHits, _localBoosts, _localCc, _localHits * 10000 + _localBoosts, true);
+    }
 
     public void ShowEndScreen()
     {

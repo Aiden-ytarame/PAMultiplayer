@@ -1,11 +1,14 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using AttributeNetworkWrapperV2;
 using HarmonyLib;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
+using PAMultiplayer.Data;
 using PAMultiplayer.UI;
 using Steamworks;
 using Steamworks.Data;
+using Steamworks.Ugc;
 using UnityEngine;
 using WrapperNetworkManager = AttributeNetworkWrapperV2.NetworkManager;
 namespace PAMultiplayer.Managers;
@@ -43,8 +46,7 @@ public class SteamManager : MonoBehaviour
 
     private void OnApplicationQuit()
     {
-        EndServer();
-        EndClient();
+        DisconnectAll();
     }
     
     public void InitSteamClient()
@@ -104,6 +106,12 @@ public class SteamManager : MonoBehaviour
         PAM.Logger.LogInfo($"Invite received from [{friend.Name}]");
         //handle invite dialog
     }
+
+    public void DisconnectAll()
+    {
+        EndClient();
+        EndServer();
+    }
     
     public void StartClient(SteamId targetSteamId)
     {
@@ -116,15 +124,11 @@ public class SteamManager : MonoBehaviour
 
     public void EndClient()
     {
-        GlobalsManager.IsReloadingLobby = false;
         GlobalsManager.IsMultiplayer = false;
         GlobalsManager.IsHosting = false;
-        GlobalsManager.JoinedMidLevel = false;
-        GlobalsManager.HasLoadedMidLobbyInfo = true;
-        GlobalsManager.HasLoadedMainLobbyInfo = true;
         
-        SteamLobbyManager.Inst.LeaveLobby();
         WrapperNetworkManager.Instance?.Disconnect();
+        SteamLobbyManager.Inst?.LeaveLobby();
     }
     public void StartServer()
     {
@@ -141,14 +145,47 @@ public class SteamManager : MonoBehaviour
 
     public void EndServer()
     {
-        GlobalsManager.IsReloadingLobby = false;
         GlobalsManager.IsMultiplayer = false;
         GlobalsManager.IsHosting = false;
         
         SteamLobbyManager.Inst?.LeaveLobby();
         WrapperNetworkManager.Instance?.EndServer();
     }
-    
+
+    public static async Task<SteamWorkshopLevel?> GetSteamLevel(ulong id)
+    {
+        var result = await SteamUGC.QueryFileAsync(id);
+        if (!result.HasValue || result.Value.Result != Result.OK)
+        {
+            return null;
+        }
+
+        if (result.Value.ConsumerApp != 440310)
+        {
+            PAM.Logger.LogError($"Tried to get non PA level [{id}]");
+            return null;
+        }
+        
+        SteamWorkshopLevel.VisibilityType visibility;
+        if (result.Value.IsPublic)
+        {
+            visibility = SteamWorkshopLevel.VisibilityType.Public;
+        }
+        else if (result.Value.IsPrivate)
+        {
+            visibility = SteamWorkshopLevel.VisibilityType.Private;
+        }
+        else if (result.Value.IsFriendsOnly)
+        {
+            visibility = SteamWorkshopLevel.VisibilityType.Friends;
+        }
+        else
+        {
+            visibility = SteamWorkshopLevel.VisibilityType.Unlisted;
+        }
+        
+        return new (result.Value, visibility);
+    }
 }
 
 

@@ -5,6 +5,7 @@ using HarmonyLib;
 using AttributeNetworkWrapperV2;
 using Crosstales;
 using PaApi;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using UnityEngine;
 using PAMultiplayer.Managers;
 using PAMultiplayer.UI;
@@ -56,11 +57,11 @@ namespace PAMultiplayer.Patch
             {
                 if (GlobalsManager.Queue.Count > 0)
                 {
-                    string id = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo != null ? ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID.ToString() : ArcadeManager.Inst.CurrentArcadeLevel.name;
-                    if (!GlobalsManager.Queue.Contains(id))
-                        GlobalsManager.Queue.Add(id);
+                    string id = ArcadeManager.Inst.CurrentArcadeLevel.name;
+                    if (!GlobalsManager.Queue.ContainsLevel(id))
+                        GlobalsManager.Queue.AddLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, id);
 
-                    id = GlobalsManager.Queue[0];
+                    id = GlobalsManager.Queue[0].Id;
                     GlobalsManager.LevelId = id;
                     ArcadeManager.Inst.CurrentArcadeLevel =
                         ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
@@ -154,7 +155,7 @@ namespace PAMultiplayer.Patch
         {
             if (!GlobalsManager.IsMultiplayer) return true;
 
-            if (GlobalsManager.HasStarted || (GlobalsManager.IsHosting && SteamLobbyManager.Inst.IsEveryoneLoaded))
+            if (PaMNetworkManager.PamInstance?.LobbyInfo.HasStarted == true || GlobalsManager.IsChallenge || (GlobalsManager.IsHosting && SteamLobbyManager.Inst.IsEveryoneLoaded))
             {
                 return true;
             }
@@ -237,7 +238,7 @@ namespace PAMultiplayer.Patch
         {
             if (!GlobalsManager.IsMultiplayer) return true;
             
-            if (!GlobalsManager.HasStarted && (!GlobalsManager.IsHosting || !SteamLobbyManager.Inst.IsEveryoneLoaded))
+            if (PaMNetworkManager.PamInstance?.LobbyInfo.HasStarted != true && (!GlobalsManager.IsHosting || !SteamLobbyManager.Inst.IsEveryoneLoaded))
             {
                 return false;
             }
@@ -284,13 +285,22 @@ namespace PAMultiplayer.Patch
     /// </summary>
 
     [HarmonyPatch(typeof(ShowChangeLog))]
-    public static class UpdateModButton
+    public static class UpdateModButtonPatches
     {
         [HarmonyPatch(nameof(ShowChangeLog.Start))]
         [HarmonyPrefix]
         static bool PostStart(ShowChangeLog __instance)
         {
-            UI_Book book = __instance.transform.parent.parent.parent.Find("Settings").GetComponent<UI_Book>();
+            if (!SettingsManager.Inst.ShowChangeLog())
+            {
+                __instance.gameObject.SetActive(false);
+            }
+            return false;
+        }
+
+        public static void HandleMenuCreation(ShowChangeLog changeLog)
+        {
+            UI_Book book = changeLog.transform.parent.parent.parent.Find("Settings").GetComponent<UI_Book>();
             
             void InstantiateSlider(GameObject prefab, Transform parent, string label, float value, UnityAction<float> setter)
             {
@@ -313,7 +323,7 @@ namespace PAMultiplayer.Patch
                 book.Pages[1].SubElements.Add(slider);
             }
             
-            SystemManager.inst.StartCoroutine(FetchGithubReleases(__instance.gameObject));
+            SystemManager.inst.StartCoroutine(FetchGithubReleases(changeLog.gameObject));
           
             GameObject sliderPrefab = book.transform.Find("Audio/Right/Music").gameObject;
             Transform audioParent = sliderPrefab.transform.parent;
@@ -333,7 +343,7 @@ namespace PAMultiplayer.Patch
                 DataManager.inst.UpdateSettingBool("PlayerWarpSFX", x != 2);
             });
            
-            MultiElementButton button = __instance.transform.parent.parent.Find("pc_top-buttons/Custom Mode")
+            MultiElementButton button = changeLog.transform.parent.parent.Find("pc_top-buttons/Custom Mode")
                 .GetComponent<MultiElementButton>();
 
             button.onClick = new();
@@ -341,15 +351,8 @@ namespace PAMultiplayer.Patch
             {
                 MenuSelectionManager.Instance.OpenMenu();
             });
-            
-            if (!SingletonBase<SettingsManager>.Inst.ShowChangeLog())
-            {
-                __instance.gameObject.SetActive(false);
-            }
-          
-            return false;
         }
-
+        
         const string UpdateStr = "<sprite name=info> Update Multiplayer";
         static IEnumerator FetchGithubReleases(GameObject changeLog)
         {
@@ -403,21 +406,19 @@ namespace PAMultiplayer.Patch
 
         
     }
-    /// <summary>
-    /// prevents the changelog button from destroying itself, so we can copy it for the Update Button
-    /// </summary>
-    [HarmonyPatch(typeof(ShowChangeLog))]
-    public static class ChangelogsPatch
+
+    [HarmonyPatch(typeof(UIToSystems))]
+    public static class UiToSystemsPatch
     {
-        [HarmonyPatch(nameof(ShowChangeLog.Start))]
-        [HarmonyPrefix]
-        static bool PreStart(ShowChangeLog __instance)
+        [HarmonyPatch(nameof(UIToSystems.LoadScene))]
+        [HarmonyPostfix]
+        static void PostLoadScene()
         {
-            if (!SettingsManager.Inst.ShowChangeLog() && __instance.name == "Changelog")
+            if (GlobalsManager.IsMultiplayer)
             {
-                __instance.gameObject.SetActive(false);
+                SteamManager.Inst.DisconnectAll();
+                PAM.Logger.LogInfo("Left game lobby");
             }
-            return false;
         }
     }
 }

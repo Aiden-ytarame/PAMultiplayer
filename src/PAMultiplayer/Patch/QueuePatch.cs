@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using Crosstales;
 using HarmonyLib;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
 using Systems.SceneManagement;
 using TMPro;
@@ -117,7 +118,7 @@ public class QueueButton : MonoBehaviour
 
     void UpdateButton()
     {
-        int newIndex = GlobalsManager.Queue.IndexOf(currentLevel) + 1;
+        int newIndex = GlobalsManager.Queue.IndexOfLevel(currentLevel) + 1;
         if (newIndex > 0 && newIndex != queueIndex)
         {
             queueIndex = newIndex;
@@ -127,16 +128,17 @@ public class QueueButton : MonoBehaviour
     }
     public void OnClick()
     {
-        if (GlobalsManager.Queue.Contains(currentLevel))
+        if (GlobalsManager.Queue.ContainsLevel(currentLevel))
         {
-            GlobalsManager.Queue.Remove(currentLevel);
+            GlobalsManager.Queue.RemoveLevel(currentLevel);
             queueIndex = 0;
             queueText.text = "+";
             _queueUpdated.Invoke();
         }
         else
         {
-            GlobalsManager.Queue.Add(currentLevel);
+            VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(currentLevel);
+            GlobalsManager.Queue.AddLevel(level?.TrackName, currentLevel);
             queueIndex = GlobalsManager.Queue.Count;
             queueText.text = queueIndex.ToString();
         }
@@ -156,7 +158,7 @@ public class QueueButton : MonoBehaviour
         
         currentLevel = level;
 
-        queueIndex = GlobalsManager.Queue.IndexOf(level) + 1;
+        queueIndex = GlobalsManager.Queue.IndexOfLevel(level) + 1;
         queueText.text = queueIndex > 0 ? queueIndex.ToString() : "+";
     }
 }
@@ -249,7 +251,6 @@ public static class LevelEndScreenPatch
         nextLevel.onClick = new Button.ButtonClickedEvent();
         nextLevel.onClick.AddListener(() =>
         {
-            GlobalsManager.IsReloadingLobby = true;
             if (GlobalsManager.IsMultiplayer)
             {
                 SteamLobbyManager.Inst.UnloadAll();
@@ -266,7 +267,7 @@ public static class LevelEndScreenPatch
                 return;
             }
 
-            string id = GlobalsManager.Queue[0];
+            string id = GlobalsManager.Queue[0].Id;
             ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
             GlobalsManager.LevelId = id;
 
@@ -279,5 +280,16 @@ public static class LevelEndScreenPatch
         {
             __instance.DisableButton(buttonsParent.Find("Restart Level").GetComponent<MultiElementButton>());
         }
+    }
+}
+
+[HarmonyPatch(typeof(PauseUIManager))]
+public static class PauseUIManagerPatch
+{
+    [HarmonyPatch(nameof(PauseUIManager.OpenUI), typeof(Action), typeof(bool))]
+    [HarmonyPrefix]
+    static void PreOpen(PauseUIManager __instance)
+    {
+        __instance.transform.Find("Pause Menu/Skip Queue Level")?.gameObject.SetActive(GlobalsManager.Queue.Count > 0 || GlobalsManager.IsChallenge);
     }
 }

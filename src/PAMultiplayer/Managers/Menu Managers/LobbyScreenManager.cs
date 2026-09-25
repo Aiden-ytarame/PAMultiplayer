@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using AttributeNetworkWrapperV2;
 using Crosstales;
 using Newtonsoft.Json;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
@@ -100,6 +101,7 @@ public class LobbyScreenManager : MonoBehaviour
         if (LobbyMenu)
         {
             LobbyMenu.HideAll();
+            CameraDB.Inst.SetUIVolumeWeightIn(0);
             Destroy(LobbyMenu.gameObject);
         }
     }
@@ -182,7 +184,7 @@ public class LobbyScreenManager : MonoBehaviour
 
     public void StartLevel()
     {
-        if (GlobalsManager.HasStarted)
+        if (PaMNetworkManager.PamInstance?.LobbyInfo.HasStarted == true)
         {
             return;
         }
@@ -197,10 +199,10 @@ public class LobbyScreenManager : MonoBehaviour
         }
                 
         VGPlayerManager.Inst.RespawnPlayers();
-        
+    
         PaMNetworkManager.CallRpc_Multi_UpdateLobbyState((byte)SteamLobbyManager.LobbyState.Playing);
         SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)SteamLobbyManager.LobbyState.Playing).ToString());
-        GlobalsManager.HasStarted = true;
+        PaMNetworkManager.PamInstance?.LobbyInfo.HasStarted = true;
         
         LobbyMenu.HideAll();
         GameManager.Inst.UnPause();

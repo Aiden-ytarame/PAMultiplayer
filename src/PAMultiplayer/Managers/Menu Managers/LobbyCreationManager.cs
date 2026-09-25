@@ -13,12 +13,15 @@ public class LobbyCreationManager : MonoBehaviour
     public UI_Menu LobbyCreationMenu;
     
     public bool IsPrivate { get; private set; }
+    public bool AllowClientLevels { get; private set; }
     public int PlayerCount { get; set; } = 16;
     
     public Action FallbackAction { get; set; }
     public Selectable FallbackUIElement { get; set; }
 
     private bool _isChallenge;
+    private GameObject _allowClientLevels;
+    
     private void Awake()
     {
         if (Instance != null)
@@ -30,13 +33,21 @@ public class LobbyCreationManager : MonoBehaviour
         Instance = this;
         LobbyCreationMenu = gameObject.GetComponent<UI_Menu>();
 
-        MultiElementToggle toggle = transform.Find("Pause Menu/Private").GetComponent<MultiElementToggle>();
+        MultiElementToggle toggle = transform.Find("Pause Menu/Buttons/Private").GetComponent<MultiElementToggle>();
         toggle.onValueChanged.AddListener(x =>
         {
             IsPrivate = x;
         });
         
-        UI_Slider slider = transform.Find("Pause Menu/PlayerCount").GetComponent<UI_Slider>();
+        MultiElementToggle toggle2 = transform.Find("Pause Menu/Buttons/AddLevels").GetComponent<MultiElementToggle>();
+        toggle2.onValueChanged.AddListener(x =>
+        {
+            AllowClientLevels = x;
+        });
+
+        _allowClientLevels = toggle2.gameObject;
+        
+        UI_Slider slider = transform.Find("Pause Menu/Buttons/PlayerCount").GetComponent<UI_Slider>();
         slider.OnValueChanged.AddListener(x =>
         {
             PlayerCount = 16 - (int)x * 4;
@@ -51,17 +62,18 @@ public class LobbyCreationManager : MonoBehaviour
                 if (_isChallenge)
                 {
                     GlobalsManager.IsChallenge = true;
+                    AllowClientLevels = false;
                     LobbyCreationMenu.HideAllInstant();
                     SceneLoader.Inst.LoadSceneGroup("Challenge");
                     return;
                 }
                 
                 PublishedFileId id = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID;
-                if (!GlobalsManager.Queue.Contains(id.ToString()))
-                    GlobalsManager.Queue.Add(id.ToString());
+                if (!GlobalsManager.Queue.ContainsLevel(id.ToString()))
+                    GlobalsManager.Queue.AddLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.name);
 
                 ArcadeManager.Inst.CurrentArcadeLevel =
-                    ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.Queue[0]);
+                    ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.Queue[0].Id);
 
                 
                 LobbyCreationMenu.HideAllInstant();
@@ -76,6 +88,7 @@ public class LobbyCreationManager : MonoBehaviour
     public void OpenMenu(bool bIsChallange)
     {
         _isChallenge = bIsChallange;
+        _allowClientLevels.SetActive(!bIsChallange);
         
         LobbyCreationMenu.ShowBase();
         LobbyCreationMenu.SwapView("main");

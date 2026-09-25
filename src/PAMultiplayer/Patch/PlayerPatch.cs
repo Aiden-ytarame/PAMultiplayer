@@ -13,7 +13,7 @@ using Object = UnityEngine.Object;
 namespace PAMultiplayer.Patch;
 
 [HarmonyPatch(typeof(VGPlayer))]
-public partial class Player_Patch
+public partial class PlayerPatch
 {
     
     [HarmonyPatch(nameof(VGPlayer.CheckForObjectCollision))]
@@ -79,7 +79,7 @@ public partial class Player_Patch
                 else
                 {
                     if (!linked || !IsDamageAll)
-                        CallRpc_Server_PlayerDamaged(player.Health, GameManager.Inst.currentCheckpointIndex, GameManager.Inst.CurrentSongTime);
+                        CallRpc_Server_PlayerDamaged(player.Health, GameManager.Inst.currentCheckpointIndex, PaMNetworkManager.PamInstance?.LobbyInfo.RewindCounter ?? 0);
                 }
 
                 IsDamageAll = false;
@@ -151,9 +151,9 @@ public partial class Player_Patch
     }
 
     [ServerRpc]
-    private static void Server_PlayerDamaged(ClientNetworkConnection conn, int healthPreHit, int checkpointIndex, float time)
+    private static void Server_PlayerDamaged(ClientNetworkConnection conn, int healthPreHit, int checkpointIndex, uint rewindCounter)
     {
-        if(!GameManager.Inst || GameManager.Inst.currentCheckpointIndex < checkpointIndex || GameManager.Inst.CurGameState != GameManager.GameState.Playing|| GameManager.inst.CurrentSongTime < time || !conn.TryGetSteamId(out SteamId steamID))
+        if(!GameManager.Inst || GameManager.Inst.currentCheckpointIndex < checkpointIndex || GameManager.Inst.CurGameState != GameManager.GameState.Playing|| (PaMNetworkManager.PamInstance?.LobbyInfo.RewindCounter ?? 0) > rewindCounter || !conn.TryGetSteamId(out SteamId steamID))
         {
             return;
         }
@@ -296,7 +296,7 @@ public partial class Player_Patch
                 ps = Object.Instantiate(__instance.PS_Spawn, __instance.Player_Wrapper.position, rot);
 
                 ParticleSystem.MainModule settings = ps.main;
-                settings.startColor = new ParticleSystem.MinMaxGradient(beatmapTheme.GetPlayerColor(__instance.PlayerID));
+                settings.startColor = new ParticleSystem.MinMaxGradient(beatmapTheme.GetPlayerColor(__instance.PlayerID % 4));
                 break;
             }
             case VGPlayer.ParticleTypes.Boost:
@@ -317,7 +317,7 @@ public partial class Player_Patch
                 ps.transform.SetParent(__instance.Player_Wrapper);
 
                 ParticleSystem.MainModule settings = ps.main;
-                settings.startColor = new ParticleSystem.MinMaxGradient(beatmapTheme.GetPlayerColor(__instance.PlayerID));
+                settings.startColor = new ParticleSystem.MinMaxGradient(beatmapTheme.GetPlayerColor(__instance.PlayerID % 4));
                 break;
             }
             case VGPlayer.ParticleTypes.Hit:
@@ -650,6 +650,12 @@ public partial class Player_Patch
         return false;
     }
 
+    [HarmonyPatch(typeof(SystemManager), nameof(SystemManager.PlayHitTimeWarp))]
+    [HarmonyPrefix]
+    static bool PreHitAnim()
+    {
+        return !GlobalsManager.IsMultiplayer; //do not warp if MP, causes desync otherwise
+    }
 }
 
 [HarmonyPatch(typeof(VGPlayerManager))]
@@ -782,7 +788,7 @@ public static class BeatmapThemePatch
     /// </summary>
     [HarmonyPatch(nameof(DataManager.BeatmapTheme.GetPlayerColor))]
     [HarmonyPrefix]
-    static bool PreGetPlayerColor(DataManager.BeatmapTheme __instance, ref Color __result, int _val)
+    static void PreGetPlayerColor(DataManager.BeatmapTheme __instance, ref Color __result, int _val)
     {
         __result = __instance.playerColors[_val % 4];
         return false;

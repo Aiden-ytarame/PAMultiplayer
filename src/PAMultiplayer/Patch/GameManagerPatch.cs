@@ -67,26 +67,20 @@ public partial class GameManagerPatch
                 "Skips the current level in queue");
             
             PauseUIManager.Inst.PauseMenu.AllViews["main"].Elements.Add(skipButton.GetComponent<UI_Button>());
-            
-            restartButton.GetComponent<MultiElementButton>().onClick.AddListener(() =>
-            {
-                GlobalsManager.IsReloadingLobby = true;
-            });
         }
 
         var button = skipButton.GetComponent<MultiElementButton>();
         button.onClick = new();
         button.onClick.AddListener(() =>
         {
-            PauseUIManager.Inst.CloseUI();
-            GlobalsManager.IsReloadingLobby = true;
-            if (GlobalsManager.IsMultiplayer)
-            {
-                SteamLobbyManager.Inst.UnloadAll();
-            }
-
             if (GlobalsManager.IsChallenge)
             {
+                PauseUIManager.Inst.CloseUI();
+                if (GlobalsManager.IsMultiplayer)
+                {
+                    SteamLobbyManager.Inst.UnloadAll();
+                }
+                
                 if (GlobalsManager.IsMultiplayer && GlobalsManager.IsHosting)
                 {
                     CallRpc_Multi_OpenChallenge();
@@ -94,15 +88,33 @@ public partial class GameManagerPatch
                 SceneLoader.Inst.LoadSceneGroup("Challenge");
                 return;
             }
-           
-            string id = GlobalsManager.Queue[0];
-            ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-            GlobalsManager.LevelId = id;
 
-            
+            while (true)
+            {
+                if (GlobalsManager.Queue.Count == 0)
+                {
+                    return;
+                }
+                
+                string id = GlobalsManager.Queue[0].Id;
+                ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
 
-            SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-            PAM.Logger.LogInfo("Skipping to next level in queue!");
+                if (!GlobalsManager.IsMultiplayer && !ArcadeManager.Inst.CurrentArcadeLevel)
+                {
+                    GlobalsManager.Queue.RemoveLevelAt(0);
+                    continue;
+                }
+                
+                GlobalsManager.LevelId = id;
+                PauseUIManager.Inst.CloseUI();
+                if (GlobalsManager.IsMultiplayer)
+                {
+                    SteamLobbyManager.Inst.UnloadAll();
+                }
+                SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+                PAM.Logger.LogInfo("Skipping to next level in queue!");
+                return;
+            }
         });
 
         var nav = skipButton.GetComponent<DirectedNavigation>();
@@ -110,9 +122,7 @@ public partial class GameManagerPatch
         {
             nav.ConfigUp.Type = DirectedNavigationType.Value.Automatic;
         }
-
-        skipButton.gameObject.SetActive(GlobalsManager.Queue.Count >= 2 || GlobalsManager.IsChallenge);
-
+        
         __instance.gameObject.AddComponent<PointsManager>();
         
         if (!GlobalsManager.IsMultiplayer)
@@ -151,7 +161,7 @@ public partial class GameManagerPatch
             
             SceneLoader.Inst.manager.AddToLoadingTasks("Server Info", Task.Run(async () =>
             {
-                while (!GlobalsManager.HasLoadedAllInfo)
+                while (PaMNetworkManager.PamInstance?.LobbyInfo.HasLoadedAllInfo != true)
                 {
                     await Task.Delay(100);
                 }
@@ -173,14 +183,11 @@ public partial class GameManagerPatch
         {
             Object.Destroy(CameraDB.Inst.CameraParentedRoot.GetChild(i).gameObject);
         }
-        
-        if (GlobalsManager.IsReloadingLobby)
-        {
-            return;
-        }
 
-        GlobalsManager.IsChallenge = false;
-        GlobalsManager.IsMultiplayer = false;
+        if (MultiplayerDiscordManager.IsInitialized)
+        {
+            MultiplayerDiscordManager.Instance.SetMenuPresence();
+        }
     }
 
     /// <summary>
@@ -230,7 +237,7 @@ public partial class GameManagerPatch
             }
         }
         
-        GlobalsManager.HasLoadedExternalInfo = true;
+        PaMNetworkManager.PamInstance?.LobbyInfo.HasLoadedExternalInfo = true;
     }
     
     //wtf is this
@@ -241,7 +248,7 @@ public partial class GameManagerPatch
     {
         if(!GlobalsManager.IsMultiplayer) return true;
 
-        if (!GlobalsManager.HasStarted) return true;
+        if (PaMNetworkManager.PamInstance?.LobbyInfo.HasStarted != true) return true;
 
         if (paused)
         {
@@ -264,15 +271,7 @@ public partial class GameManagerPatch
         
         paused = false;
     }
-
-    [HarmonyPatch(nameof(GameManager.OnDestroy))]
-    [HarmonyPostfix]
-    static void PostOnDestroy()
-    {
-        if (!MultiplayerDiscordManager.IsInitialized) return;
-        
-        MultiplayerDiscordManager.Instance.SetMenuPresence();
-    }
+    
     
     [HarmonyPatch(nameof(GameManager.PlayGame))]
     [HarmonyPostfix]
@@ -293,8 +292,7 @@ public partial class GameManagerPatch
                 MultiplayerDiscordManager.Instance.SetLevelPresence(state, $"{GameManager.Inst.TrackName} by {GameManager.Inst.ArtistName}", levelCover);
             }
         }
-        GlobalsManager.IsReloadingLobby = false;
-        GlobalsManager.Queue.Remove(GlobalsManager.LevelId);
+        GlobalsManager.Queue.RemoveLevel(GlobalsManager.LevelId);
         
         //setup discord presence on singleplayer
         if (!GlobalsManager.IsMultiplayer)
@@ -316,7 +314,7 @@ public partial class GameManagerPatch
             return;
         }
 
-        if (GlobalsManager.LobbyState != LobbyState.Playing)
+        if (PaMNetworkManager.PamInstance?.LobbyInfo.LobbyState != LobbyState.Playing)
         {
             //setup lobby screen
             __instance.Pause(false);
@@ -327,7 +325,7 @@ public partial class GameManagerPatch
         {
             __instance.Pause(false);
             __instance.Paused = true;
-            GlobalsManager.HasStarted = true;
+            PaMNetworkManager.PamInstance?.LobbyInfo.HasStarted = true;
         }
 
 
@@ -347,16 +345,14 @@ public partial class GameManagerPatch
             {
                 //player 0 is never added, so we add it here
                 var newData = new VGPlayerManager.VGPlayerData() { PlayerID = 0, ControllerID = 0 };
-                VGPlayerManager.Inst.players.Add(newData);
                 GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayerId, new PlayerData(newData, SteamClient.Name));
             }
-            else
+
+            foreach (var vgPlayerData in GlobalsManager.Players)
             {
-                foreach (var vgPlayerData in GlobalsManager.Players)
-                {
-                    VGPlayerManager.Inst.players.Add(vgPlayerData.Value.VGPlayerData);
-                }
+                VGPlayerManager.Inst.players.Add(vgPlayerData.Value.VGPlayerData);
             }
+
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
         }
         else if (AttributeNetworkWrapperV2.NetworkManager.Instance != null)
@@ -364,13 +360,18 @@ public partial class GameManagerPatch
             SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
             foreach (var vgPlayerData in GlobalsManager.Players)
             {
-                       VGPlayerManager.Inst.players.Add(vgPlayerData.Value.VGPlayerData);
+                VGPlayerManager.Inst.players.Add(vgPlayerData.Value.VGPlayerData);
             }
             
-            if (GlobalsManager.LobbyState != LobbyState.Playing)
+            if (PaMNetworkManager.PamInstance?.LobbyInfo.LobbyState != LobbyState.Playing)
             {
-                GlobalsManager.HasLoadedMidLobbyInfo = true;
-                VGPlayerManager.Inst.RespawnPlayers();
+                PaMNetworkManager.PamInstance?.LobbyInfo.HasLoadedMidLobbyInfo = true;
+                DataManager.GameData.BeatmapData beatmapData = DataManager.inst.gameData?.beatmapData;
+
+                if (beatmapData != null)
+                {
+                    __instance.SpawnPlayers(beatmapData.GetFirstCheckpointPos());  
+                }
             }
             else
             {
@@ -422,8 +423,7 @@ public partial class GameManagerPatch
                 }
             }
 
-            CallRpc_Client_LobbyState(conn, endScreen.Hits.Count, GameManager.Inst.CurrentSongTime, playerIds,
-                healths.ToArray());
+            CallRpc_Client_LobbyState(conn, endScreen.Hits.Count, GameManager.Inst.CurrentSongTime, playerIds, healths.ToArray());
 
             if (!conn.TryGetSteamId(out SteamId id))
             {
@@ -441,7 +441,7 @@ public partial class GameManagerPatch
     
     [ClientRpc]
     private static void Client_LobbyState(int hitCount, float currentTime,
-        List<ulong> playerIds, Span<short> healths) //weird types is cuz they already have writers, ill fix later
+        List<ulong> playerIds, ReadOnlySpan<short> healths) //weird types is cuz they already have writers, ill fix later
     {
         LevelEndScreen.ActionMoment actionMoment = new();  
         actionMoment.position = Vector3.zero;
@@ -460,13 +460,14 @@ public partial class GameManagerPatch
                 endScreen.Hits.Add(actionMoment);
             }
         }
-        
-        if (GlobalsManager.HasLoadedMidLobbyInfo)
+
+        var lobby = PaMNetworkManager.PamInstance?.LobbyInfo;
+        if (lobby?.HasLoadedMidLobbyInfo == true)
         {
             return;
         }
         
-        GlobalsManager.HasLoadedMidLobbyInfo = true;
+        lobby?.HasLoadedMidLobbyInfo = true;
 
         if (!GameManager.Inst)
         {
@@ -536,16 +537,20 @@ public partial class GameManagerPatch
          GameManager gm = GameManager.Inst;
          gm.LoadTimer = new();
          gm.LoadTimer.Start();
-         
-         if (!GlobalsManager.IsReloadingLobby)
+
+         bool justCreatedLobby = false;
+         if (PaMNetworkManager.PamInstance == null)
          {
              if (GlobalsManager.IsHosting)
              {
-                 GlobalsManager.HasLoadedMidLobbyInfo = true;
-                 GlobalsManager.HasLoadedMainLobbyInfo = true;
-                 GlobalsManager.LobbyState = LobbyState.Lobby;
-                 
                  SteamLobbyManager.Inst.CreateLobby();
+                 var lobby = PaMNetworkManager.PamInstance!.LobbyInfo;
+                 
+                 lobby.HasLoadedMidLobbyInfo = true;
+                 lobby.HasLoadedMainLobbyInfo = true;
+                 lobby.LobbyState = LobbyState.Lobby;
+                 
+                 
                  yield return new WaitUntil(() => SteamLobbyManager.Inst.InLobby);
                  
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState", ((ushort)LobbyState.Lobby).ToString());
@@ -553,35 +558,36 @@ public partial class GameManagerPatch
              else
              {
                  SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
+                   var lobby = PaMNetworkManager.PamInstance!.LobbyInfo;
                  yield return new WaitUntil(() => AttributeNetworkWrapperV2.NetworkManager.Instance!.TransportActive);
-                 yield return new WaitUntil(() => GlobalsManager.HasLoadedMainLobbyInfo);
-                 yield return new WaitUntil(() => GlobalsManager.HasLoadedAllInfo);
+                 yield return new WaitUntil(() => lobby.HasLoadedMainLobbyInfo);
+                 yield return new WaitUntil(() => lobby.HasLoadedAllInfo);
                  
-                 if (GlobalsManager.LobbyState == LobbyState.Challenge)
+                 if (lobby.LobbyState == LobbyState.Challenge)
                  {
                      SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "1");
                      SceneLoader.Inst.manager.AddToLoadingTasks("Challenge Level Vote", Task.Run(async () =>
                      {
-                         while (GlobalsManager.LobbyState == LobbyState.Challenge)
+                         while (lobby.LobbyState == LobbyState.Challenge)
                          {
                              await Task.Delay(100);
                          }
                      }));
                      
-                     GlobalsManager.HasLoadedMidLobbyInfo = true;
+                     lobby.HasLoadedMidLobbyInfo = true;
                      
-                     yield return new WaitUntil(() => GlobalsManager.LobbyState != LobbyState.Challenge); //what?
+                     yield return new WaitUntil(() => lobby.LobbyState != LobbyState.Challenge); //what?
                      
                      yield break;
                  }
                  
-                 if (GlobalsManager.LobbyState == LobbyState.Playing)
+                 if (lobby.LobbyState == LobbyState.Playing)
                  {
-                     GlobalsManager.HasLoadedMidLobbyInfo = false;
-                     GlobalsManager.JoinedMidLevel = true;
+                     lobby.HasLoadedMidLobbyInfo = false;
+                     lobby.JoinedMidLevel = true;
                      SceneLoader.Inst.manager.AddToLoadingTasks("Lobby State", Task.Run(async () =>
                      {
-                         while (!GlobalsManager.HasLoadedMidLobbyInfo)
+                         while (!lobby.HasLoadedMidLobbyInfo)
                          {
                              await Task.Delay(100);
                          }
@@ -589,10 +595,12 @@ public partial class GameManagerPatch
                  }
                  else
                  {
-                     GlobalsManager.HasLoadedMidLobbyInfo = true;
-                     GlobalsManager.JoinedMidLevel = false;
+                     lobby.HasLoadedMidLobbyInfo = true;
+                     lobby.JoinedMidLevel = false;
                  }
              }
+
+             justCreatedLobby = true;
          }
         
          VGLevel levelTest;
@@ -619,12 +627,18 @@ public partial class GameManagerPatch
 
              var item = DownloadLevel();
 
-             yield return new WaitUntil(() => !GlobalsManager.IsDownloading);
-
+             while (!item.IsCompleted)
+             {
+                 yield return new WaitForUpdate();
+             }
+             
              var result = item.Result;
 
              if (result.Id == 0)
              {
+                 SceneLoader.Inst.LoadSceneGroup("Arcade");
+                 SteamManager.Inst?.DisconnectAll();
+                 ErrorScreen.CreateErrorScreen($"Failed to download level with id [<b>{GlobalsManager.LevelId}</b>]\n\nDisconnected from lobby.");
                  yield break; //this prob doesnt need to be here
              }
 
@@ -685,8 +699,7 @@ public partial class GameManagerPatch
              {
                  PAM.Logger.LogError(
                      "tried playing local or non public level while [Allow hidden levels] is disabled");
-
-                 GlobalsManager.IsReloadingLobby = true;
+                 
                  SteamLobbyManager.Inst.UnloadAll();
              
                  SceneLoader.Inst.manager.ClearLoadingTasks();
@@ -699,7 +712,7 @@ public partial class GameManagerPatch
                  }
                  else
                  {
-                     GlobalsManager.Queue.Remove(GlobalsManager.LevelId);
+                     GlobalsManager.Queue.RemoveLevel(GlobalsManager.LevelId);
 
                      if (GlobalsManager.Queue.Count == 0)
                      {
@@ -707,8 +720,8 @@ public partial class GameManagerPatch
                          SteamManager.Inst.EndServer();
                          yield break;
                      }
-                     
-                     string id = GlobalsManager.Queue[0];
+
+                     string id = GlobalsManager.Queue[0].Id; 
                      ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
                      GlobalsManager.LevelId = id;
                  }
@@ -722,7 +735,7 @@ public partial class GameManagerPatch
              SteamLobbyManager.Inst.RandSeed = Random.seed;
              ObjectManager.inst.seed = Random.seed;
              RNGSync.Seed = SteamLobbyManager.Inst.RandSeed;
-             if (GlobalsManager.IsReloadingLobby)
+             if (!justCreatedLobby)
              {
                  SteamLobbyManager.Inst.CurrentLobby.SetData("LevelId", GlobalsManager.LevelId);
                  SteamLobbyManager.Inst.CurrentLobby.SetData("seed", SteamLobbyManager.Inst.RandSeed.ToString());
@@ -731,7 +744,7 @@ public partial class GameManagerPatch
 
                  if (!GlobalsManager.IsChallenge)
                  {
-                     SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(GlobalsManager.GetQueueLevelNames()));
+                     SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(GlobalsManager.Queue.GetQueueLevelNames()));
                  }
 
                  PAM.Logger.LogError(SteamLobbyManager.Inst.RandSeed);
@@ -756,8 +769,6 @@ public partial class GameManagerPatch
          {
              PAM.Logger.LogFatal("LEVEL FAILED TO LOAD, going back to menu");
              PAM.Logger.LogDebug(e);
-        
-             GlobalsManager.IsReloadingLobby = false;
              
              if (!GlobalsManager.IsHosting)
              {
@@ -796,9 +807,13 @@ public partial class GameManagerPatch
 
         GlobalsManager.LevelId = levelID.ToString();
         SteamLobbyManager.Inst.RandSeed = seed;
-        GlobalsManager.IsReloadingLobby = true;
-        GlobalsManager.LobbyState = LobbyState.Lobby;
-        GlobalsManager.HasLoadedMidLobbyInfo = true;
+
+        var lobby = PaMNetworkManager.PamInstance?.LobbyInfo;
+        if (lobby != null)
+        {
+            lobby.LobbyState = LobbyState.Lobby;
+            lobby.HasLoadedMidLobbyInfo = true;
+        }
         
         DataManager.inst.StartCoroutine(NextQueueLevelIEnu(levelID, seed)); //task crashes game here 
     }
@@ -830,8 +845,7 @@ public partial class GameManagerPatch
         }
         
         SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "0");
-        GlobalsManager.IsReloadingLobby = true;
-        GlobalsManager.HasLoadedMidLobbyInfo = true;
+        PaMNetworkManager.PamInstance?.LobbyInfo.HasLoadedMidLobbyInfo = true;
         SceneLoader.Inst.manager.ClearLoadingTasks();
         SceneLoader.Inst.LoadSceneGroup("Challenge");
     }

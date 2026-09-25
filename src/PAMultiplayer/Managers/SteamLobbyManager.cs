@@ -207,7 +207,7 @@ public partial class SteamLobbyManager : MonoBehaviour
         if(GlobalsManager.Players.TryAdd(friend.Id, new PlayerData(newData, friend.Name)))
         {
             //do not add new players if on loading screen 
-            if (GameManager.Inst && GameManager.Inst.CurGameState != GameManager.GameState.Loading && GlobalsManager.LobbyState != LobbyState.Playing)
+            if (GameManager.Inst && GameManager.Inst.CurGameState != GameManager.GameState.Loading && PaMNetworkManager.PamInstance?.LobbyInfo.LobbyState != LobbyState.Playing)
             {
                 VGPlayerManager.Inst.players.Add(GlobalsManager.Players[friend.Id].VGPlayerData);
             }
@@ -262,11 +262,6 @@ public partial class SteamLobbyManager : MonoBehaviour
             }
             playerAmount++;
         }
-
-        GlobalsManager.HasLoadedExternalInfo = false;
-        GlobalsManager.HasLoadedBasePlayerIds = false;
-        GlobalsManager.HasLoadedMainLobbyInfo = false;
-        GlobalsManager.HasLoadedMidLobbyInfo = false;
         
         GlobalsManager.Queue.Clear();
         SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
@@ -312,7 +307,8 @@ public partial class SteamLobbyManager : MonoBehaviour
             PaMNetworkManager.CallRpc_Multi_UpdateLobbyState((byte)LobbyState.Lobby);
         }
       
-        lobby.SetData("LevelQueue", JsonConvert.SerializeObject(GlobalsManager.GetQueueLevelNames()));
+        lobby.SetData("LevelQueue", JsonConvert.SerializeObject(GlobalsManager.Queue.GetQueueLevelNames()));
+        lobby.SetData("ClientCanAdd", LobbyCreationManager.Instance.AllowClientLevels.ToString());
         lobby.SetData("HealthMod", DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0).ToString());
         lobby.SetData("LinkedMod", DataManager.inst.GetSettingBool("mp_linkedHealth", false).ToString());
         lobby.SetData("SpeedMod", DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0).ToString());

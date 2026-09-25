@@ -1,10 +1,10 @@
 using System;
 using HarmonyLib;
 using AttributeNetworkWrapperV2;
-using PAMultiplayer;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
 using UnityEngine;
-using Random = UnityEngine.Random;
+
 
 namespace PAMultiplayer.Patch;
 
@@ -60,9 +60,17 @@ public static partial class CheckpointHandler
         PAM.Logger.LogInfo($"Checkpoint [{index}] Received");
         
         GameManager.Inst.playingCheckpointAnimation = true;
-        VGPlayerManager.Inst.RespawnPlayers();
+   
+        Vector3 pos = Vector3.zero;
+        if (index >= 0 && index < DataManager.inst.gameData?.beatmapData?.checkpoints.Count)
+        {
+            pos = DataManager.inst.gameData.beatmapData.checkpoints[index].pos;
+        }
+        VGPlayerManager.Inst.EnqueueRespawn(pos);
+        
         VGPlayerManager.Inst.HealPlayers();
         GameManager.Inst.currentCheckpointIndex = index;
+      
         GameManager.Inst.StartCoroutine(GameManager.Inst.PlayCheckpointAnimation(index));
         
         for (var i = 0; i < GlobalsManager.HitsQueue.Count; i++)
@@ -76,11 +84,11 @@ public static partial class CheckpointHandler
             
             if (hitInfo.All)
             {
-                Player_Patch.DamageAll(hitInfo.Health, hitInfo.Checkpoint, hitInfo.Id);
+                PlayerPatch.DamageAll(hitInfo.Health, hitInfo.Checkpoint, hitInfo.Id);
             }
             else
             {
-                Player_Patch.Multi_PlayerDamaged(hitInfo.Id, hitInfo.Health, hitInfo.Checkpoint);
+                PlayerPatch.Multi_PlayerDamaged(hitInfo.Id, hitInfo.Health, hitInfo.Checkpoint);
             }
             
             GlobalsManager.HitsQueue.RemoveAt(i);
@@ -116,7 +124,7 @@ public static partial class RewindHandler
                     index = GameManager.Inst.currentCheckpointIndex;
                 }
                 
-                CallRpc_Multi_RewindToCheckpoint(index);
+                CallRpc_Multi_RewindToCheckpoint(index, PaMNetworkManager.PamInstance?.LobbyInfo.RewindCounter + 1 ?? 0);
             };
         }
         else
@@ -129,9 +137,9 @@ public static partial class RewindHandler
     }
 
     [MultiRpc]
-    public static void Multi_RewindToCheckpoint(int index)
+    public static void Multi_RewindToCheckpoint(int index, uint counter)
     {
-        if (!GlobalsManager.HasLoadedAllLobbyInfo)
+        if (PaMNetworkManager.PamInstance?.LobbyInfo.HasLoadedAllLobbyInfo != true)
         {
             return;
         }
@@ -149,27 +157,7 @@ public static partial class RewindHandler
             }
         }
         GameManager.Inst.RewindToCheckpoint(index);
+        PaMNetworkManager.PamInstance?.LobbyInfo.RewindCounter = counter;
     }
 }
 
-[HarmonyPatch(typeof(SteamWrapper))]
-public static class SteamWrapperPatch
-{
-    [HarmonyPatch(nameof(SteamWrapper.SubmitArcadeLeaderboardScore))]
-    [HarmonyPrefix]
-    static bool PreSubmitArcadeLeaderboardScore()
-    {
-        if (!GlobalsManager.IsMultiplayer || GlobalsManager.IsHosting)
-        {
-            return true;
-        }
-
-        if (GlobalsManager.JoinedMidLevel)
-        {
-            GlobalsManager.JoinedMidLevel = false;
-            return false;
-        }
-
-        return true;
-    }
-}

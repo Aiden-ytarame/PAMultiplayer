@@ -11,7 +11,7 @@ namespace PAMultiplayer.AttributeNetworkWrapperOverrides;
 
 public static class AttrWrapperExtension
 {
-    public static void WriteSteamId(this NetworkWriter writer, SteamId steamId) => writer.BinaryWriter.Write(steamId);
+    public static void WriteSteamId(this NetworkWriter writer, SteamId steamId) => writer.Write(steamId.Value);
     public static SteamId ReadSteamId(this NetworkReader reader) => reader.ReadUInt64();
 
     public static void WriteVector2(this NetworkWriter writer, Vector2 vector2)
@@ -47,17 +47,37 @@ public static class AttrWrapperExtension
         return ulongs;
     }
 
-    public static void WriteSongData(this NetworkWriter writer, Span<short> songData)
+    public static void WriteSongData(this NetworkWriter writer, ReadOnlySpan<short> songData)
     {
-        var buffer = MemoryMarshal.Cast<short, byte>(songData);
-        writer.Write(buffer.Length);
-        writer.BinaryWriter.Write(buffer);
+        unsafe
+        {
+            fixed (short* ptr = songData)
+            {
+                byte* data = (byte*)ptr;
+                int size = sizeof(short) * songData.Length;
+                writer.Write(size);
+                writer.WriteBytes(data, size);
+            }
+        }
     }
 
-    public static Span<short> ReadSongData(this NetworkReader reader)
+    public static ReadOnlySpan<short> ReadSongData(this NetworkReader reader)
     {
         int count = reader.ReadInt32();
-        return MemoryMarshal.Cast<byte, short>(reader.BinaryReader.ReadBytes(count)).ToArray();
+        unsafe
+        {
+            ReadOnlySpan<byte> bytes = reader.ReadBytes(count);
+            if (bytes != null && bytes.Length >= 2)
+            {
+                fixed (byte* ptr = bytes)
+                {
+                    return new Span<short>(ptr, Mathf.FloorToInt((float)count / sizeof(short)));
+                }
+            }
+           
+        }
+
+        return new Span<short>();
     }
     
     public static void WriteVersion(this NetworkWriter writer, Version version)

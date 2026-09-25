@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using AttributeNetworkWrapperV2;
+using PAMultiplayer.Managers;
 using PAMultiplayer.UI;
 using Steamworks;
 using Steamworks.Data;
@@ -11,13 +12,14 @@ namespace PAMultiplayer.AttributeNetworkWrapperOverrides;
 
 public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionManager
 {
+    private const int KickEndReasonCode = 1111;
+    
     private SocketManager _server;
     private ConnectionManager _client;
     
     internal readonly Dictionary<int, Connection?> IDToConnection = new();
+    internal readonly Dictionary<Connection, int> ConnectionToID = new();
     internal readonly Dictionary<ulong, int> SteamIdToNetId = new();
-
-    private static byte[] _buffer = new byte[1024];
 
     public int GetNextConnectionId()
     {
@@ -32,49 +34,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     
     int GetIdFromSteamConnection(Connection steamConnection)
     {
-        foreach (var keyValuePair in IDToConnection)
-        {
-            if (keyValuePair.Value == steamConnection)
-            {
-                return keyValuePair.Key;
-            }
-        }
-        return -1;
-    }
-
-    void AssureBufferSpace(int size)
-    {
-        if (_buffer.Length >= size || size <= 0)
-        {
-            return;
-        }
-        
-        // taken from MemoryStream
-        // Check for overflow
-        if (size > _buffer.Length)
-        {
-            int newCapacity = Math.Max(size, 256);
-
-            // We are ok with this overflowing since the next statement will deal
-            // with the cases where _capacity*2 overflows.
-            if (newCapacity < _buffer.Length * 2)
-            {
-                newCapacity = _buffer.Length * 2;
-            }
-
-            // We want to expand the array up to Array.MaxLength.
-            // And we want to give the user the value that they asked for
-            if ((uint)(_buffer.Length * 2) > 999999)
-            {
-                newCapacity = Math.Max(size, 9999999);
-            }
-
-            byte[] newBuffer = new byte[newCapacity];
-           
-            Buffer.BlockCopy(_buffer, 0, newBuffer, 0, _buffer.Length);
-            
-            _buffer = newBuffer;
-        } 
+        return ConnectionToID.GetValueOrDefault(steamConnection, -1);
     }
 
     public void Receive()
@@ -97,6 +57,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     {
         IDToConnection.Clear();
         SteamIdToNetId.Clear();
+        ConnectionToID.Clear();
         if (ulong.TryParse(address, out var id))
         {
             _client = SteamNetworkingSockets.ConnectRelay(id, 0, this);
@@ -132,24 +93,34 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     {
         if (IDToConnection.TryGetValue(connectionId, out var connection))
         {
-            connection?.Close(false, 1111);
+            connection?.Close(false, KickEndReasonCode);
         }
     }
 
-    public override void SendMessageToServer(ArraySegment<byte> data, SendType sendType = SendType.Reliable)
+    public override void SendMessageToServer(ReadOnlySpan<byte> data, SendType sendType = SendType.Reliable)
     {
         var steamSendType = sendType == SendType.Reliable ? Steamworks.Data.SendType.Reliable : Steamworks.Data.SendType.Unreliable;
-        
-        _client?.Connection.SendMessage(data.Array, data.Offset, data.Count, steamSendType);
+        unsafe
+        {
+            fixed (byte* numPtr = data)
+            {
+                _client?.Connection.SendMessage((IntPtr) numPtr, data.Length, steamSendType);
+            }
+        }
     }
 
-    public override void SendMessageToClient(int connectionId, ArraySegment<byte> data, SendType sendType = SendType.Reliable)
+    public override void SendMessageToClient(int connectionId, ReadOnlySpan<byte> data, SendType sendType = SendType.Reliable)
     {
         if (IDToConnection.TryGetValue(connectionId, out var connection))
         {
             var steamSendType = sendType == SendType.Reliable ? Steamworks.Data.SendType.Reliable | Steamworks.Data.SendType.NoNagle : Steamworks.Data.SendType.Unreliable | Steamworks.Data.SendType.NoDelay;
-            
-            connection?.SendMessage(data.Array, data.Offset, data.Count, steamSendType);
+            unsafe
+            {
+                fixed (byte* numPtr = data)
+                {
+                    connection?.SendMessage((IntPtr) numPtr, data.Length, steamSendType);
+                }
+            }
         }
     }
 
@@ -159,6 +130,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
         _client?.Close();
         IDToConnection.Clear();
         SteamIdToNetId.Clear();
+        ConnectionToID.Clear();
         IsActive = false;
     }
 
@@ -174,6 +146,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
         int id = GetNextConnectionId();
         
         IDToConnection.Add(id, connection);
+        ConnectionToID.Add(connection, id);
         SteamIdToNetId.Add(info.Identity.SteamId, id);
         
         OnServerClientConnected?.Invoke(new ClientNetworkConnection(id, info.Identity.SteamId.ToString()));
@@ -189,6 +162,7 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
         }
         
         IDToConnection.Remove(id);
+        ConnectionToID.Remove(connection);
         SteamIdToNetId.Remove(info.Identity.SteamId);
         OnServerClientDisconnected?.Invoke(new ClientNetworkConnection(id, info.Identity.SteamId.ToString()));
 
@@ -218,17 +192,16 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
             return;
         }
 
-        AssureBufferSpace(size);
-        Marshal.Copy(data, _buffer, 0, size);
-        ArraySegment<byte> dataArr = new ArraySegment<byte>(_buffer, 0, size);
-
-        try
+        unsafe
         {
-            OnServerDataReceived?.Invoke(new ClientNetworkConnection(id, identity.SteamId.ToString()), dataArr);
-        }
-        catch (Exception e)
-        {
-            PAM.Logger.LogError(e);
+            try
+            {
+                OnServerDataReceived?.Invoke(new ClientNetworkConnection(id, identity.SteamId.ToString()), new ReadOnlySpan<byte>(data.ToPointer(), size));
+            }
+            catch (Exception e)
+            {
+                PAM.Logger.LogError(e);
+            }
         }
     }
     
@@ -249,20 +222,18 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
     {
         IsActive = false;
         OnClientDisconnected?.Invoke();
-
-        if (info.State == ConnectionState.ClosedByPeer)
+     
+        switch (info.State)
         {
-            if (info.EndReason == (NetConnectionEnd)1111)
-            {
+            case ConnectionState.ClosedByPeer when info.EndReason == (NetConnectionEnd)KickEndReasonCode:
                 ErrorScreen.CreateErrorScreen("You were kicked from the lobby.");
                 return;
-            }
-            ErrorScreen.CreateErrorScreen("Server has been closed.");
-        }
-        
-        if (info.State is ConnectionState.Dead or ConnectionState.ProblemDetectedLocally)
-        {
-            ErrorScreen.CreateErrorScreen("Connection lost.");
+            case ConnectionState.ClosedByPeer:
+                ErrorScreen.CreateErrorScreen("Server has been closed.");
+                break;
+            case ConnectionState.Dead or ConnectionState.ProblemDetectedLocally:
+                ErrorScreen.CreateErrorScreen("Connection lost.");
+                break;
         }
     }
 
@@ -280,17 +251,16 @@ public class FacepunchSocketsTransport : Transport, ISocketManager, IConnectionM
             return;
         }
         
-        AssureBufferSpace(size);
-        Marshal.Copy(data, _buffer, 0, size);
-        ArraySegment<byte> dataArr = new ArraySegment<byte>(_buffer, 0, size);
-        
-        try
+        unsafe
         {
-            OnClientDataReceived?.Invoke(dataArr);
-        }
-        catch (Exception e)
-        {
-            PAM.Logger.LogError(e);
+            try
+            {
+                OnClientDataReceived?.Invoke(new ReadOnlySpan<byte>(data.ToPointer(), size));
+            }
+            catch (Exception e)
+            {
+                PAM.Logger.LogError(e);
+            }
         }
     }
 }

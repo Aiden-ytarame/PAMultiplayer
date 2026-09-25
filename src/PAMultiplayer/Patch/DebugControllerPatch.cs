@@ -1,7 +1,10 @@
 using System;
+using System.Collections;
+using AttributeNetworkWrapperV2;
 using HarmonyLib;
 using Newtonsoft.Json;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
+using PAMultiplayer.Data;
 using PAMultiplayer.Managers;
 using PAMultiplayer.UI;
 using Steamworks;
@@ -11,7 +14,7 @@ using UnityEngine;
 namespace PAMultiplayer.Patch;
 
 [HarmonyPatch(typeof(DebugController))]
-public static class DebugControllerPatch
+public static partial class DebugControllerPatch
 {
     [HarmonyPatch(nameof(DebugController.Awake))]
     [HarmonyPostfix]
@@ -154,7 +157,7 @@ public static class DebugControllerPatch
                             index = GameManager.Inst.currentCheckpointIndex;
                         }
                         
-                        RewindHandler.CallRpc_Multi_RewindToCheckpoint(index);
+                        RewindHandler.CallRpc_Multi_RewindToCheckpoint(index, PaMNetworkManager.PamInstance?.LobbyInfo.RewindCounter + 1 ?? 0);
                     }
                     else
                     {
@@ -185,8 +188,7 @@ public static class DebugControllerPatch
             {
                 __instance.AddLog("Attempting to disconnect from the lobby.");
                 GlobalsManager.LocalPlayerObjectId = 0;
-                SteamManager.Inst.EndServer();
-                SteamManager.Inst.EndClient();
+                SteamManager.Inst.DisconnectAll();
                 GlobalsManager.Players.Clear();
             });
         __instance.CommandList.Add(disconnectCommand);
@@ -226,29 +228,60 @@ public static class DebugControllerPatch
         __instance.CommandList.Add(chatCommand2);
         
         DebugCommand<string> queueCommand = new("AddQueue",
-            "Adds a level to the queue, the level has to be downloaded. (multiplayer mod, host)",
+            "Adds a level to the queue, the level has to be downloaded. (multiplayer mod, any)",
             "string(level_id)",
             levelId =>
             {
                 if (GlobalsManager.IsMultiplayer && !GlobalsManager.IsHosting)
                 {
-                    __instance.AddLog("You're not the host.");
+                    if (PaMNetworkManager.PamInstance?.LobbyInfo.AllowClientLevels == false)
+                    {
+                        __instance.AddLog("This lobby does not allow clients to add levels");
+                        ErrorScreen.CreateErrorScreen("This lobby does not allow clients to add levels to the Queue.");
+                        return;
+                    }
+                    
+                    if (ulong.TryParse(levelId, out ulong id))
+                    {
+                        CallRpc_Server_AddQueueLevel(id);
+                        __instance.AddLog("Requesting queue level to server");
+                        return;
+                    }
+                    __instance.AddLog("Clients can only pass ulong level ids");
                     return;
                 }
 
-                if (ArcadeLevelDataManager.Inst.GetLocalCustomLevel(levelId.ToString()))
+                if (!AddLevelToQueue(levelId.Trim()))
                 {
-                    GlobalsManager.Queue.Insert(0, ArcadeManager.Inst.CurrentArcadeLevel.TrackName);
-                    GlobalsManager.Queue.Add(levelId);
-                    __instance.AddLog($"Adding level with id [{levelId}] to queue.");
-                  
-                    SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(GlobalsManager.GetQueueLevelNames()));
-                    GlobalsManager.Queue.RemoveAt(0);
-                    return;
+                    if (ulong.TryParse(levelId, out ulong id))
+                    {
+                        __instance.StartCoroutine(AddWorkshopLevelToQueue(id));
+                    }
                 }
-                __instance.AddLog($"Level with id [{levelId}] wasn't found downloaded.");
             });
         __instance.CommandList.Add(queueCommand);
+
+        DebugCommand<int> removeQueue = new("RemoveQueue",
+            "Removes a level from the queue (multiplayer mod, host)",
+            "int(index)", index =>
+            {
+                if (GlobalsManager.IsMultiplayer && !GlobalsManager.IsHosting)
+                {
+                    return;
+                }
+                
+                if (index >= 0 && GlobalsManager.Queue.Count > index)
+                {
+                    GlobalsManager.Queue.RemoveLevelAt(index);
+                    GlobalsManager.Queue.InsertLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.name);
+                    DebugController.inst.AddLog($"removing the [{index}] level from the queue.");
+                  
+                    SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(GlobalsManager.Queue.GetQueueLevelNames()));
+                    GlobalsManager.Queue.RemoveLevelAt(0);
+                }
+            });
+        
+        __instance.CommandList.Add(removeQueue);
         
         DebugCommand toggleTransparencyCommand = new("ToggleTransparency",
             "toggles Transparent Nanos. (multiplayer mod, any)",
@@ -420,10 +453,64 @@ public static class DebugControllerPatch
                 SteamNetworkingUtils.FakeSendPacketLag = ms;
             });
         __instance.CommandList.Add(packetDelayCommand);
-        
-        
     }
 
+    private static bool AddLevelToQueue(string id)
+    {
+        VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
+        if (level)
+        {
+            GlobalsManager.Queue.InsertLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.name);
+            GlobalsManager.Queue.AddLevel(level.TrackName, id);
+            DebugController.inst.AddLog($"Adding level with id [{id}] to queue.");
+                  
+            SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(GlobalsManager.Queue.GetQueueLevelNames()));
+            GlobalsManager.Queue.RemoveLevelAt(0);
+            return true;
+        }
+        DebugController.inst.AddLog($"Level with id [{id}] wasn't found downloaded.");
+        return false;
+    }
+
+    static IEnumerator AddWorkshopLevelToQueue(ulong id)
+    {
+        var task = SteamManager.GetSteamLevel(id);
+        while (!task.IsCompleted)
+        {
+            yield return new WaitForUpdate();
+        }
+
+        var result = task.Result;
+        if (!result.HasValue || result.Value.Visibility == SteamWorkshopLevel.VisibilityType.Private
+                             || (result.Value.Visibility is SteamWorkshopLevel.VisibilityType.Friends or SteamWorkshopLevel.VisibilityType.Unlisted && !Settings.AllowNonPublicLevels.Value))
+        {
+            PAM.Logger.LogWarning($"Client tried to add disallowed level [{id}]");
+            yield break;
+        }
+        
+        GlobalsManager.Queue.InsertLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.name);
+        GlobalsManager.Queue.AddLevel(result.Value.LevelItem.Title, id.ToString());
+        DebugController.inst.AddLog($"Adding level with id [{id}] to queue.");
+                  
+        SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(GlobalsManager.Queue.GetQueueLevelNames()));
+        GlobalsManager.Queue.RemoveLevelAt(0);
+    }
+    
+    [ServerRpc]
+    private static void Server_AddQueueLevel(ClientNetworkConnection conn, ulong levelId)
+    {
+        if (LobbyCreationManager.Instance.AllowClientLevels)
+        {
+            if (!AddLevelToQueue(levelId.ToString()))
+            {
+                DebugController.inst.StartCoroutine(AddWorkshopLevelToQueue(levelId));
+            }
+            return;
+        }
+
+        DebugController.inst.AddLog($"player {conn.Address} tried to request level {levelId} but its dissallowed.");
+    }
+    
     [HarmonyPatch(nameof(DebugController.HandleInput))]
     [HarmonyPrefix]
     static void PreHandleInput(ref string _input)

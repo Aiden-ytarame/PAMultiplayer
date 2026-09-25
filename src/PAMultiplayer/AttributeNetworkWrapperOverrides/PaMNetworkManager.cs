@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using AttributeNetworkWrapperV2;
 using BepInEx.Bootstrap;
+using PAMultiplayer.Data;
 using PAMultiplayer.Managers;
 using PAMultiplayer.UI;
 using Steamworks;
@@ -47,6 +48,8 @@ public partial class PaMNetworkManager : NetworkManager
 
     public Dictionary<ulong, int> SteamIdToNetId =>
         _facepunchtransport.SteamIdToNetId;
+
+    public readonly LobbyInfo LobbyInfo = new();
     
     public void Receive()
     {
@@ -114,7 +117,7 @@ public partial class PaMNetworkManager : NetworkManager
             connection.Disconnect();
         }
         
-        CallRpc_Client_SetMainLobbyData(connection, level, SteamLobbyManager.Inst.RandSeed, (byte)GlobalsManager.LobbyState, (byte)DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0), (byte)DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0), DataManager.inst.GetSettingBool("mp_linkedHealth", false));
+        CallRpc_Client_SetMainLobbyData(connection, level, SteamLobbyManager.Inst.RandSeed, LobbyCreationManager.Instance.AllowClientLevels, (byte)LobbyInfo.LobbyState, (byte)DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0), (byte)DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0), DataManager.inst.GetSettingBool("mp_linkedHealth", false));
         foreach (var keyValuePair in GlobalsManager.Players)
         {
             CallRpc_Client_RegisterPlayerId(connection, keyValuePair.Key, keyValuePair.Value.VGPlayerData.PlayerID, GlobalsManager.Players.Count);
@@ -148,7 +151,7 @@ public partial class PaMNetworkManager : NetworkManager
     [ClientRpc]
     private static void Client_RegisterPlayerId(SteamId steamID, int id, int amount)
     {
-        GlobalsManager.HasLoadedBasePlayerIds = false;
+        PamInstance?.LobbyInfo.HasLoadedBasePlayerIds = false;
         
         _amountOfInfo++;
         PAM.Logger.LogInfo($"Player Id from [{id}] Received, {steamID}//{amount}");
@@ -174,7 +177,7 @@ public partial class PaMNetworkManager : NetworkManager
         {
             _amountOfInfo = 0;
             PAM.Logger.LogInfo($"Player Id from [{id}] Received");
-            GlobalsManager.HasLoadedBasePlayerIds = true;
+            PamInstance?.LobbyInfo.HasLoadedBasePlayerIds = true;
         }
     }
     
@@ -209,17 +212,19 @@ public partial class PaMNetworkManager : NetworkManager
     }
 
     [ClientRpc]
-    private static void Client_SetMainLobbyData(ulong levelId, int seed, byte state, byte healthMod, byte speedMod, bool linked)
+    private static void Client_SetMainLobbyData(ulong levelId, int seed, bool allowsClient, byte state, byte healthMod, byte speedMod, bool linked)
     {
         if (state < (byte)SteamLobbyManager.LobbyState.Max)
         {
-            GlobalsManager.LobbyState = (SteamLobbyManager.LobbyState)state;
+            PamInstance?.LobbyInfo.LobbyState = (SteamLobbyManager.LobbyState)state;
         }
 
-        if (GlobalsManager.LobbyState != SteamLobbyManager.LobbyState.Challenge)
+        if (PamInstance?.LobbyInfo.LobbyState != SteamLobbyManager.LobbyState.Challenge)
         {
             GlobalsManager.LevelId = levelId.ToString();
         }
+
+        PamInstance?.LobbyInfo.AllowClientLevels = allowsClient;
         
         //modifiers
         DataManager.inst.UpdateSettingEnum("ArcadeHealthMod", healthMod);
@@ -228,7 +233,7 @@ public partial class PaMNetworkManager : NetworkManager
         SteamLobbyManager.Inst.RandSeed = seed;
         PAM.Logger.LogInfo($"SEED : {seed}");
 
-        GlobalsManager.HasLoadedMainLobbyInfo = true;
+        PamInstance?.LobbyInfo.HasLoadedMainLobbyInfo = true;
     }
     
     [MultiRpc]
@@ -236,7 +241,7 @@ public partial class PaMNetworkManager : NetworkManager
     {
         if (state < (ushort)SteamLobbyManager.LobbyState.Max)
         {
-            GlobalsManager.LobbyState = (SteamLobbyManager.LobbyState)state;
+            PamInstance?.LobbyInfo.LobbyState = (SteamLobbyManager.LobbyState)state;
         }
     }
     

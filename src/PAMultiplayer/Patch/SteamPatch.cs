@@ -1,7 +1,7 @@
-using System.Threading.Tasks;
 using HarmonyLib;
+using PAMultiplayer.AttributeNetworkWrapperOverrides;
+using PAMultiplayer.Managers;
 using Steamworks;
-using Steamworks.Data;
 
 namespace PAMultiplayer.Patch;
 
@@ -14,5 +14,40 @@ public static class SteamPatch
     private static bool PreInit()
     {
         return !SteamClient.IsValid;
+    }
+}
+
+
+[HarmonyPatch(typeof(SteamWrapper))]
+public static class SteamWrapperPatch
+{
+    [HarmonyPatch(nameof(SteamWrapper.SubmitArcadeLeaderboardScore))]
+    [HarmonyPrefix]
+    static bool PreSubmitArcadeLeaderboardScore(ref int _score, ref int[] _scores)
+    {
+        if (!GlobalsManager.IsMultiplayer)
+        {
+            return true;
+        }
+
+        if (PaMNetworkManager.PamInstance?.LobbyInfo.JoinedMidLevel == true)
+        {
+            PaMNetworkManager.PamInstance?.LobbyInfo.JoinedMidLevel = false;
+            return false;
+        }
+
+        /*if (PointsManager.Inst)
+        {
+            PointsManager.PlayerRank rank = PointsManager.Inst.GetLocalRank();
+            _score = rank.Score;
+            if (_scores.Length == 3)
+            {
+                _scores[0] = rank.Hits;
+                _scores[1] = rank.Cc;
+                _scores[2] = rank.Boosts;
+            }
+        }*/
+        
+        return true;
     }
 }
