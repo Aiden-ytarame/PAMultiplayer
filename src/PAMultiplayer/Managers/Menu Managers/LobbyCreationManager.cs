@@ -70,7 +70,7 @@ public class LobbyCreationManager : MonoBehaviour
                 
                 PublishedFileId id = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID;
                 if (!GlobalsManager.Queue.ContainsLevel(id.ToString()))
-                    GlobalsManager.Queue.AddLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.name);
+                    GlobalsManager.Queue.AddLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID);
 
                 ArcadeManager.Inst.CurrentArcadeLevel =
                     ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.Queue[0].Id);

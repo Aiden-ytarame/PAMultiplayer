@@ -57,7 +57,7 @@ namespace PAMultiplayer.Patch
             {
                 if (GlobalsManager.Queue.Count > 0)
                 {
-                    string id = ArcadeManager.Inst.CurrentArcadeLevel.name;
+                    string id = ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID;
                     if (!GlobalsManager.Queue.ContainsLevel(id))
                         GlobalsManager.Queue.AddLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, id);
 

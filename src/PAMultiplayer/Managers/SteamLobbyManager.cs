@@ -299,7 +299,7 @@ public partial class SteamLobbyManager : MonoBehaviour
         else
         {
             VGLevel currentLevel = ArcadeManager.Inst.CurrentArcadeLevel;
-            GlobalsManager.LevelId = currentLevel.SteamInfo != null ?  currentLevel.SteamInfo.ItemID.Value.ToString() : currentLevel.name;
+            GlobalsManager.LevelId = currentLevel.SteamInfo != null ?  currentLevel.SteamInfo.ItemID.Value.ToString() : currentLevel.BaseLevelData.LevelID;
             
             lobby.SetData("LevelId", GlobalsManager.LevelId);
             lobby.SetData("seed", RandSeed.ToString());

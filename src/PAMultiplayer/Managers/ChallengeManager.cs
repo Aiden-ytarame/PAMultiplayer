@@ -210,7 +210,7 @@ public partial class ChallengeManager : MonoBehaviour
 
         foreach (var arcadeLevel in ArcadeLevelDataManager.Inst.ArcadeLevels)
         {
-            if (!comparer.Contains(arcadeLevel.name))
+            if (!comparer.Contains(arcadeLevel.BaseLevelData.LevelID))
             {
                 nonRepeatLevels.Add(arcadeLevel);
             }
@@ -262,7 +262,7 @@ public partial class ChallengeManager : MonoBehaviour
             if (!level.LevelMusic) //this can mean the user is using the mod LessRam
             {
                 level = ArcadeLevelDataManager.Inst
-                    .GetLocalCustomLevel(level.name); //this triggers song load if thats the case
+                    .GetLocalCustomLevel(level.BaseLevelData.LevelID); //this triggers song load if thats the case
 
                 for (int j = 0; j < 316; j++)
                 {
@@ -280,14 +280,14 @@ public partial class ChallengeManager : MonoBehaviour
 
             if (!level.AlbumArt)
             {
-                loadTasks.Add(AlbumArtManager.LoadAlbumArtAsync(level.name, level.BaseLevelData.LocalFolder));
+                loadTasks.Add(AlbumArtManager.LoadAlbumArtAsync(level.BaseLevelData.LevelID, level.BaseLevelData.LocalFolder));
             }
             else
             {
                 loadTasks.Add(null);
             }
 
-            RecentLevels.Add(level.name);
+            RecentLevels.Add(level.BaseLevelData.LevelID);
             _levelsToVote.Add(level);
             nonRepeatLevels.Remove(level);
 
@@ -449,7 +449,7 @@ public partial class ChallengeManager : MonoBehaviour
                 if (!_levelsToVote.Contains(level))
                 {
                     _levelsToVote.Add(level);
-                    level.AlbumArt = await AlbumArtManager.LoadAlbumArtAsync(level.name, level.BaseLevelData.LocalFolder);
+                    level.AlbumArt = await AlbumArtManager.LoadAlbumArtAsync(level.BaseLevelData.LevelID, level.BaseLevelData.LocalFolder);
                     _loadedLevels[level] = new(true, true);
                 }
                 

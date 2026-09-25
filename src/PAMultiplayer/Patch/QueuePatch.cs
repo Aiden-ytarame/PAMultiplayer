@@ -189,7 +189,7 @@ public static class LevelEndScreenPatch
         blacklist.Start();
         var ui = blacklist.UIElement as UI_Button;
 
-        if (Settings.ChallengeBlacklist.Value.Contains(ArcadeManager.Inst.CurrentArcadeLevel.name))
+        if (Settings.ChallengeBlacklist.Value.Contains(ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID))
         {
             UIStateManager.Inst.RefreshTextCache(ui!.Text, "Whitelist Level");
         }
@@ -205,16 +205,16 @@ public static class LevelEndScreenPatch
         {
             string blacklistStr = Settings.ChallengeBlacklist.Value;
 
-            if (!blacklistStr.Contains(ArcadeManager.Inst.CurrentArcadeLevel.name))
+            if (!blacklistStr.Contains(ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID))
             {
-                Settings.ChallengeBlacklist.Value += $"/{ArcadeManager.Inst.CurrentArcadeLevel.name}";
+                Settings.ChallengeBlacklist.Value += $"/{ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID}";
                 UIStateManager.Inst.RefreshTextCache(ui.Text, "Whitelist Level");
                 ui.Text.text = "Whitelist Level";
 
             }
             else
             {
-                Settings.ChallengeBlacklist.Value = Settings.ChallengeBlacklist.Value.Replace($"/{ArcadeManager.Inst.CurrentArcadeLevel.name}", "");
+                Settings.ChallengeBlacklist.Value = Settings.ChallengeBlacklist.Value.Replace($"/{ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID}", "");
                 UIStateManager.Inst.RefreshTextCache(ui.Text, "Blacklist Level");
                 ui.Text.text = "Blacklist Level";
             }

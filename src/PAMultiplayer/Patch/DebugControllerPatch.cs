@@ -273,7 +273,7 @@ public static partial class DebugControllerPatch
                 if (index >= 0 && GlobalsManager.Queue.Count > index)
                 {
                     GlobalsManager.Queue.RemoveLevelAt(index);
-                    GlobalsManager.Queue.InsertLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.name);
+                    GlobalsManager.Queue.InsertLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID);
                     DebugController.inst.AddLog($"removing the [{index}] level from the queue.");
                   
                     SteamLobbyManager.Inst.CurrentLobby.SetData("LevelQueue", JsonConvert.SerializeObject(GlobalsManager.Queue.GetQueueLevelNames()));
@@ -460,7 +460,7 @@ public static partial class DebugControllerPatch
         VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
         if (level)
         {
-            GlobalsManager.Queue.InsertLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.name);
+            GlobalsManager.Queue.InsertLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID);
             GlobalsManager.Queue.AddLevel(level.TrackName, id);
             DebugController.inst.AddLog($"Adding level with id [{id}] to queue.");
                   
@@ -488,7 +488,7 @@ public static partial class DebugControllerPatch
             yield break;
         }
         
-        GlobalsManager.Queue.InsertLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.name);
+        GlobalsManager.Queue.InsertLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID);
         GlobalsManager.Queue.AddLevel(result.Value.LevelItem.Title, id.ToString());
         DebugController.inst.AddLog($"Adding level with id [{id}] to queue.");
                   

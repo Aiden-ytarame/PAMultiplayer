@@ -788,7 +788,7 @@ public static class BeatmapThemePatch
     /// </summary>
     [HarmonyPatch(nameof(DataManager.BeatmapTheme.GetPlayerColor))]
     [HarmonyPrefix]
-    static void PreGetPlayerColor(DataManager.BeatmapTheme __instance, ref Color __result, int _val)
+    static bool PreGetPlayerColor(DataManager.BeatmapTheme __instance, ref Color __result, int _val)
     {
         __result = __instance.playerColors[_val % 4];
         return false;
