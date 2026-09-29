@@ -114,7 +114,11 @@ public partial class PaMNetworkManager : NetworkManager
         {
             PAM.Logger.LogError("Tried to send local level to client");
             ErrorScreen.CreateErrorScreen("Tried to send local level to client, disconnecting...\n\nHost another level and try again");
-            connection.Disconnect();
+        
+            SteamManager.Inst.EndServer();
+            SceneLoader.Inst.manager.ClearLoadingTasks();
+            SceneLoader.Inst.LoadSceneGroup("Menu");
+            return;
         }
         
         CallRpc_Client_SetMainLobbyData(connection, level, SteamLobbyManager.Inst.RandSeed, LobbyCreationManager.Instance.AllowClientLevels, (byte)LobbyInfo.LobbyState, (byte)DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0), (byte)DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0), DataManager.inst.GetSettingBool("mp_linkedHealth", false));

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using AttributeNetworkWrapperV2;
@@ -9,7 +8,6 @@ using Steamworks;
 using Steamworks.Data;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using VGFunctions;
 
 namespace PAMultiplayer.Managers;
@@ -56,7 +54,7 @@ public partial class PointsManager : MonoBehaviour
 
     }
 
-    private Leaderboard? leaderboard;
+    private Leaderboard? _leaderboard;
     private int _currentPoint = 0;
     
     public static PointsManager Inst;
@@ -137,12 +135,12 @@ public partial class PointsManager : MonoBehaviour
         });
         _playerEntryPrefab = _pointsBundle.LoadAsset("assets/playerentry.prefab") as GameObject;
 
-        leaderboard = await SteamUserStats.FindOrCreateLeaderboardAsync("MP_MOD_Points", LeaderboardSort.Descending,
+        _leaderboard = await SteamUserStats.FindOrCreateLeaderboardAsync("MP_MOD_Points", LeaderboardSort.Descending,
             LeaderboardDisplay.Numeric);
 
-        if (leaderboard.HasValue)
+        if (_leaderboard.HasValue)
         {
-            var entry = await leaderboard.Value.GetScoresForUsersAsync([SteamClient.SteamId]);
+            var entry = await _leaderboard.Value.GetScoresForUsersAsync([SteamClient.SteamId]);
             
             if (entry != null && entry.Length > 0)
             {
@@ -209,9 +207,9 @@ public partial class PointsManager : MonoBehaviour
         Settings.Score.Value = score;
         _currentPoint = score;
 
-        if (leaderboard.HasValue)
+        if (_leaderboard.HasValue)
         {
-            leaderboard.Value.SubmitScoreAsync(score);
+            _leaderboard.Value.SubmitScoreAsync(score);
         }
         
         if (GlobalsManager.IsMultiplayer)

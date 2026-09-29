@@ -101,7 +101,7 @@ public class LobbyScreenManager : MonoBehaviour
         if (LobbyMenu)
         {
             LobbyMenu.HideAll();
-            CameraDB.Inst.SetUIVolumeWeightIn(0);
+            CameraDB.Inst.SetUIVolumeWeight(0f, 0f);
             Destroy(LobbyMenu.gameObject);
         }
     }

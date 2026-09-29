@@ -10,7 +10,7 @@ public class MenuSelectionManager : MonoBehaviour
 {
     public static MenuSelectionManager Instance { get; private set; }
     public UI_Menu Menu;
-    private TextMeshProUGUI LobbyCount;
+    private TextMeshProUGUI _lobbyCount;
     private void Awake()
     {
         if(Instance != null)
@@ -27,10 +27,10 @@ public class MenuSelectionManager : MonoBehaviour
         buttons.GetChild(0).GetComponent<MultiElementButton>().onClick.AddListener(() =>
         {
             Menu.HideAllInstant();
-            MultiplayerUIManager.Inst.SetContinueAction(new Action(() =>
+            MultiplayerUIManager.Inst.SetContinueAction(() =>
             {
                 SceneLoader.Inst.LoadSceneGroup("Arcade");
-            }));
+            });
             MultiplayerUIManager.Inst.OpenUI();
         });
         
@@ -53,7 +53,7 @@ public class MenuSelectionManager : MonoBehaviour
 
         });
 
-        LobbyCount = buttons.GetChild(1).Find("QueueIcon/Text").GetComponent<TextMeshProUGUI>();
+        _lobbyCount = buttons.GetChild(1).Find("QueueIcon/Text").GetComponent<TextMeshProUGUI>();
         
         buttons.GetChild(2).GetComponent<MultiElementButton>().onClick.AddListener(() =>
         {
@@ -100,26 +100,26 @@ public class MenuSelectionManager : MonoBehaviour
             Menu.AllViews["main"].PossibleFirstButtons[0].Select();
             CameraDB.Inst.SetUIVolumeWeightIn(0.2f);
             
-            LobbyCount.text = "...";
-            UIStateManager.Inst.RefreshTextCache(LobbyCount, "...");
+            _lobbyCount.text = "...";
+            UIStateManager.Inst.RefreshTextCache(_lobbyCount, "...");
             
             LobbyQuery query = new LobbyQuery();
             var lobbies = await query.WithMaxResults(10).WithKeyValue("AlphaMultiplayer", "true").RequestAsync();
 
-            if (!LobbyCount)
+            if (!_lobbyCount)
             {
                 return;
             }
             
             if (lobbies != null)
             {
-                LobbyCount.text = lobbies.Length.ToString();
-                UIStateManager.Inst.RefreshTextCache(LobbyCount, lobbies.Length.ToString());
+                _lobbyCount.text = lobbies.Length.ToString();
+                UIStateManager.Inst.RefreshTextCache(_lobbyCount, lobbies.Length.ToString());
             }
             else
             {
-                LobbyCount.text = "0";
-                UIStateManager.Inst.RefreshTextCache(LobbyCount, "0");
+                _lobbyCount.text = "0";
+                UIStateManager.Inst.RefreshTextCache(_lobbyCount, "0");
             }
         }
         catch (Exception e)

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -6,8 +7,8 @@ using Eflatun.SceneReference;
 using HarmonyLib;
 using PAMultiplayer.Managers;
 using Systems.SceneManagement;
-using UnityEngine;
 using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 
 namespace PAMultiplayer.Patch;
@@ -54,61 +55,9 @@ public static class LoadingTipsPatch
         //thanks Pidge for making this public after I complained lol
         __instance.Tips = customTips.ToArray();
         
-        AddChallengeScene();
-
         SceneManager.sceneLoaded += (scene, _) =>
         {
-            if (scene.name == "Menu")
-            {
-                ShowChangeLog show = Object.FindObjectOfType<ShowChangeLog>();
-                if (show)
-                {
-                    PAM.Logger.LogFatal("GOT IT");
-                    UpdateModButtonPatches.HandleMenuCreation(show);
-                }
-            }
-        };
-    }
-
-    static void AddChallengeScene()
-    {
-        //this adds a new scene group for the challenge mode, terrible code
-        //adding to an il2cpp list is kinda trash, so we do this horrible hack
-        List<SceneGroup> groups = new(SceneLoader.Inst.sceneGroups);
-        if (groups.All(x => x.GroupName != "Challenge"))
-        {
-            using var stream = Assembly.GetExecutingAssembly()
-                .GetManifestResourceStream("PAMultiplayer.Assets.challenge");
-
-            var lobbyBundle = AssetBundle.LoadFromMemory(stream!.CTReadFully());
-
-            var scene = lobbyBundle.GetAllScenePaths()[0];
-            var guid = "11f830737ff4bc41a4ffe792d073f41f";
-
-            SceneGroup sceneGroup = new()
-            {
-                GroupName = "Challenge",
-                GroupType = SceneGroupType.GAME,
-                Scenes = new()
-            };
-
-            SceneData sceneData = new()
-            {
-                SceneType = SceneType.ACTIVE,
-                Reference = new SceneReference()
-                {
-                    guid = guid
-                }
-            };
-
-            //load scene group makes use of these
-            SceneGuidToPathMapProvider._sceneGuidToPathMap.Add(guid, scene);
-            SceneGuidToPathMapProvider._scenePathToGuidMap.Add(scene, guid);
-
-            sceneGroup.Scenes.Add(sceneData);
-            groups.Add(sceneGroup);
-            SceneLoader.Inst.sceneGroups = groups.ToArray();
-            SceneManager.sceneLoaded += (scene, _) =>
+            try
             {
                 //just in-casse
                 if (scene.name == "Arcade" || scene.name == "Menu")
@@ -118,43 +67,25 @@ public static class LoadingTipsPatch
                     GlobalsManager.LocalPlayerObjectId = 0;
                     GlobalsManager.Players.Clear();
                     VGPlayerManager.Inst.players.Clear();
-                    VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){ControllerID = 0, PlayerID = 0});
-                    
+                    VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData()
+                        { ControllerID = 0, PlayerID = 0 });
+
                     SteamManager.Inst.DisconnectAll();
                 }
-             
-                if (scene.name != "Challenge")
-                    return;
-
-                //asset bundles dont load custom scripts, we gotta add it here on scene load
-                //horrible code, please end me
-                var manager = scene.GetRootGameObjects().First(x => x.name == "Managers");
-                manager.AddComponent<ChallengeManager>();
-            };
-
-            //unloading the asset bundle unloads the scene
-            //lobbyBundle.Unload(false);
-        }
-    }
-}
-
-
-// what was I cooking? did il2cpp require this? I am no longer sure but we leave it here 
-[HarmonyPatch(typeof(SceneReference))]
-public static class SceneReferencePatch
-{
-    [HarmonyPatch(nameof(SceneReference.State), MethodType.Getter)]
-    [HarmonyPrefix]
-    static bool GetStatePatch(SceneReference __instance, ref SceneReferenceState __result)
-    {
-        __result = SceneReferenceState.Unsafe;
-        if (__instance.HasValue)
-        {
-            if (SceneGuidToPathMapProvider.SceneGuidToPathMap.TryGetValue(__instance.Guid, out var path))
-            {
-                __result = SceneReferenceState.Regular;
             }
-        }
-        return false;
+            catch (Exception e)
+            {
+                PAM.Logger.LogError(e);
+            }
+
+            if (scene.name == "Menu")
+            {
+                ShowChangeLog show = Object.FindObjectOfType<ShowChangeLog>();
+                if (show)
+                {
+                    UpdateModButtonPatches.HandleMenuCreation(show);
+                }
+            }
+        };
     }
 }

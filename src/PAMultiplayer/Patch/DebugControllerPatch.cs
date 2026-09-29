@@ -508,7 +508,7 @@ public static partial class DebugControllerPatch
             return;
         }
 
-        DebugController.inst.AddLog($"player {conn.Address} tried to request level {levelId} but its dissallowed.");
+        DebugController.inst.AddLog($"player {conn.Address} tried to request level {levelId} but its disallowed.");
     }
     
     [HarmonyPatch(nameof(DebugController.HandleInput))]

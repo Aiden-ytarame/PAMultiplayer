@@ -3,6 +3,9 @@ using BepInEx;
 using BepInEx.Logging;
 using Crosstales;
 using HarmonyLib;
+using PaApi;
+using PAMultiplayer.Managers;
+using Systems.SceneManagement;
 using UnityEngine;
 
 namespace PAMultiplayer;
@@ -61,6 +64,15 @@ public class PAM : BaseUnityPlugin
             builder.Toggle("Linked Health Hit Popup", "Popup for which player caused the hit", "No popup appears", Settings.Linked);
             builder.Toggle("Allow hidden workshop levels", "Non public levels are allowed", "Only public are allowed", Settings.AllowNonPublicLevels);
         });
+
+        using (var stream = Assembly.GetExecutingAssembly()
+                   .GetManifestResourceStream("PAMultiplayer.Assets.challenge"))
+        {
+            var lobbyBundle = AssetBundle.LoadFromMemory(stream!.CTReadFully());
+
+            var scene = lobbyBundle.GetAllScenePaths()[0];
+            SceneHelpers.AddNewSceneGroup<ChallengeManager>("Challenge", scene, SceneGroupType.GAME);
+        }
         
         Logger.LogInfo($"Multiplayer {Version} has loaded!");
     }

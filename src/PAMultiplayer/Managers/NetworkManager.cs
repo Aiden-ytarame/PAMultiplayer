@@ -25,7 +25,7 @@ namespace PAMultiplayer.Managers
             public Vector2 LastMovementDirection;
             public float Speed;
             public float InterpSpeed;
-            public bool Extrapolating = false;
+            public bool Extrapolating;
             
             private ushort _lastId;
             private float _timeReceived;
@@ -110,7 +110,7 @@ namespace PAMultiplayer.Managers
         
         PaMNetworkManager _paMNetworkManager;
         private VGPlayerManager.VGPlayerData _localData;
-        private float _timeSinceUpdate = 0;
+        private float _timeSinceUpdate;
         private ushort _movementId;
         
         private static Dictionary<ulong, PlayerPredictionData> _playerPrediction = new();

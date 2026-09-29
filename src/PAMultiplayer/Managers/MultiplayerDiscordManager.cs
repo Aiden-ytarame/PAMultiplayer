@@ -5,7 +5,6 @@ using DiscordRPC.Logging;
 using DiscordRPC.Message;
 using PAMultiplayer.UI;
 using Steamworks;
-using Steamworks.Data;
 using UnityEngine;
 using EventType = DiscordRPC.EventType;
 
@@ -18,10 +17,10 @@ public class MultiplayerDiscordManager : MonoBehaviour
 {
 	public static MultiplayerDiscordManager Instance{get; private set;}
 
-	public static bool IsInitialized => Instance && Instance.client != null && Instance.client.CurrentUser != null;
+	public static bool IsInitialized => Instance && Instance._client != null && Instance._client.CurrentUser != null;
 
-	private DiscordRpcClient client = null;
-	private RichPresence presence = null;
+	private DiscordRpcClient _client;
+	private RichPresence _presence;
 
 	private const string ApplicationId = "1282511280833298483";
 
@@ -33,9 +32,9 @@ public class MultiplayerDiscordManager : MonoBehaviour
 
 	private void FixedUpdate()
 	{
-		if (client != null)
+		if (_client != null)
 		{
-			client.Invoke();
+			_client.Invoke();
 		}
 	}
 
@@ -49,20 +48,20 @@ public class MultiplayerDiscordManager : MonoBehaviour
 		
 		Instance = this;
 
-		client = new DiscordRpcClient(
+		_client = new DiscordRpcClient(
 			ApplicationId,
 			-1,
 			new ConsoleLogger(LogLevel.Warning),
 			false);
 		
-		client.OnError += (_, e) => PAM.Logger.LogError($"An error occurred with Discord RPC Client: {e.Message} ({e.Code})");
-		client.OnReady += onReady;
+		_client.OnError += (_, e) => PAM.Logger.LogError($"An error occurred with Discord RPC Client: {e.Message} ({e.Code})");
+		_client.OnReady += OnReady;
 
-		client.OnJoin += ClientOnOnJoin;
-		client.Subscribe(EventType.Join);
-		client.RegisterUriScheme("440310", Paths.ExecutablePath);
+		_client.OnJoin += ClientOnOnJoin;
+		_client.Subscribe(EventType.Join);
+		_client.RegisterUriScheme("440310", Paths.ExecutablePath);
 
-		client.Initialize();
+		_client.Initialize();
 	}
 
 	private void ClientOnOnJoin(object sender, JoinMessage joinSecret)
@@ -92,46 +91,46 @@ public class MultiplayerDiscordManager : MonoBehaviour
 		PAM.Logger.LogError("Failed to join lobby from discord, steam wasn't initialized or you're already in a lobby");
 	}
 
-	private void onReady(object _, ReadyMessage __)
+	private void OnReady(object _, ReadyMessage __)
 	{
-		presence = new RichPresence();
-		presence.Assets = new Assets()
+		_presence = new RichPresence();
+		_presence.Assets = new Assets()
 		{
 			SmallImageKey = "pamplogo2",
 			SmallImageText = "Multiplayer Logo"
 		};
 		SetMenuPresence();
-		client.SetPresence(presence);
+		_client.SetPresence(_presence);
 	}
 
 	public void SetLevelPresence(string state, string details, string levelCoverUrl)
 	{
 		try
 		{
-			presence.State = state;
-			presence.Details = details;
-			presence.Assets.LargeImageKey = levelCoverUrl;
-			presence.Assets.LargeImageText = "Level Cover";
-			presence.Timestamps = new Timestamps(DateTime.UtcNow);
+			_presence.State = state;
+			_presence.Details = details;
+			_presence.Assets.LargeImageKey = levelCoverUrl;
+			_presence.Assets.LargeImageText = "Level Cover";
+			_presence.Timestamps = new Timestamps(DateTime.UtcNow);
 		
 			if (GlobalsManager.IsMultiplayer)
 			{
 				string id = SteamLobbyManager.Inst.CurrentLobby.Id.ToString();
-				presence.Party = new Party()
+				_presence.Party = new Party()
 				{
 					ID = id + SteamLobbyManager.Inst.CurrentLobby.Owner.Id,
 					Max = SteamLobbyManager.Inst.CurrentLobby.MaxMembers,
 					Size = SteamLobbyManager.Inst.CurrentLobby.MemberCount,
 					Privacy = Party.PrivacySetting.Public
 				};
-				presence.Secrets = new Secrets()
+				_presence.Secrets = new Secrets()
 				{
 					Join = id
 				};
 
-				presence.Buttons = null;
+				_presence.Buttons = null;
 			}
-			client.SetPresence(presence);
+			_client.SetPresence(_presence);
 		}
 		catch (Exception e)
 		{
@@ -141,65 +140,65 @@ public class MultiplayerDiscordManager : MonoBehaviour
 
 	public void UpdatePartySize(int size)
 	{
-		if (presence.Party != null)
+		if (_presence.Party != null)
 		{
-			presence.Party.Size = size; 
-			client.SetPresence(presence);
+			_presence.Party.Size = size; 
+			_client.SetPresence(_presence);
 		}
 	}
 	
 	public void SetMenuPresence()
 	{
-		presence.State = "Navigating Menus";
-		presence.Details = "";
+		_presence.State = "Navigating Menus";
+		_presence.Details = "";
 
-		presence.Assets.LargeImageKey = "palogo";
-		presence.Assets.LargeImageText = "Game Logo";
-		presence.Timestamps = null;
+		_presence.Assets.LargeImageKey = "palogo";
+		_presence.Assets.LargeImageText = "Game Logo";
+		_presence.Timestamps = null;
 		
-		presence.Buttons = Buttons;
+		_presence.Buttons = Buttons;
 		
 		//discord does not handle buttons and parties at the same time.
-		presence.Party = null;
-		presence.Secrets = null;
-		client.SetPresence(presence);
+		_presence.Party = null;
+		_presence.Secrets = null;
+		_client.SetPresence(_presence);
 	}
 
 	public void SetChallengePresence()
 	{
-		if (client == null || presence == null)
+		if (_client == null || _presence == null)
 		{
 			return;
 		}
-		presence.State = "Choosing Level";
-		presence.Details = "Playing Challenge";
+		_presence.State = "Choosing Level";
+		_presence.Details = "Playing Challenge";
 
-		presence.Assets.LargeImageKey = "palogo";
-		presence.Assets.LargeImageText = "Game Logo";
-		presence.Timestamps = null;
-		presence.Buttons = Buttons;
-		presence.Party = null;
-		presence.Secrets = null;
+		_presence.Assets.LargeImageKey = "palogo";
+		_presence.Assets.LargeImageText = "Game Logo";
+		_presence.Timestamps = null;
+		_presence.Buttons = Buttons;
+		_presence.Party = null;
+		_presence.Secrets = null;
 		
 		if (GlobalsManager.IsMultiplayer)
 		{
 			string id = SteamLobbyManager.Inst.CurrentLobby.Id.ToString();
-			presence.Party = new Party()
+			_presence.Party = new Party()
 			{
 				ID = id + SteamLobbyManager.Inst.CurrentLobby.Owner.Id,
 				Max = SteamLobbyManager.Inst.CurrentLobby.MaxMembers,
 				Size = SteamLobbyManager.Inst.CurrentLobby.MemberCount,
 				Privacy = Party.PrivacySetting.Public
 			};
-			presence.Secrets = new Secrets()
+			_presence.Secrets = new Secrets()
 			{
 				Join = id
 			};
 
-			presence.Buttons = null;
+			_presence.Buttons = null;
 		}
 		
 		//discord does not handle buttons and parties at the same time.
-		client.SetPresence(presence);
+		_client.SetPresence(_presence);
 	}
 }

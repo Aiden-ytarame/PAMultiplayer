@@ -25,8 +25,8 @@ public partial class ChallengeManager : MonoBehaviour
 {
     class LoadState
     {
-        public bool AudioLoaded = false;
-        public bool ImageLoaded = false;
+        public bool AudioLoaded;
+        public bool ImageLoaded;
 
         public LoadState(bool audio = false, bool image = false)
         {
@@ -52,14 +52,14 @@ public partial class ChallengeManager : MonoBehaviour
     private Image _bgSlider;
     private Sequence _sequence = DOTween.Sequence();
     
-    private bool _votingStarted = false;
+    private bool _votingStarted;
     public AlbumArtManager AlbumArtManager = new();
     public delegate void OnVoteChangedSignature(VGLevel newLevel);
     public event OnVoteChangedSignature OnVoteChanged;
 
     #region MonoBehaviour Methods
 
-       private void Awake()
+    private void Awake()
     {
         if (Inst)
         {
@@ -557,6 +557,7 @@ public partial class ChallengeManager : MonoBehaviour
             }
            
             timeSinceLastButton += 2.5;
+            // ReSharper disable once AccessToModifiedClosure
             yield return new WaitUntil(() => timeSinceLastButton <= Time.realtimeSinceStartupAsDouble);
            //Used instead of waitForSeconds to account for lag
         }
@@ -659,6 +660,7 @@ public partial class ChallengeManager : MonoBehaviour
         }
 
         var timer = Stopwatch.StartNew();
+   
         _songData.SongDataUpdated += count =>
         {
             SceneLoader.Inst?.manager?.UpdateTaskStatus("Setting up chosen levels", $"<color=#FFD000>[ Prepping ]</color> {count}/6");
@@ -668,10 +670,9 @@ public partial class ChallengeManager : MonoBehaviour
         foreach (var vgLevel in _levelsToVote)
         {
             ids.Add(vgLevel.SteamInfo.ItemID);
-            _songData.AddLevel(this, vgLevel);
         }
 
-        yield return new WaitUntil(() => _songData.Ready());
+        yield return _songData.SetupSongData(_levelsToVote);
 
         timer.Stop();
         PAM.Logger.LogDebug($"took {timer.ElapsedMilliseconds}ms to get level data");
@@ -689,7 +690,8 @@ public partial class ChallengeManager : MonoBehaviour
         CallRpc_Multi_StartVoting();
         StartVoting();
     }
-
+    
+    
     [MultiRpc]
     private static void Multi_CheckLevelIds(List<ulong> levelIds)
     {
@@ -742,13 +744,13 @@ public partial class ChallengeManager : MonoBehaviour
         foreach (var levelId in levelIds)
         {
 
-            SongData.SongInfo? info = Inst._songData.GetData(levelId);
+            SongData.SongInfo? info = Inst._songData.GetData(levelId.ToString());
             if (info == null)
             {
                 PAM.Logger.LogFatal("client asked for level id not in the picked challenge levels");
                 continue;
             }
-
+    
             const int separator = 131000 * 2; //what is this magical number bruh
             int offset = 0;
             while (true)
@@ -966,8 +968,8 @@ public partial class VoterCell : MonoBehaviour
             transform.GetChild(1).GetChild(0).GetComponent<Image>().sprite = level.AlbumArt;
         }
             
-        UIStateManager.Inst.RefreshTextCache(transform.GetChild(2).GetComponent<TextMeshProUGUI>(), level.TrackName);
-        UIStateManager.Inst.RefreshTextCache(transform.GetChild(3).GetComponent<TextMeshProUGUI>(), level.CharterName);
+        UIStateManager.Inst.RefreshTextCache(transform.GetChild(2).GetComponent<TextMeshProUGUI>(), level.TrackName ?? "MISSING NAME");
+        UIStateManager.Inst.RefreshTextCache(transform.GetChild(3).GetComponent<TextMeshProUGUI>(), level.CharterName ?? "MISSING NAME");
     }
 
     public void EnableVoting()
