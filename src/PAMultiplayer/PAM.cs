@@ -20,7 +20,8 @@ public class PAM : BaseUnityPlugin
     internal static GameObject LobbyScreenPrefab { get; private set; }
     internal static GameObject LobbyPlayerEntryPrefab { get; private set; }
     internal static GameObject LobbyQueueEntryPrefab { get; private set; }
-
+    internal static GameObject QueueIconPrefab { get; private set; }
+    
     private Harmony _harmony;
     public const string Guid = "me.ytarame.Multiplayer";
     const string Name = "Multiplayer";
@@ -74,6 +75,15 @@ public class PAM : BaseUnityPlugin
             SceneHelpers.AddNewSceneGroup<ChallengeManager>("Challenge", scene, SceneGroupType.GAME);
         }
         
+        using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("PAMultiplayer.Assets.queue assets"))
+        {
+            var lobbyBundle = AssetBundle.LoadFromMemory(stream!.CTReadFully());
+            
+            QueueIconPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[0]) as GameObject;
+         
+            lobbyBundle.Unload(false);
+        }
+
         Logger.LogInfo($"Multiplayer {Version} has loaded!");
     }
 }

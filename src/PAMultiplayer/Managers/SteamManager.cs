@@ -114,7 +114,7 @@ public class SteamManager : MonoBehaviour
     
     public void StartClient(SteamId targetSteamId)
     {
-        PAM.Logger.LogInfo($"Starting client. Connection to [{targetSteamId}]");
+        PAM.Logger.LogError($"Starting client. Connection to [{targetSteamId}]");
         PaMNetworkManager netManager = new PaMNetworkManager();
         netManager.Init(new FacepunchSocketsTransport());
         

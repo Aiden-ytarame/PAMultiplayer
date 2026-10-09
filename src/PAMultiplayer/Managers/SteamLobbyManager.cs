@@ -226,7 +226,7 @@ public partial class SteamLobbyManager : MonoBehaviour
         {
             lobby.Leave();
             SceneLoader.Inst.manager.ClearLoadingTasks();
-            SceneLoader.inst.LoadSceneGroup("Menu");
+            MPUtility.DelayLoadScene("Menu");
             SteamManager.Inst.EndClient();
             ErrorScreen.CreateErrorScreen($"Tried to join invalid Lobby [<b>{lobby.Id}</b>] by [<b>{lobby.Owner.Name}</b>]!\n\nTry again in a few seconds, if it doesnt work it may be a different MP version, or another mod");
 
@@ -278,7 +278,7 @@ public partial class SteamLobbyManager : MonoBehaviour
             lobby.Leave();
             SteamManager.Inst.EndServer();
             SceneLoader.Inst.manager.ClearLoadingTasks();
-            SceneLoader.inst.LoadSceneGroup("Menu");
+            MPUtility.DelayLoadScene("Menu");
             return;
         }
         

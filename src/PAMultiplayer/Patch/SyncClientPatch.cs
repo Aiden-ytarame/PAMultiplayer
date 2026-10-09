@@ -5,9 +5,7 @@ using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
 using UnityEngine;
 
-
 namespace PAMultiplayer.Patch;
-
 
 /// <summary>
 /// takes care of checkpoint for server only
@@ -104,13 +102,13 @@ public static partial class RewindHandler
 {
     [HarmonyPatch(nameof(VGPlayerManager.SpawnPlayers))]
     [HarmonyPrefix]
-    static void ReplaceDeathAction(ref Action<Vector3> _deathAction)
+    static void ReplaceDeathAction(ref Action<Vector3, int, Vector2> _deathAction)
     {
         if (!GlobalsManager.IsMultiplayer) return;
-        
+        //TODO: add last stand and hot swap if added to arcade
         if (GlobalsManager.IsHosting)
         {
-            _deathAction = x =>
+            _deathAction = (x, _, _) =>
             {
                 if (!GameManager.Inst.AreAllPlayersDead())
                 {
@@ -129,7 +127,7 @@ public static partial class RewindHandler
         }
         else
         {
-            _deathAction = x =>
+            _deathAction = (x, _, _) =>
             {
                 //clients do nothing on death, just wait for the server message.
             };

@@ -31,72 +31,72 @@ namespace PAMultiplayer.Patch
         [HarmonyPostfix]
         static void AddUIToSettings(ref ModifiersManager __instance)
         {
-            var hiddenButtons = __instance.transform.parent.Find("Buttons/Primary/Multiplayer").gameObject;
-            hiddenButtons.SetActive(true);
-            var mpToggle = hiddenButtons.GetComponent<MultiElementToggle>();
-            mpToggle.isOn = false;
-            mpToggle.interactable = true;
-            mpToggle.onValueChanged = new Toggle.ToggleEvent();
-            mpToggle.onValueChanged.AddListener(_ =>
-            {
-                mpToggle.isOn = false;
-                if(LobbyCreationManager.Instance) 
-                    LobbyCreationManager.Instance.OpenMenu(false);
-            });
+            LevelDetailPanel panel = __instance.transform.parent.parent.parent.parent.GetComponent<LevelDetailPanel>();
             
-            mpToggle.GetComponentInChildren<TextMeshProUGUI>().richText = true;
+            var hiddenButtons = __instance.transform.Find("Multiplayer").gameObject;
+            hiddenButtons.SetActive(true);
+            hiddenButtons.transform.SetSiblingIndex(2);
+            
+            var mpButton = hiddenButtons.GetComponent<MultiElementButton>();
+            mpButton.onClick.AddListener(() =>
+            {
+                if(LobbyCreationManager.Instance) 
+                    LobbyCreationManager.Instance.OpenMenu(false, panel._currentLevel);
+            });
+
+            var uiElement = (mpButton.UIElement as UI_Button);
+            if (uiElement)
+            {
+                uiElement.Text.text = "▶ Multiplayer";
+                UIStateManager.Inst.RefreshTextCache(uiElement.Text, "▶ Multiplayer");
+            }
             
             if (LobbyCreationManager.Instance)
             {
-                LobbyCreationManager.Instance.FallbackUIElement = mpToggle;
+                LobbyCreationManager.Instance.FallbackUIElement = mpButton;
             }
-            MultiElementButton playgame = __instance.transform.parent.Find("Buttons/Primary/Play").GetComponent<MultiElementButton>();
- 
-            //playgame.onClick = new Button.ButtonClickedEvent();
+            
+            MultiElementButton playgame = __instance.transform.Find("Play").GetComponent<MultiElementButton>();
+            
+            playgame.onClick = new Button.ButtonClickedEvent();
             playgame.onClick.AddListener(() =>
             {
-                if (GlobalsManager.Queue.Count > 0)
-                {
-                    string id = ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID;
-                    if (!GlobalsManager.Queue.ContainsLevel(id))
-                        GlobalsManager.Queue.AddLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, id);
+                GlobalsManager.PlayQueue(panel._currentLevel);
+            });
 
-                    id = GlobalsManager.Queue[0].Id;
-                    GlobalsManager.LevelId = id;
-                    ArcadeManager.Inst.CurrentArcadeLevel =
-                        ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-                    
-                    //SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-                }   
-            });
-           
-            var row1 = __instance.transform.Find("r-2");
-            var mpRow = Object.Instantiate(row1, __instance.transform);
-            for (int i = 0; i <   mpRow.childCount; i++)
-            {
-                Object.Destroy(mpRow.GetChild(i).gameObject);
-            }
-          
-            var linkedHealthToggle = Object.Instantiate(row1.GetChild(0), mpRow).GetComponent<MultiElementToggle>();
-            var modText = linkedHealthToggle.gameObject.GetComponentInChildren<TextMeshProUGUI>();
+            var modsParent = __instance.transform.parent.Find("mods");
+            var modifierTemplate = modsParent.GetChild(1);
+            var linkedHealthSlider = Object.Instantiate(modifierTemplate, modsParent).GetComponent<UI_Slider>();
+            var modText = linkedHealthSlider.gameObject.GetComponentInChildren<TextMeshProUGUI>();
             
-            UIStateManager.Inst.RefreshTextCache(modText, "<size=75%><sprite name=\"heart\"><size=100%>Linked Health");
-            modText.text = "<size=75%><sprite name=\"heart\"><size=100%>Linked Health";
-            modText.richText = true;
-            linkedHealthToggle.name = "mp_linkedHealth";
-            
-            linkedHealthToggle.onValueChanged = new();
-            linkedHealthToggle.onValueChanged.AddListener(on =>
+            UIStateManager.Inst.RefreshTextCache(modText, "Linked Health");
+            modText.text = "Linked Health";
+
+            linkedHealthSlider.name = "mp_linkedHealth";
+            linkedHealthSlider.OnValueChanged = new();
+            linkedHealthSlider.OnValueChanged.AddListener(x =>
             {
-                DataManager.inst.UpdateSettingBool("mp_linkedHealth", on);
+                DataManager.inst.UpdateSettingBool("mp_linkedHealth", x == 1);
             });
+
+            linkedHealthSlider.Values = ["Off", "On"];
+            linkedHealthSlider.Range = new Vector2(0, 1);
+            linkedHealthSlider.VisualRange = linkedHealthSlider.Range;
+            
+            linkedHealthSlider.DataID = null;
+            linkedHealthSlider.DataIDType = UI_Slider.DataType.Runtime;
+
+            linkedHealthSlider.Value = 0;
+            linkedHealthSlider.ChangeAmount = 1;
+            linkedHealthSlider.Type = UI_Slider.VisualType.line;
+            linkedHealthSlider.originalNonLocalizedText.Clear();
+            linkedHealthSlider.SetLocalization(linkedHealthSlider.Label, PAM.Guid, "mpLinkedHealth", "Linked Health");
             
             DataManager.inst.UpdateSettingBool("mp_linkedHealth", false);
-            linkedHealthToggle.isOn = false;
-            linkedHealthToggle.wasOn = false;
             
             //adds to the 'Song Menu' page so it plays the glitch effect on this toggle 
-            Object.FindFirstObjectByType<UI_Book>().Pages[1].SubElements.Add(linkedHealthToggle.uiElement);
+            Object.FindFirstObjectByType<UI_Book>()
+                .Pages[1].SubElements.Add(linkedHealthSlider);
         }
     }
 

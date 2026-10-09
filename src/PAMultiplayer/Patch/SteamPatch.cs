@@ -23,7 +23,7 @@ public static class SteamWrapperPatch
 {
     [HarmonyPatch(nameof(SteamWrapper.SubmitArcadeLeaderboardScore))]
     [HarmonyPrefix]
-    static bool PreSubmitArcadeLeaderboardScore(ref int _score, ref int[] _scores)
+    static bool PreSubmitArcadeLeaderboardScore()
     {
         if (!GlobalsManager.IsMultiplayer)
         {

@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Text;
+using Systems.SceneManagement;
 using TMPro;
 using UnityEngine;
 
@@ -54,5 +56,16 @@ public static class MPUtility
             vertexColors[vertexIndex + 2] = color2; //top right
             vertexColors[vertexIndex + 3] = color2; //bottom right
         }
+    }
+
+    public static void DelayLoadScene(string sceneId)
+    {
+        SystemManager.inst.StartCoroutine(InternalDelayLoadScene(sceneId));
+    }
+
+    private static IEnumerator InternalDelayLoadScene(string id)
+    {
+        yield return new WaitUntil(() => SceneLoader.Inst.CanLoadSceneGroup);
+        SceneLoader.Inst.LoadSceneGroup(id);
     }
 }

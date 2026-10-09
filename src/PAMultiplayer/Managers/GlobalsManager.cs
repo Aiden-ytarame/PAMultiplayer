@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using PAMultiplayer.Data;
 using Steamworks;
+using Systems.SceneManagement;
+using UnityEngine;
 
 namespace PAMultiplayer.Managers
 {
@@ -44,5 +46,46 @@ namespace PAMultiplayer.Managers
         public static bool IsDownloading = false;
         
         public static readonly List<HitInfo> HitsQueue = new();
+
+        public static void PlayQueue(VGLevel fallback)
+        {
+            if (Queue.Count > 0)
+            {
+                if (fallback && SceneLoader.Inst.manager.ActiveSceneGroup.GroupName == "Arcade")
+                {
+                    if (!Queue.ContainsLevel(fallback.BaseLevelData.LevelID))
+                        Queue.AddLevel(fallback.TrackName, fallback.BaseLevelData.LevelID);
+                }
+
+                string id = Queue[0].Id;
+                LevelId = id;
+        
+                var level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
+
+                if (level)
+                {
+                    DownloadAndPlayFlow.Play(level);
+                    return;
+                }
+
+                if (ulong.TryParse(id, out var longId))
+                {
+                    var temp = ScriptableObject.CreateInstance<VGLevel>();
+                    temp.BaseLevelData = new VGLevel.LevelDataBase() { LevelID = id };
+                    temp.SteamInfo = new VGLevel.SteamData() { ItemID = longId };
+                    DownloadAndPlayFlow.Play(temp);
+                    return;
+                }
+                  
+                //SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+            }
+
+            if (!fallback)
+            {
+                SceneLoader.Inst.LoadSceneGroup("Menu");
+                return;
+            }
+            DownloadAndPlayFlow.Play(fallback);
+        }
     }
 }

@@ -238,6 +238,15 @@ namespace PAMultiplayer.Managers
             player.p_lastMoveX = data.LastMovementDirection.x;
             player.p_lastMoveY = data.LastMovementDirection.y;
             
+            float angle = Mathf.Atan2(data.LastMovementDirection.y, data.LastMovementDirection.x) * Mathf.Rad2Deg;
+          
+            var rot = Quaternion.Slerp(
+                Quaternion.Euler(0.0f, 0.0f, player.Player_Wrapper.rotation.z), 
+                Quaternion.AngleAxis(angle, Vector3.forward), 
+                Time.deltaTime * VGPlayer.DEFAULT_ROTATION_LERP);
+            
+            player.Player_Wrapper.rotation = rot;
+       
             if (data.Extrapolating)
             {
                 Vector2 current = player.Player_Wrapper.position;

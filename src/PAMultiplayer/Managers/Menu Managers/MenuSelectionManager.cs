@@ -74,7 +74,7 @@ public class MenuSelectionManager : MonoBehaviour
                 {
                     GeneralUILoader.Inst?.LeaveSaveUI?.Invoke();
                 };
-                LobbyCreationManager.Instance.OpenMenu(true);
+                LobbyCreationManager.Instance.OpenMenu(true, null);
             }
 
             GlobalsManager.IsChallenge = true;

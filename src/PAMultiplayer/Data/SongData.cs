@@ -93,12 +93,14 @@ public class SongData
                 for (var i = 0; i < songData.Length; i += divider * clip.channels)
                 {
                     songDataShort[index] = 0;
+                    float curr = 0;
+                    
                     for (int j = 0; j < clip.channels; j++)
                     {
-                        songDataShort[index] += (short)(songData[i + j] * short.MaxValue);
+                        curr += songData[i + j];
                     }
 
-                    songDataShort[index] /= (short)clip.channels;
+                    songDataShort[index] = (short)(Mathf.Clamp(curr / clip.channels, -1f, 1f) * short.MaxValue);
                     index++;
                 }
         

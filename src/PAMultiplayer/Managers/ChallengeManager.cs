@@ -47,6 +47,8 @@ public partial class ChallengeManager : MonoBehaviour
     private readonly List<VGLevel> _levelsToVote = new(6);
     private readonly Dictionary<VGLevel, LoadState> _loadedLevels = new(6);
     private readonly Dictionary<VGPlayer, VGLevel> _votes = new(16);
+
+    private readonly List<AudioClip> _tempClips = new(6);
     private SongData _songData = new(); //struct here crashes bepinex lmao
 
     private Image _bgSlider;
@@ -135,7 +137,7 @@ public partial class ChallengeManager : MonoBehaviour
             VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){PlayerID = 0, ControllerID = 0});
         }
         
-        VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, (_,_) => {}, _ => {},_ => {}, 3);
+        VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, (_,_,_,_) => {}, _ => {},(_, _, _) => {}, 3);
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
         {
             vgPlayerData.PlayerObject.SetColor(ChallengeTheme.GetPlayerColor(vgPlayerData.PlayerID), ChallengeTheme.guiAccent);
@@ -143,7 +145,7 @@ public partial class ChallengeManager : MonoBehaviour
         
         StartCoroutine(ShowLevels());
         
-        Transform skip = PauseUIManager.Inst.transform.Find("Pause Menu")?.Find("Skip Queue Level");
+        Transform skip = PauseUIManager.Inst.transform.Find("sizer/Pause Menu")?.Find("Skip Queue Level");
         if (skip)
         {
             skip.gameObject.SetActive(false);
@@ -169,6 +171,15 @@ public partial class ChallengeManager : MonoBehaviour
         }
         
         AlbumArtManager.Dispose();
+        foreach (var audioClip in _tempClips)
+        {
+            if (audioClip)
+            {
+                AudioManager.Inst.ReleaseMusicClip(audioClip);
+                audioClip.UnloadAudioData();
+                Destroy(audioClip);
+            }
+        }
     }
     #endregion
     
@@ -181,7 +192,7 @@ public partial class ChallengeManager : MonoBehaviour
             PAM.Logger.LogError(
                 $"Not enough levels loaded or downloaded, minimum [6], loaded [{ArcadeLevelDataManager.Inst.ArcadeLevels.Count}]");
             SceneLoader.Inst.manager.ClearLoadingTasks();
-            SceneLoader.Inst.LoadSceneGroup("Menu");
+            MPUtility.DelayLoadScene("Menu");
             yield break;
         }
 
@@ -221,7 +232,7 @@ public partial class ChallengeManager : MonoBehaviour
             PAM.Logger.LogError(
                 $"Not enough non blacklisted levels found, minimum [6], loaded [{ArcadeLevelDataManager.Inst.ArcadeLevels.Count}]");
             SceneLoader.Inst.manager.ClearLoadingTasks();
-            SceneLoader.Inst.LoadSceneGroup("Menu");
+            MPUtility.DelayLoadScene("Menu");
             yield break;
         }
 
@@ -258,21 +269,18 @@ public partial class ChallengeManager : MonoBehaviour
                     continue;
                 }
             }
-
-            if (!level.LevelMusic) //this can mean the user is using the mod LessRam
+            
+            
+            if (!level.LevelMusic)
             {
-                level = ArcadeLevelDataManager.Inst
-                    .GetLocalCustomLevel(level.BaseLevelData.LevelID); //this triggers song load if thats the case
+                var task = LevelMusicLoader.LoadAsync(level);
 
-                for (int j = 0; j < 316; j++)
+                while (!task.IsCompleted)
                 {
-                    if (!level.LevelMusic)
-                    {
-                        yield return new WaitForUpdate();
-                    }
+                    yield return null;
                 }
 
-                if (!level.LevelMusic) //too long has passed, no song yet. this is bad;
+                if (!level.LevelMusic)
                 {
                     continue;
                 }
@@ -318,7 +326,7 @@ public partial class ChallengeManager : MonoBehaviour
         PAM.Logger.LogError(
             "Not enough levels found in too many attempts");
         SceneLoader.Inst.manager.ClearLoadingTasks();
-        SceneLoader.Inst.LoadSceneGroup("Menu");
+        MPUtility.DelayLoadScene("Menu");
     }
 
     VGLevel PickLevel()
@@ -450,6 +458,12 @@ public partial class ChallengeManager : MonoBehaviour
                 {
                     _levelsToVote.Add(level);
                     level.AlbumArt = await AlbumArtManager.LoadAlbumArtAsync(level.BaseLevelData.LevelID, level.BaseLevelData.LocalFolder);
+
+                    if (!level.LevelMusic)
+                    {
+                        var audio = await LevelMusicLoader.LoadForPlaybackAsync(level);
+                        _tempClips.Add(audio);
+                    }
                     _loadedLevels[level] = new(true, true);
                 }
                 
@@ -481,7 +495,7 @@ public partial class ChallengeManager : MonoBehaviour
                 ErrorScreen.CreateErrorScreen($"Host tried to send level {id} which is not available on workshop, disconnecting...");
 
                 SceneLoader.Inst.manager.ClearLoadingTasks();
-                SceneLoader.Inst.LoadSceneGroup("Menu");
+                MPUtility.DelayLoadScene("Menu");
                 return;
             }
 
@@ -549,13 +563,13 @@ public partial class ChallengeManager : MonoBehaviour
             if (level.LevelMusic)
             {
                 AudioManager.Inst.PlayMusic(level.LevelMusic);
+                
+                if (level.LevelMusic.length > 5)
+                {
+                    AudioManager.Inst.musicSources[AudioManager.Inst.activeSource].time = level.LevelMusic.length / 2;
+                }
             }
             
-            if (level.LevelMusic.length > 5)
-            {
-                AudioManager.Inst.musicSources[AudioManager.Inst.activeSource].time = level.LevelMusic.length / 2;
-            }
-           
             timeSinceLastButton += 2.5;
             // ReSharper disable once AccessToModifiedClosure
             yield return new WaitUntil(() => timeSinceLastButton <= Time.realtimeSinceStartupAsDouble);
@@ -590,7 +604,7 @@ public partial class ChallengeManager : MonoBehaviour
         
         if (!nextLevel)
         {
-            SceneLoader.Inst.LoadSceneGroup("Menu");
+            MPUtility.DelayLoadScene("Menu");
             yield break;
         }
         
@@ -653,7 +667,7 @@ public partial class ChallengeManager : MonoBehaviour
 
         // yield return new WaitUntil(new Func<bool>(() => _levelsToVote.Count >= 6));
 
-        Transform skip = PauseUIManager.Inst.transform.Find("Pause Menu")?.Find("Skip Queue Level");
+        Transform skip = PauseUIManager.Inst.transform.Find("sizer/Pause Menu")?.Find("Skip Queue Level");
         if (skip)
         {
             skip.gameObject.SetActive(false);
@@ -797,15 +811,17 @@ public partial class ChallengeManager : MonoBehaviour
         }
       
         PAM.Logger.LogInfo($"Got all audio data for level [{audioID}]");
-        
-        var newClip = AudioClip.Create(audioID.ToString(), AudioDataBuffer.Count, 1, frequency, false);
-        newClip.SetData(AudioDataBuffer.ToArray(), 0); //this to array is specially bad cuz its making 2 copies, may fix later
-        newClip.LoadAudioData();
-        
-        AudioDataBuffer.Clear();
 
         if (Inst)
         {
+            var newClip = AudioClip.Create(audioID.ToString(), AudioDataBuffer.Count, 1, frequency, false);
+            newClip.SetData(AudioDataBuffer.ToArray(),
+                0); //this to array is specially bad cuz its making 2 copies, may fix later
+            newClip.LoadAudioData();
+
+            AudioDataBuffer.Clear();
+
+            Inst._tempClips.Add(newClip);
             Inst.SetLevelSong(audioID, newClip);
         }
     }
@@ -839,7 +855,7 @@ public partial class ChallengeManager : MonoBehaviour
                 GlobalsManager.Players.TryAdd(GlobalsManager.LocalPlayerId, new PlayerData(newData, SteamClient.Name));
             }
           
-            VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, (_,_) => {}, _ => {},_ => {}, 3);
+            VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, (_,_,_,_) => {}, _ => {},(_, _, _) => {}, 3);
         }
         else
         {
@@ -848,7 +864,7 @@ public partial class ChallengeManager : MonoBehaviour
                 VGPlayerManager.Inst.players.Add(vgPlayerData.Value.VGPlayerData);
             }
             
-            VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, (_,_) => {}, _ => {},_ => {}, 3);
+            VGPlayerManager.Inst.SpawnPlayers(Vector2.zero, (_,_,_,_) => {}, _ => {},(_, _, _) => {}, 3);
         }
    
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
@@ -956,8 +972,8 @@ public partial class VoterCell : MonoBehaviour
 
     public void Hide()
     {
-        _ghostUIElement.Hide();
-        gameObject.GetComponent<BoxCollider2D>().enabled = false;
+        _ghostUIElement?.Hide();
+        gameObject.GetComponent<BoxCollider2D>()?.enabled = false;
     }
     public void SetLevelData(VGLevel level)
     {

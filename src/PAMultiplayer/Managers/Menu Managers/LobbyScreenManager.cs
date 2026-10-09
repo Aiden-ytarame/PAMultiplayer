@@ -55,6 +55,7 @@ public class LobbyScreenManager : MonoBehaviour
 
         QuitButton = buttons.GetChild(1).GetComponent<MultiElementButton>();
         QuitButton.onClick.AddListener(() => SceneLoader.Inst.LoadSceneGroup("Arcade"));
+        QuitButton.UnlockUIButton();
         
         if (!GlobalsManager.IsHosting)
         {
@@ -64,11 +65,6 @@ public class LobbyScreenManager : MonoBehaviour
         foreach (var friend in SteamLobbyManager.Inst.CurrentLobby.Members)
         {
             AddPlayerToLobby(friend.Id, friend.Name);
-                
-            if (SteamLobbyManager.Inst.IsPlayerLoaded(friend.Id))
-            {
-                SetPlayerLoaded(friend.Id, false);
-            }
         }
             
         UpdateQueue();
@@ -139,9 +135,9 @@ public class LobbyScreenManager : MonoBehaviour
         playerEntry.GetComponent<UI_Text>().ShowCustom(0.2f);
         _playerList.Add(player, playerEntry);
 
-        if (GlobalsManager.IsHosting)
+        if (SteamLobbyManager.Inst.IsPlayerLoaded(player))
         {
-            SetButtonActive(SteamLobbyManager.Inst.IsEveryoneLoaded);
+            SetPlayerLoaded(player, false);
         }
     }
 
@@ -243,13 +239,17 @@ public class LobbyScreenManager : MonoBehaviour
     void SetButtonActive(bool active)
     {
         if (ResumeButton.interactable == active) return;
-        
-        ResumeButton.interactable = active;
-        ResumeButton.enabled = active;
 
-        Color newColor = active ? Color.white : new Color(1, 1, 1, 0.188f);
-        ResumeButton.targetGraphics.subGraphics[0].color = newColor;
-        
+        if (active)
+        {
+            ResumeButton.UnlockUIButton();
+        }
+        else
+        {
+            ResumeButton.LockUIButton();
+        }
+     
+
         ResumeButton.GetComponent<UI_Button>().PlayGlitch(0.6f, 0, 0.5f);
     }
 }

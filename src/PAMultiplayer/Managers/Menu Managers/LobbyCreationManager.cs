@@ -21,6 +21,8 @@ public class LobbyCreationManager : MonoBehaviour
 
     private bool _isChallenge;
     private GameObject _allowClientLevels;
+
+    private VGLevel _fallback;
     
     private void Awake()
     {
@@ -68,27 +70,21 @@ public class LobbyCreationManager : MonoBehaviour
                     return;
                 }
                 
-                PublishedFileId id = ArcadeManager.Inst.CurrentArcadeLevel.SteamInfo.ItemID;
-                if (!GlobalsManager.Queue.ContainsLevel(id.ToString()))
-                    GlobalsManager.Queue.AddLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID);
-
-                ArcadeManager.Inst.CurrentArcadeLevel =
-                    ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.Queue[0].Id);
-
-                
                 LobbyCreationMenu.HideAllInstant();
-                SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+                GlobalsManager.PlayQueue(_fallback);
             });
 
         MultiElementButton returnButton = transform.Find("Pause Menu/Return to Customs").GetComponent<MultiElementButton>();
         returnButton.onClick = new();//todo: remove this in unity
         returnButton.onClick.AddListener(CloseMenu);
+        returnButton.UnlockUIButton();
     }
 
-    public void OpenMenu(bool bIsChallange)
+    public void OpenMenu(bool bIsChallange, VGLevel fallbackLevel)
     {
         _isChallenge = bIsChallange;
         _allowClientLevels.SetActive(!bIsChallange);
+        _fallback = fallbackLevel;
         
         LobbyCreationMenu.ShowBase();
         LobbyCreationMenu.SwapView("main");

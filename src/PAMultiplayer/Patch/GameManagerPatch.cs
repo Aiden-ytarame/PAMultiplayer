@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using HarmonyLib;
 using AttributeNetworkWrapperV2;
@@ -51,7 +50,7 @@ public partial class GameManagerPatch
         if (!__instance.IsArcade)
             return;
 
-        Transform pauseUi = PauseUIManager.Inst.transform.Find("Pause Menu");
+        Transform pauseUi = PauseUIManager.Inst.transform.Find("sizer/Pause Menu");
         Transform restartButton = pauseUi.Find("Restart");
         Transform skipButton = pauseUi.Find("Skip Queue Level");
 
@@ -70,6 +69,7 @@ public partial class GameManagerPatch
         }
 
         var button = skipButton.GetComponent<MultiElementButton>();
+        button.UnlockUIButton();
         button.onClick = new();
         button.onClick.AddListener(() =>
         {
@@ -89,32 +89,13 @@ public partial class GameManagerPatch
                 return;
             }
 
-            while (true)
+            PauseUIManager.Inst.CloseUI();
+            if (GlobalsManager.IsMultiplayer)
             {
-                if (GlobalsManager.Queue.Count == 0)
-                {
-                    return;
-                }
-                
-                string id = GlobalsManager.Queue[0].Id;
-                ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-
-                if (!GlobalsManager.IsMultiplayer && !ArcadeManager.Inst.CurrentArcadeLevel)
-                {
-                    GlobalsManager.Queue.RemoveLevelAt(0);
-                    continue;
-                }
-                
-                GlobalsManager.LevelId = id;
-                PauseUIManager.Inst.CloseUI();
-                if (GlobalsManager.IsMultiplayer)
-                {
-                    SteamLobbyManager.Inst.UnloadAll();
-                }
-                SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-                PAM.Logger.LogInfo("Skipping to next level in queue!");
-                return;
+                SteamLobbyManager.Inst.UnloadAll();
             }
+          
+            GlobalsManager.PlayQueue(null);
         });
 
         var nav = skipButton.GetComponent<DirectedNavigation>();
@@ -135,7 +116,6 @@ public partial class GameManagerPatch
 
         GlobalsManager.HitsQueue.Clear();
         __instance.gameObject.AddComponent<NetworkManager>();
-        __instance.StartCoroutine(FetchExternalData());
         
         //this is for waiting for the Objects to load before initialing the server/client
 
@@ -238,6 +218,7 @@ public partial class GameManagerPatch
         }
         
         PaMNetworkManager.PamInstance?.LobbyInfo.HasLoadedExternalInfo = true;
+        PAM.Logger.LogError($"EXTERNAL {PaMNetworkManager.PamInstance.LobbyInfo.HasLoadedExternalInfo}");
     }
     
     //wtf is this
@@ -382,7 +363,7 @@ public partial class GameManagerPatch
         {
             //if failed to connect to server
             SceneLoader.Inst.manager.ClearLoadingTasks();
-            SceneLoader.Inst.LoadSceneGroup("Menu");
+            MPUtility.DelayLoadScene("Menu");
             return;
         }
         
@@ -529,21 +510,22 @@ public partial class GameManagerPatch
     /// <summary>
     /// download the levels if not downloaded
     /// and wait for the loading screen to end (game doesnt do that by default)
-    /// note: the custom loading screen awaits were removed cuz they crashed the game
-    /// may add it back later
+    /// this function needs a rewrite for the new level download logic, however it seems to not cause an issue so itll be left like this
     /// </summary>
     static IEnumerator CustomLoadGame(VGLevel _level)
     {
          GameManager gm = GameManager.Inst;
          gm.LoadTimer = new();
          gm.LoadTimer.Start();
-
+         VoidMaskController.ResetForLevelLoad();
+         LevelInkLibrary.Unload();
          bool justCreatedLobby = false;
          if (PaMNetworkManager.PamInstance == null)
          {
              if (GlobalsManager.IsHosting)
              {
                  SteamLobbyManager.Inst.CreateLobby();
+                 GameManager.Inst.StartCoroutine(FetchExternalData());
                  var lobby = PaMNetworkManager.PamInstance!.LobbyInfo;
                  
                  lobby.HasLoadedMidLobbyInfo = true;
@@ -558,7 +540,8 @@ public partial class GameManagerPatch
              else
              {
                  SteamManager.Inst.StartClient(SteamLobbyManager.Inst.CurrentLobby.Owner.Id);
-                   var lobby = PaMNetworkManager.PamInstance!.LobbyInfo;
+                 GameManager.Inst.StartCoroutine(FetchExternalData());
+                 var lobby = PaMNetworkManager.PamInstance!.LobbyInfo;
                  yield return new WaitUntil(() => AttributeNetworkWrapperV2.NetworkManager.Instance!.TransportActive);
                  yield return new WaitUntil(() => lobby.HasLoadedMainLobbyInfo);
                  yield return new WaitUntil(() => lobby.HasLoadedAllInfo);
@@ -602,7 +585,11 @@ public partial class GameManagerPatch
 
              justCreatedLobby = true;
          }
-        
+         else
+         {
+             GameManager.Inst.StartCoroutine(FetchExternalData());
+         }
+         
          VGLevel levelTest;
          do
          {
@@ -636,7 +623,8 @@ public partial class GameManagerPatch
 
              if (result.Id == 0)
              {
-                 SceneLoader.Inst.LoadSceneGroup("Arcade");
+                 SceneLoader.Inst.manager.ClearLoadingTasks();
+                 MPUtility.DelayLoadScene("Menu");
                  SteamManager.Inst?.DisconnectAll();
                  ErrorScreen.CreateErrorScreen($"Failed to download level with id [<b>{GlobalsManager.LevelId}</b>]\n\nDisconnected from lobby.");
                  yield break; //this prob doesnt need to be here
@@ -662,7 +650,20 @@ public partial class GameManagerPatch
              ArcadeManager.Inst.CurrentArcadeLevel = _level;
          }
          
+         LevelSaveData.BeginLevel(_level);
+         gm.playbackStarted = false;
+         VoidMaskController.LoadLevelFolderMasks(_level.LevelData?.LocalFolder);
+         LevelInkLibrary.LoadLevelFolder(_level.LevelData?.LocalFolder);
+         
+         yield return LevelInkLibrary.EnsureDialogRuntime();
+         
          gm.LoadMetadata(_level);
+
+         if (!_level.LevelMusic)
+         {
+             var task = LevelMusicLoader.LoadForPlaybackAsync(_level);
+             yield return new WaitUntil(() => task.IsCompleted);
+         }
          
          yield return gm.StartCoroutine(gm.LoadAudio(_level));
          
@@ -709,6 +710,7 @@ public partial class GameManagerPatch
                  {
                      CallRpc_Multi_OpenChallenge();
                      SceneLoader.Inst.LoadSceneGroup("Challenge");
+                     yield break;
                  }
                  else
                  {
@@ -721,19 +723,15 @@ public partial class GameManagerPatch
                          yield break;
                      }
 
-                     string id = GlobalsManager.Queue[0].Id; 
-                     ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-                     GlobalsManager.LevelId = id;
+                     GlobalsManager.PlayQueue(null);
+                     yield break;
                  }
-                 
-                 SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-                 yield break;
              }
              
              PAM.Logger.LogError(Random.seed.ToString());
              
              SteamLobbyManager.Inst.RandSeed = Random.seed;
-             ObjectManager.inst.seed = Random.seed;
+             ObjectManager.inst.SetSeed(Random.seed);
              RNGSync.Seed = SteamLobbyManager.Inst.RandSeed;
              if (!justCreatedLobby)
              {
@@ -758,7 +756,7 @@ public partial class GameManagerPatch
                  SteamLobbyManager.Inst.RandSeed = seed;
              }
              RNGSync.Seed = SteamLobbyManager.Inst.RandSeed;
-             ObjectManager.inst.seed = SteamLobbyManager.Inst.RandSeed;
+             ObjectManager.inst.SetSeed(SteamLobbyManager.Inst.RandSeed);
          }
          
          try
@@ -776,7 +774,7 @@ public partial class GameManagerPatch
              }
            
              SceneLoader.Inst.manager.ClearLoadingTasks();
-             SceneLoader.Inst.LoadSceneGroup("Menu");
+             MPUtility.DelayLoadScene("Menu");
              yield break;
          }
          
@@ -847,7 +845,7 @@ public partial class GameManagerPatch
         SteamLobbyManager.Inst.CurrentLobby.SetMemberData("IsLoaded", "0");
         PaMNetworkManager.PamInstance?.LobbyInfo.HasLoadedMidLobbyInfo = true;
         SceneLoader.Inst.manager.ClearLoadingTasks();
-        SceneLoader.Inst.LoadSceneGroup("Challenge");
+        MPUtility.DelayLoadScene("Challenge");
     }
     static void InitSteamInfo(ref VGLevel _level, PublishedFileId _id, string _folder, Item _item)
     {
@@ -876,7 +874,7 @@ public partial class GameManagerPatch
             GlobalsManager.IsDownloading = false;
            
             SceneLoader.Inst.manager.ClearLoadingTasks();
-            SceneLoader.Inst.LoadSceneGroup("Menu");
+            MPUtility.DelayLoadScene("Menu");
         }
         
         if (!ulong.TryParse(GlobalsManager.LevelId, out var id))

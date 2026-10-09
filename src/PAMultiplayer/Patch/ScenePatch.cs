@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -8,6 +9,7 @@ using HarmonyLib;
 using PAMultiplayer.Managers;
 using Systems.SceneManagement;
 using UnityEngine.SceneManagement;
+using VGFunctions;
 using Object = UnityEngine.Object;
 
 
@@ -78,14 +80,19 @@ public static class LoadingTipsPatch
                 PAM.Logger.LogError(e);
             }
 
+            
             if (scene.name == "Menu")
             {
-                ShowChangeLog show = Object.FindObjectOfType<ShowChangeLog>();
-                if (show)
+                LSHelpers.Delay(.1f, () =>
                 {
-                    UpdateModButtonPatches.HandleMenuCreation(show);
-                }
+                    ShowChangeLog show = Object.FindObjectOfType<ShowChangeLog>();
+                    if (show)
+                    {
+                        UpdateModButtonPatches.HandleMenuCreation(show);
+                    }
+                });
             }
         };
     }
+    
 }

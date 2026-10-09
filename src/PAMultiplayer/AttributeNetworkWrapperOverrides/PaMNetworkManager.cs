@@ -92,7 +92,7 @@ public partial class PaMNetworkManager : NetworkManager
         
         SteamManager.Inst.EndClient();
         SceneLoader.Inst.manager.ClearLoadingTasks();
-        SceneLoader.Inst.LoadSceneGroup("Menu");
+        MPUtility.DelayLoadScene("Menu");
         OnMultiplayerEnd?.Invoke(false);
     }
 
@@ -117,7 +117,7 @@ public partial class PaMNetworkManager : NetworkManager
         
             SteamManager.Inst.EndServer();
             SceneLoader.Inst.manager.ClearLoadingTasks();
-            SceneLoader.Inst.LoadSceneGroup("Menu");
+            MPUtility.DelayLoadScene("Menu");
             return;
         }
         
@@ -325,6 +325,6 @@ public partial class PaMNetworkManager : NetworkManager
         
         SteamManager.Inst.EndClient();
         SceneLoader.Inst.manager.ClearLoadingTasks();
-        SceneLoader.Inst.LoadSceneGroup("Menu");
+        MPUtility.DelayLoadScene("Menu");
     }
 }

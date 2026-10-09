@@ -1,167 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
-using Crosstales;
 using HarmonyLib;
-using PAMultiplayer.AttributeNetworkWrapperOverrides;
 using PAMultiplayer.Managers;
 using Systems.SceneManagement;
-using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using VGFunctions;
 using Action = System.Action;
 using Object = UnityEngine.Object;
 
-
 namespace PAMultiplayer.Patch;
-
-
-
-/// <summary>
-/// generate the queue UI
-/// </summary>
-[HarmonyPatch(typeof(ArcadeMenu))]
-public static class ArcadeMenuPatch
-{
-    private static List<QueueButton> _queueButtons = new();
-        
-    [HarmonyPatch(nameof(ArcadeMenu.Start))]
-    [HarmonyPostfix]
-    static void PostStart(ArcadeMenu __instance)
-    {
-        GameObject QueueIconPrefab;
-        _queueButtons.Clear();
-        GlobalsManager.Queue.Clear();
-        
-        using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("PAMultiplayer.Assets.queue assets"))
-        {
-            var lobbyBundle = AssetBundle.LoadFromMemory(stream!.CTReadFully());
-            
-            QueueIconPrefab = lobbyBundle.LoadAsset(lobbyBundle.GetAllAssetNames()[0]) as GameObject;
-         
-            lobbyBundle.Unload(false);
-        }
-        
-        foreach (var levelButton in __instance.LevelButtons)
-        {
-            Transform button = levelButton.Button.transform;
-            GameObject icon = Object.Instantiate(QueueIconPrefab, button);
- 
-            _queueButtons.Add(icon.AddComponent<QueueButton>());
-
-            var buttonElement = icon.GetComponent<MultiElementButton>();
-            buttonElement.navigation = buttonElement.navigation with { mode = Navigation.Mode.None };
-        }
-    }
-    
-    [HarmonyPatch(nameof(ArcadeMenu.SelectPage), typeof(int), typeof(bool))]
-    [HarmonyPostfix]
-    static void PostRenderLevelButtons(ArcadeMenu __instance)
-    {
-        int page = __instance.Page;
-        for (int i = 0; i < 12; i++)
-        {
-            if (__instance.SearchedLevels.Count - 1 >= i + 12 * page)
-            {
-                _queueButtons[i].gameObject.SetActive(true);
-                _queueButtons[i].SetLevel(__instance.SearchedLevels[i + 12 * page].BaseLevelData.LevelID);
-            }
-            else
-            {
-                _queueButtons[i].gameObject.SetActive(false);
-            }
-        }
-    }
-
-    [HarmonyPatch(nameof(ArcadeMenu.Update))]
-    [HarmonyPostfix]
-    static void PostUpdate(ArcadeMenu __instance)
-    {
-        if ((Input.GetKeyDown(KeyCode.Y) || Input.GetKeyDown(KeyCode.JoystickButton3)) && EventSystem.current)
-        {
-            var selected = EventSystem.current.currentSelectedGameObject;
-            for (var i = 0; i < __instance.LevelButtons.Count; i++)
-            {
-                if (__instance.LevelButtons[i].Button.gameObject == selected)
-                {
-                    _queueButtons[i].OnClick();
-                    _queueButtons[i].UIQueueButton.Show();
-                    break;
-                }
-            }
-        }
-    }
-}
-
-
-public class QueueButton : MonoBehaviour
-{
-    public UI_Button UIQueueButton { get; private set; }
-    private TextMeshProUGUI queueText;
-
-    private string currentLevel = "";
-    private int queueIndex = 0;
-    private delegate void QueueUpdated();
-    private static event QueueUpdated _queueUpdated;
-    
-    private void Start()
-    {
-        _queueUpdated += UpdateButton;
-    }
-
-    private void OnDestroy()
-    {
-        _queueUpdated -= UpdateButton;
-    }
-
-    void UpdateButton()
-    {
-        int newIndex = GlobalsManager.Queue.IndexOfLevel(currentLevel) + 1;
-        if (newIndex > 0 && newIndex != queueIndex)
-        {
-            queueIndex = newIndex;
-            UIQueueButton.Show();
-            queueText.text = newIndex.ToString();
-        }
-    }
-    public void OnClick()
-    {
-        if (GlobalsManager.Queue.ContainsLevel(currentLevel))
-        {
-            GlobalsManager.Queue.RemoveLevel(currentLevel);
-            queueIndex = 0;
-            queueText.text = "+";
-            _queueUpdated.Invoke();
-        }
-        else
-        {
-            VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(currentLevel);
-            GlobalsManager.Queue.AddLevel(level?.TrackName, currentLevel);
-            queueIndex = GlobalsManager.Queue.Count;
-            queueText.text = queueIndex.ToString();
-        }
-    }
-
-    public void SetLevel(string level)
-    {
-        if (UIQueueButton == null)
-        {
-            UIQueueButton = gameObject.GetComponent<UI_Button>();
-            queueText = gameObject.GetComponentInChildren<TextMeshProUGUI>();
-            UIQueueButton.GetComponent<MultiElementButton>().onClick.AddListener(OnClick);
-        }
-
-        UIQueueButton = gameObject.GetComponent<UI_Button>();
-        UIQueueButton.Show();
-        
-        currentLevel = level;
-
-        queueIndex = GlobalsManager.Queue.IndexOfLevel(level) + 1;
-        queueText.text = queueIndex > 0 ? queueIndex.ToString() : "+";
-    }
-}
 
 [HarmonyPatch(typeof(LevelEndScreen))]
 public static class LevelEndScreenPatch
@@ -186,8 +32,8 @@ public static class LevelEndScreenPatch
         MultiElementButton blacklist = Object.Instantiate(buttonsParent.Find("Continue").gameObject, buttonsParent)
             .GetComponent<MultiElementButton>();
 
-        blacklist.Start();
-        var ui = blacklist.UIElement as UI_Button;
+        blacklist.gameObject.SetActive(true);
+        var ui = blacklist.GetComponent<UI_Button>();
 
         if (Settings.ChallengeBlacklist.Value.Contains(ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID))
         {
@@ -198,7 +44,7 @@ public static class LevelEndScreenPatch
             UIStateManager.Inst.RefreshTextCache(ui!.Text, "Blacklist Level");
         }
         
-        __instance.Buttons = __instance.Buttons.AddToArray(blacklist.UIElement);
+        __instance.Buttons = __instance.Buttons.AddToArray(ui);
       
         blacklist.onClick = new();
         blacklist.onClick.AddListener(() =>
@@ -229,10 +75,9 @@ public static class LevelEndScreenPatch
 
         Transform buttonsParent = __instance.transform.Find("Content/EndScreen/Buttons");
 
-        buttonsParent.Find("Flair").gameObject.SetActive(false);
+        buttonsParent.Find("Filer")?.transform.SetAsLastSibling();
 
-
-        MultiElementButton nextLevel = buttonsParent.Find("Continue").GetComponent<MultiElementButton>();
+        MultiElementButton nextLevel = __instance.ContinueButton;
         if ((GlobalsManager.Queue.Count == 0 && !GlobalsManager.IsChallenge) ||
             (GlobalsManager.IsMultiplayer && !GlobalsManager.IsHosting))
         {
@@ -240,13 +85,17 @@ public static class LevelEndScreenPatch
         }
         else
         {
-            nextLevel.Lock = false;
-            nextLevel.interactable = true;
+            var element = nextLevel.GetComponent<UIElement>();
+            nextLevel.gameObject.SetActive(true);
+
+            LSHelpers.Delay(.1f, () =>
+            {
+                element.Show();
+                nextLevel.LockButtonState(false);
+                nextLevel.interactable = true;
+            });
         }
-
-        nextLevel.uiElement.Show();
-        nextLevel.gameObject.SetActive(true);
-
+   
         //remove all listeners seems broken :c
         nextLevel.onClick = new Button.ButtonClickedEvent();
         nextLevel.onClick.AddListener(() =>
@@ -267,13 +116,7 @@ public static class LevelEndScreenPatch
                 return;
             }
 
-            string id = GlobalsManager.Queue[0].Id;
-            ArcadeManager.Inst.CurrentArcadeLevel = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
-            GlobalsManager.LevelId = id;
-
-
-            SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
-            PAM.Logger.LogInfo("Starting next level in queue!");
+            GlobalsManager.PlayQueue(null);
         });
 
         if (GlobalsManager.IsMultiplayer)
@@ -290,6 +133,6 @@ public static class PauseUIManagerPatch
     [HarmonyPrefix]
     static void PreOpen(PauseUIManager __instance)
     {
-        __instance.transform.Find("Pause Menu/Skip Queue Level")?.gameObject.SetActive(GlobalsManager.Queue.Count > 0 || GlobalsManager.IsChallenge);
+        __instance.transform.Find("sizer/Pause Menu/Skip Queue Level")?.gameObject.SetActive(GlobalsManager.Queue.Count > 0 || GlobalsManager.IsChallenge);
     }
 }
