@@ -1,3 +1,16 @@
+## 1.4.1
+* Story mode levels now are playable in Queues and Challenge, both in Multiplayer and Singleplayer
+* Multiplayer Challenge loading time decreased.
+* Joning mid level now correctly removes the scanlines effect
+* Previous player effects like "Cant move, Cant Dash, Player Keyframes" no longer gets carried into Challenge voting
+
+## 1.4.0
+* Fixed mod for 1.0
+* Now allows you to queue levels not yet subscribed, this includes for multiplayer
+* Clients can now add levels to the queue if "Allow Client Levels" is enabled during lobby creation
+
+This is possibly VERY broken so PLEASE report in PA MODDING in the discord
+
 ## 1.3.1
 * Fixed bug from latest alpha where MP would not work due to IsArcade not being set to true quickly enough
 

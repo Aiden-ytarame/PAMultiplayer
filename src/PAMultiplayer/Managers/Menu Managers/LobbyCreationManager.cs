@@ -66,7 +66,7 @@ public class LobbyCreationManager : MonoBehaviour
                     GlobalsManager.IsChallenge = true;
                     AllowClientLevels = false;
                     LobbyCreationMenu.HideAllInstant();
-                    SceneLoader.Inst.LoadSceneGroup("Challenge");
+                    MPUtility.DelayLoadScene("Challenge");
                     return;
                 }
                 

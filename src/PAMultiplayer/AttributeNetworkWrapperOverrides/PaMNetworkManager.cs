@@ -109,19 +109,8 @@ public partial class PaMNetworkManager : NetworkManager
     public override void OnServerClientConnected(ClientNetworkConnection connection)
     {
         base.OnServerClientConnected(connection);
-
-        if (!ulong.TryParse(GlobalsManager.LevelId, out var level))
-        {
-            PAM.Logger.LogError("Tried to send local level to client");
-            ErrorScreen.CreateErrorScreen("Tried to send local level to client, disconnecting...\n\nHost another level and try again");
         
-            SteamManager.Inst.EndServer();
-            SceneLoader.Inst.manager.ClearLoadingTasks();
-            MPUtility.DelayLoadScene("Menu");
-            return;
-        }
-        
-        CallRpc_Client_SetMainLobbyData(connection, level, SteamLobbyManager.Inst.RandSeed, LobbyCreationManager.Instance.AllowClientLevels, (byte)LobbyInfo.LobbyState, (byte)DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0), (byte)DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0), DataManager.inst.GetSettingBool("mp_linkedHealth", false));
+        CallRpc_Client_SetMainLobbyData(connection, GlobalsManager.LevelId, SteamLobbyManager.Inst.RandSeed, LobbyCreationManager.Instance.AllowClientLevels, (byte)LobbyInfo.LobbyState, (byte)DataManager.inst.GetSettingEnum("ArcadeHealthMod", 0), (byte)DataManager.inst.GetSettingEnum("ArcadeSpeedMod", 0), DataManager.inst.GetSettingBool("mp_linkedHealth", false));
         foreach (var keyValuePair in GlobalsManager.Players)
         {
             CallRpc_Client_RegisterPlayerId(connection, keyValuePair.Key, keyValuePair.Value.VGPlayerData.PlayerID, GlobalsManager.Players.Count);
@@ -216,7 +205,7 @@ public partial class PaMNetworkManager : NetworkManager
     }
 
     [ClientRpc]
-    private static void Client_SetMainLobbyData(ulong levelId, int seed, bool allowsClient, byte state, byte healthMod, byte speedMod, bool linked)
+    private static void Client_SetMainLobbyData(string levelId, int seed, bool allowsClient, byte state, byte healthMod, byte speedMod, bool linked)
     {
         if (state < (byte)SteamLobbyManager.LobbyState.Max)
         {
@@ -225,7 +214,7 @@ public partial class PaMNetworkManager : NetworkManager
 
         if (PamInstance?.LobbyInfo.LobbyState != SteamLobbyManager.LobbyState.Challenge)
         {
-            GlobalsManager.LevelId = levelId.ToString();
+            GlobalsManager.LevelId = levelId;
         }
 
         PamInstance?.LobbyInfo.AllowClientLevels = allowsClient;

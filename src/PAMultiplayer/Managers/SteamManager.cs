@@ -129,6 +129,7 @@ public class SteamManager : MonoBehaviour
         WrapperNetworkManager.Instance?.Disconnect();
         SteamLobbyManager.Inst?.LeaveLobby();
     }
+    
     public void StartServer()
     {
         PAM.Logger.LogInfo("Starting Server.");

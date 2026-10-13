@@ -85,7 +85,7 @@ public partial class GameManagerPatch
                 {
                     CallRpc_Multi_OpenChallenge();
                 }
-                SceneLoader.Inst.LoadSceneGroup("Challenge");
+                MPUtility.DelayLoadScene("Challenge");
                 return;
             }
 
@@ -180,6 +180,7 @@ public partial class GameManagerPatch
         //we also can make this repo not a github page but eh, why not 
         UnityWebRequest webRequest =
             UnityWebRequest.Get("https://raw.githubusercontent.com/aiden-ytarame/PAMultiplayer/master/ColoredNames.json");
+        
         yield return webRequest.SendWebRequest();
 
         if (webRequest.result != UnityWebRequest.Result.Success)
@@ -216,9 +217,11 @@ public partial class GameManagerPatch
                 }
             }
         }
-        
-        PaMNetworkManager.PamInstance?.LobbyInfo.HasLoadedExternalInfo = true;
-        PAM.Logger.LogError($"EXTERNAL {PaMNetworkManager.PamInstance.LobbyInfo.HasLoadedExternalInfo}");
+
+        if (LobbyScreenManager.Instance)
+        {
+            LobbyScreenManager.Instance.SpecialColorsUpdated();
+        }
     }
     
     //wtf is this
@@ -497,6 +500,8 @@ public partial class GameManagerPatch
                 }
             }
         }
+        
+        CameraDB.Inst.SetUIVolumeWeight(0f, 0f);
     }
 
     [MultiRpc]
@@ -593,7 +598,7 @@ public partial class GameManagerPatch
          VGLevel levelTest;
          do
          {
-             levelTest = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId);
+             levelTest = MPUtility.LookForLevel(GlobalsManager.LevelId);
              if (levelTest)
              {
                  break;
@@ -670,7 +675,12 @@ public partial class GameManagerPatch
          if (GlobalsManager.IsHosting)
          {
              bool skipLevel = true;
-             if (ulong.TryParse(GlobalsManager.LevelId, out var nextQueueId))
+             
+             if (_level.IsBakedLevel)
+             {
+                 skipLevel = false;
+             }
+             else if (ulong.TryParse(GlobalsManager.LevelId, out var nextQueueId))
              {
                  var result = SteamUGC.QueryFileAsync(nextQueueId);
 
@@ -695,7 +705,7 @@ public partial class GameManagerPatch
                      skipLevel = false;
                  }
              }
-             
+           
              if (skipLevel)
              {
                  PAM.Logger.LogError(
@@ -709,7 +719,7 @@ public partial class GameManagerPatch
                  if (GlobalsManager.IsChallenge)
                  {
                      CallRpc_Multi_OpenChallenge();
-                     SceneLoader.Inst.LoadSceneGroup("Challenge");
+                     MPUtility.DelayLoadScene("Challenge");
                      yield break;
                  }
                  else
@@ -718,7 +728,7 @@ public partial class GameManagerPatch
 
                      if (GlobalsManager.Queue.Count == 0)
                      {
-                         SceneLoader.Inst.LoadSceneGroup("Arcade");
+                         MPUtility.DelayLoadScene("Arcade");
                          SteamManager.Inst.EndServer();
                          yield break;
                      }
@@ -746,7 +756,7 @@ public partial class GameManagerPatch
                  }
 
                  PAM.Logger.LogError(SteamLobbyManager.Inst.RandSeed);
-                 CallRpc_Multi_NextQueueLevel(nextQueueId, SteamLobbyManager.Inst.RandSeed);
+                 CallRpc_Multi_NextQueueLevel(GlobalsManager.LevelId, SteamLobbyManager.Inst.RandSeed);
              }
          }
          else
@@ -789,12 +799,12 @@ public partial class GameManagerPatch
          {
              VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData(){PlayerID = 0, ControllerID = 0});
          }
-      
+         
          gm.PlayGame();
     }
 
     [MultiRpc]
-    private static void Multi_NextQueueLevel(ulong levelID, int seed)
+    private static void Multi_NextQueueLevel(string levelID, int seed)
     {
         if (GlobalsManager.IsHosting)
         {
@@ -803,7 +813,7 @@ public partial class GameManagerPatch
         
         PAM.Logger.LogInfo($"New random seed : {seed}");
 
-        GlobalsManager.LevelId = levelID.ToString();
+        GlobalsManager.LevelId = levelID;
         SteamLobbyManager.Inst.RandSeed = seed;
 
         var lobby = PaMNetworkManager.PamInstance?.LobbyInfo;
@@ -813,25 +823,25 @@ public partial class GameManagerPatch
             lobby.HasLoadedMidLobbyInfo = true;
         }
         
-        DataManager.inst.StartCoroutine(NextQueueLevelIEnu(levelID, seed)); //task crashes game here 
+        DataManager.inst.StartCoroutine(NextQueueLevelIEnu()); //task crashes game here 
     }
 
-    static IEnumerator NextQueueLevelIEnu(ulong levelID, int seed)
+    static IEnumerator NextQueueLevelIEnu()
     {
         SceneLoader.Inst.manager.ClearLoadingTasks();
         yield return new WaitForSeconds(1);
         
-        VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(GlobalsManager.LevelId);
+        VGLevel level = MPUtility.LookForLevel(GlobalsManager.LevelId);
         if (level)
         {
             ArcadeManager.Inst.CurrentArcadeLevel = level;
-            SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+            MPUtility.DelayLoadScene("Arcade_Level");
             yield break;
         }
 
         GlobalsManager.IsDownloading = true;
         PAM.Logger.LogError($"You did not have the lobby's level downloaded!, Downloading Level...");
-        SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+        MPUtility.DelayLoadScene("Arcade_Level");
     }
     
     [MultiRpc]

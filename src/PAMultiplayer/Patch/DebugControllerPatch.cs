@@ -457,7 +457,7 @@ public static partial class DebugControllerPatch
 
     private static bool AddLevelToQueue(string id)
     {
-        VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
+        VGLevel level = MPUtility.LookForLevel(id);
         if (level)
         {
             GlobalsManager.Queue.InsertLevel(ArcadeManager.Inst.CurrentArcadeLevel.TrackName, ArcadeManager.Inst.CurrentArcadeLevel.BaseLevelData.LevelID);

@@ -6,9 +6,8 @@ public class LobbyInfo
 {
     public SteamLobbyManager.LobbyState LobbyState;
         
-    public bool HasLoadedAllInfo => HasLoadedExternalInfo && HasLoadedBasePlayerIds;
-
-    public bool HasLoadedExternalInfo;
+    public bool HasLoadedAllInfo => HasLoadedBasePlayerIds;
+    
     public bool HasLoadedBasePlayerIds;
 
     public bool HasLoadedAllLobbyInfo => HasLoadedMainLobbyInfo && HasLoadedMidLobbyInfo;

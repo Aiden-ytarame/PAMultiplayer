@@ -25,6 +25,28 @@ public static class AttrWrapperExtension
         return new Vector2(reader.ReadSingle(), reader.ReadSingle());
     }
 
+    public static void WriteStrings(this NetworkWriter writer, List<string> strings)
+    {
+        writer.Write(strings.Count);
+        foreach (var se in strings)
+        {
+            writer.Write(se ?? "");
+        }
+    }
+
+    public static List<string> ReadStrings(this NetworkReader reader)
+    {
+        int count = reader.ReadInt32();
+        List<string> strings = new List<string>(count);
+        
+        for (int i = 0; i < count; i++)
+        {
+            strings.Add(reader.ReadString());
+        }
+        
+        return strings;
+    }
+    
     public static void WriteUlongs(this NetworkWriter writer, List<ulong> ulongs)
     {
         writer.Write(ulongs.Count);

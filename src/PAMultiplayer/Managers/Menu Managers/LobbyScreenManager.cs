@@ -54,7 +54,7 @@ public class LobbyScreenManager : MonoBehaviour
         ResumeButton.onClick.AddListener(GameManager.Inst.UnPause);
 
         QuitButton = buttons.GetChild(1).GetComponent<MultiElementButton>();
-        QuitButton.onClick.AddListener(() => SceneLoader.Inst.LoadSceneGroup("Arcade"));
+        QuitButton.onClick.AddListener(() => MPUtility.DelayLoadScene("Arcade"));
         QuitButton.UnlockUIButton();
         
         if (!GlobalsManager.IsHosting)
@@ -141,6 +141,33 @@ public class LobbyScreenManager : MonoBehaviour
         }
     }
 
+    public void SpecialColorsUpdated()
+    {
+        foreach (var entry in _playerList)
+        {
+            if (SpecialColors.TryGetValue(entry.Key, out var colors))
+            {
+                if (!entry.Value)
+                {
+                    continue;
+                }
+                
+                var text = entry.Value.GetComponentInChildren<TextMeshProUGUI>();
+                if (colors.Length >= 1)
+                {
+                    if (colors.Length >= 2)
+                    {
+                        text.OnPreRenderText += info => MPUtility.SetFullTextGradient(info, colors[0], colors[1]);
+                    }
+                    else
+                    {
+                        text.color = colors[0];
+                    }
+                }
+            }
+        }
+    }
+    
     public void RemovePlayerFromLobby(SteamId player)
     {
         if (_playerList.TryGetValue(player, out var value))
@@ -228,6 +255,8 @@ public class LobbyScreenManager : MonoBehaviour
             LobbyMenu.transform.Find("Queue Title").gameObject.SetActive(false);
             return;
         }
+        
+        LobbyMenu.transform.Find("Queue Title").gameObject.SetActive(true);
         
         foreach (var queueEntry in queue)
         {

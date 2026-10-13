@@ -264,7 +264,8 @@ public partial class SteamLobbyManager : MonoBehaviour
         }
         
         GlobalsManager.Queue.Clear();
-        SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+        
+        MPUtility.DelayLoadScene("Arcade_Level");
     }
 
 
@@ -299,7 +300,7 @@ public partial class SteamLobbyManager : MonoBehaviour
         else
         {
             VGLevel currentLevel = ArcadeManager.Inst.CurrentArcadeLevel;
-            GlobalsManager.LevelId = currentLevel.SteamInfo != null ?  currentLevel.SteamInfo.ItemID.Value.ToString() : currentLevel.BaseLevelData.LevelID;
+            GlobalsManager.LevelId =currentLevel.BaseLevelData.LevelID;
             
             lobby.SetData("LevelId", GlobalsManager.LevelId);
             lobby.SetData("seed", RandSeed.ToString());
@@ -368,5 +369,5 @@ public partial class SteamLobbyManager : MonoBehaviour
         return _loadedPlayers.Count(x => x.Value);
     }
     
-    public bool  IsEveryoneLoaded => !_loadedPlayers.ContainsValue(false);
+    public bool IsEveryoneLoaded => !_loadedPlayers.ContainsValue(false);
 }

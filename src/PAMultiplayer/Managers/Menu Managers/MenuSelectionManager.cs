@@ -29,7 +29,7 @@ public class MenuSelectionManager : MonoBehaviour
             Menu.HideAllInstant();
             MultiplayerUIManager.Inst.SetContinueAction(() =>
             {
-                SceneLoader.Inst.LoadSceneGroup("Arcade");
+                MPUtility.DelayLoadScene("Arcade");
             });
             MultiplayerUIManager.Inst.OpenUI();
         });
@@ -61,10 +61,11 @@ public class MenuSelectionManager : MonoBehaviour
             MultiplayerUIManager.Inst.SetContinueAction(() =>
             {
                 GlobalsManager.IsChallenge = true;
-                SceneLoader.Inst.LoadSceneGroup("Challenge");
+                MPUtility.DelayLoadScene("Challenge");
             });
             MultiplayerUIManager.Inst.OpenUI();
         });
+        
         buttons.GetChild(3).GetComponent<MultiElementButton>().onClick.AddListener(() =>
         {
             Menu.HideAllInstant();

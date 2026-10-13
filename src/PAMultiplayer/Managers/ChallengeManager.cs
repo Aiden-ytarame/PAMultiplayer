@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using AttributeNetworkWrapperV2;
 using DG.Tweening;
 using PAMultiplayer.AttributeNetworkWrapperOverrides;
@@ -47,8 +46,7 @@ public partial class ChallengeManager : MonoBehaviour
     private readonly List<VGLevel> _levelsToVote = new(6);
     private readonly Dictionary<VGLevel, LoadState> _loadedLevels = new(6);
     private readonly Dictionary<VGPlayer, VGLevel> _votes = new(16);
-
-    private readonly List<AudioClip> _tempClips = new(6);
+    
     private SongData _songData = new(); //struct here crashes bepinex lmao
 
     private Image _bgSlider;
@@ -97,6 +95,19 @@ public partial class ChallengeManager : MonoBehaviour
         {
             _levelButtons.Add(cells.GetChild(i).gameObject.AddComponent<VoterCell>());
         }
+        
+        SceneLoader.Inst.manager.AddToLoadingTasks("Loading songs", Task.Run(async () =>
+        {
+            while (_levelsToVote.Count < 6)
+            {
+                await Task.Delay(100);
+                SceneLoader.Inst?.manager?.UpdateTaskStatus("Loading songs", $"<color=#FFD000>[ Loading ]</color> {_levelsToVote.Count}/6");
+            }
+
+            SceneLoader.Inst?.manager?.ResetTaskStatus("Loading songs");
+        }), "<color=#FFD000>[ Loading ]</color> 0/6"); 
+        
+        VGPlayerManager.Inst.InitPlayerStatus();
         
         if (GlobalsManager.IsMultiplayer)
         {
@@ -160,6 +171,14 @@ public partial class ChallengeManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        foreach (var vgLevel in _levelsToVote)
+        {
+            if (vgLevel && vgLevel.LevelMusic && !LevelMusicLoader.Manager.IsPlaybackClip(vgLevel.LevelMusic))
+            {
+                MPUtility.ReleaseClip(vgLevel.LevelMusic, vgLevel.IsBakedLevel);
+            }
+        }
+        
         //attempt on fixing dupe players
         foreach (var vgPlayerData in VGPlayerManager.Inst.players)
         {
@@ -171,15 +190,6 @@ public partial class ChallengeManager : MonoBehaviour
         }
         
         AlbumArtManager.Dispose();
-        foreach (var audioClip in _tempClips)
-        {
-            if (audioClip)
-            {
-                AudioManager.Inst.ReleaseMusicClip(audioClip);
-                audioClip.UnloadAudioData();
-                Destroy(audioClip);
-            }
-        }
     }
     #endregion
     
@@ -206,7 +216,7 @@ public partial class ChallengeManager : MonoBehaviour
             }
         }
 
-        if (RecentLevels.Count + 6 >= ArcadeLevelDataManager.Inst.ArcadeLevels.Count)
+        if (RecentLevels.Count + 6 >= ArcadeLevelDataManager.Inst.ArcadeLevels.Count + (MPUtility.IsStoryModeBeaten() ? MPUtility.StoryLevelCount : 0))
         {
             PAM.Logger.LogInfo("Clearing out recent level list due to being full");
             RecentLevels.Clear();
@@ -214,11 +224,22 @@ public partial class ChallengeManager : MonoBehaviour
 
         string blacklistStr = Settings.ChallengeBlacklist.Value;
 
-        List<VGLevel> nonRepeatLevels = new(ArcadeLevelDataManager.Inst.ArcadeLevels.Count - RecentLevels.Count);
+        List<VGLevel> nonRepeatLevels = new(ArcadeLevelDataManager.Inst.ArcadeLevels.Count + (MPUtility.IsStoryModeBeaten() ? MPUtility.StoryLevelCount : 0) - RecentLevels.Count);
 
         HashSet<string> comparer = new(RecentLevels);
         comparer.UnionWith(blacklistStr.Split('/', StringSplitOptions.RemoveEmptyEntries));
 
+        if (MPUtility.IsStoryModeBeaten())
+        {
+            foreach (var storyLevel in MPUtility.GetStoryLevels())
+            {
+                if (!comparer.Contains(storyLevel.BaseLevelData.LevelID))
+                {
+                    nonRepeatLevels.Add(storyLevel);
+                }
+            }
+        }
+        
         foreach (var arcadeLevel in ArcadeLevelDataManager.Inst.ArcadeLevels)
         {
             if (!comparer.Contains(arcadeLevel.BaseLevelData.LevelID))
@@ -237,96 +258,92 @@ public partial class ChallengeManager : MonoBehaviour
         }
 
         bool allowNonPublicLevels = Settings.AllowNonPublicLevels.Value;
-        List<Task<Sprite>> loadTasks = new();
-
+        List<CoroutineWrapper> levelCoroutines = new List<CoroutineWrapper>(6);
         for (int i = 0; i < 24; i++)
         {
-            var level = nonRepeatLevels[Random.Range(0, nonRepeatLevels.Count)];
-
-            if (_levelsToVote.Contains(level))
+            int countLeft = 6 - _levelsToVote.Count - levelCoroutines.Count;
+            while (countLeft > 0)
             {
+                var level = nonRepeatLevels[Random.Range(0, nonRepeatLevels.Count)];
                 nonRepeatLevels.Remove(level);
-                continue;
+                
+                var wrapper = this.WrapCoroutine(CheckLevel(level, allowNonPublicLevels));
+                levelCoroutines.Add(wrapper);
+                countLeft--;
             }
 
-            if (GlobalsManager.IsMultiplayer)
+
+            bool end = false;
+            while (levelCoroutines.Count > 0 && !end)
             {
-                if (level.SteamInfo == null)
+                for (var i1 = 0; i1 < levelCoroutines.Count;)
                 {
-                    continue;
+                    CoroutineWrapper curr = levelCoroutines[i1];
+                    if (curr.IsCompleted)
+                    {
+                        levelCoroutines.RemoveAt(i1);
+                        break;
+                    }
+
+                    i1++;
                 }
 
-                var task = SteamManager.GetSteamLevel(level.SteamInfo.ItemID);
-                while (!task.IsCompleted)
+                if (_levelsToVote.Count + levelCoroutines.Count < 6)
                 {
-                    yield return new WaitForUpdate();
+                    end = true;
                 }
 
-                var result = task.Result;
-                if (!result.HasValue || result.Value.Visibility == SteamWorkshopLevel.VisibilityType.Private
-                                     || (result.Value.Visibility is SteamWorkshopLevel.VisibilityType.Unlisted or SteamWorkshopLevel.VisibilityType.Friends && !allowNonPublicLevels))
-                {
-                    continue;
-                }
+                yield return null;
             }
-            
-            
-            if (!level.LevelMusic)
+
+            if (_levelsToVote.Count >= 6)
             {
-                var task = LevelMusicLoader.LoadAsync(level);
-
-                while (!task.IsCompleted)
-                {
-                    yield return null;
-                }
-
-                if (!level.LevelMusic)
-                {
-                    continue;
-                }
+                yield break;
             }
-
-            if (!level.AlbumArt)
-            {
-                loadTasks.Add(AlbumArtManager.LoadAlbumArtAsync(level.BaseLevelData.LevelID, level.BaseLevelData.LocalFolder));
-            }
-            else
-            {
-                loadTasks.Add(null);
-            }
-
-            RecentLevels.Add(level.BaseLevelData.LevelID);
-            _levelsToVote.Add(level);
-            nonRepeatLevels.Remove(level);
-
-            if (_levelsToVote.Count < 6)
-            {
-                continue;
-            }
-            
-            for (var levelIndex = 0; levelIndex < loadTasks.Count; levelIndex++)
-            {
-                var albumTask = loadTasks[levelIndex];
-                if (albumTask == null)
-                {
-                    continue;
-                }
-                    
-                if (!albumTask.IsCompleted)
-                {
-                    yield return new WaitUntil(() => albumTask.IsCompleted);
-                }
-
-                _levelsToVote[levelIndex].AlbumArt = albumTask.Result;
-            }
-
-            yield break;
         }
 
         PAM.Logger.LogError(
             "Not enough levels found in too many attempts");
         SceneLoader.Inst.manager.ClearLoadingTasks();
         MPUtility.DelayLoadScene("Menu");
+    }
+
+    IEnumerator CheckLevel(VGLevel level, bool allowNonPublic)
+    {
+        if (GlobalsManager.IsMultiplayer)
+        {
+            if (!level.IsBakedLevel && level.SteamInfo != null)
+            {
+                var task = SteamManager.GetSteamLevel(level.SteamInfo.ItemID);
+                yield return task.WaitUntilComplete();
+
+                var result = task.Result;
+                if (!result.HasValue
+                    || result.Value.Visibility == SteamWorkshopLevel.VisibilityType.Private
+                    || (result.Value.Visibility is SteamWorkshopLevel.VisibilityType.Unlisted or SteamWorkshopLevel.VisibilityType.Friends && !allowNonPublic))
+                {
+                    yield break;
+                }
+            }
+            else if (!level.IsBakedLevel)
+            {
+                yield break;
+            }
+        }
+        
+        var audio = LevelMusicLoader.LoadAsync(level).WaitUntilComplete();
+      
+        if (!level.AlbumArt)
+        {
+            var albumTask = AlbumArtManager.LoadAlbumArtAsync(level.BaseLevelData.LevelID, level.BaseLevelData.LocalFolder);
+            yield return albumTask.WaitUntilComplete();
+            level.AlbumArt = albumTask.Result;
+        }
+
+        yield return audio;
+        
+        RecentLevels.Add(level.BaseLevelData.LevelID);
+        _levelsToVote.Add(level);
     }
 
     VGLevel PickLevel()
@@ -393,7 +410,7 @@ public partial class ChallengeManager : MonoBehaviour
         OnVoteChanged?.Invoke(level);
     }
     
-    public void PlayerVote(ulong player, ulong level)
+    public void PlayerVote(ulong player, string level)
     {
         var playerObj = GlobalsManager.Players[player].VGPlayerData?.PlayerObject;
         if (!playerObj)
@@ -401,18 +418,18 @@ public partial class ChallengeManager : MonoBehaviour
             return;
         }
 
-        var vgLevel = _levelsToVote.Find(x => x.SteamInfo.ItemID == level);
+        var vgLevel = _levelsToVote.Find(x => x.BaseLevelData.LevelID == level);
         if (vgLevel != null)
         {
             _votes[playerObj] = vgLevel;
         }
     }
 
-    public void SetVoteWinner(ulong level)
+    public void SetVoteWinner(string level)
     {
         foreach (var levelButton in _levelButtons)
         {
-            if (levelButton?.Level?.SteamInfo?.ItemID != level)
+            if (levelButton?.Level?.BaseLevelData?.LevelID != level)
             {
                 levelButton?.Hide();
             }
@@ -423,7 +440,7 @@ public partial class ChallengeManager : MonoBehaviour
     {
         if (GlobalsManager.IsMultiplayer)
         {
-            CallRpc_Multi_VoteWinner(level.SteamInfo.ItemID);
+            CallRpc_Multi_VoteWinner(level.BaseLevelData.LevelID);
             return;
         }
         
@@ -437,7 +454,7 @@ public partial class ChallengeManager : MonoBehaviour
     }
 
     [MultiRpc]
-    private static void Multi_VoteWinner(ulong level)
+    private static void Multi_VoteWinner(string level)
     {
         Inst?.SetVoteWinner(level);
     }
@@ -447,11 +464,11 @@ public partial class ChallengeManager : MonoBehaviour
     #region Level entry download
     
     //clients setting up server sent levels
-    public async void CreateLevelEntry(ulong id, int index)
+    public async void CreateLevelEntry(string id, int index)
     {
         try
         {
-            VGLevel level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id.ToString());
+            VGLevel level = MPUtility.LookForLevel(id);
             if (level) 
             {
                 if (!_levelsToVote.Contains(level))
@@ -461,8 +478,7 @@ public partial class ChallengeManager : MonoBehaviour
 
                     if (!level.LevelMusic)
                     {
-                        var audio = await LevelMusicLoader.LoadForPlaybackAsync(level);
-                        _tempClips.Add(audio);
+                        await LevelMusicLoader.LoadAsync(level);
                     }
                     _loadedLevels[level] = new(true, true);
                 }
@@ -471,18 +487,32 @@ public partial class ChallengeManager : MonoBehaviour
                 return;
             }
 
+            if (!ulong.TryParse(id, out var steamId))
+            {
+                if (!GlobalsManager.IsHosting)
+                {
+                    SteamManager.Inst.EndClient();
+                }
+           
+                ErrorScreen.CreateErrorScreen($"Host tried to send level {id} which is local and not story, disconnecting...");
+
+                SceneLoader.Inst.manager.ClearLoadingTasks();
+                MPUtility.DelayLoadScene("Menu");
+                return;
+            }
+
             level = new()
             {
                 SteamInfo = new()
                 {
-                    ItemID = id
+                    ItemID = steamId
                 }
             };
             
             _levelsToVote.Add(level);
             _loadedLevels.TryAdd(level, new());
             
-            var result = await SteamUGC.QueryFileAsync(id);
+            var result = await SteamUGC.QueryFileAsync(steamId);
             if (!result.HasValue || result.Value.Result != Result.OK)
             {
                 PAM.Logger.LogError($"Failed to get workshop data for level id [{id}]");
@@ -534,9 +564,9 @@ public partial class ChallengeManager : MonoBehaviour
         CheckAllLevelsReady();
     }
     
-    public void SetLevelSong(ulong id, AudioClip clip)
+    public void SetLevelSong(string id, AudioClip clip)
     {
-        var level = _levelsToVote.Find(x => x.SteamInfo.ItemID == id);
+        var level = _levelsToVote.Find(x => x.BaseLevelData.LevelID == id);
         if (level)
         {
             level.LevelMusic = clip;
@@ -562,7 +592,7 @@ public partial class ChallengeManager : MonoBehaviour
             
             if (level.LevelMusic)
             {
-                AudioManager.Inst.PlayMusic(level.LevelMusic);
+                AudioManager.Inst.ForcePlayMusic(level.LevelMusic);
                 
                 if (level.LevelMusic.length > 5)
                 {
@@ -612,8 +642,7 @@ public partial class ChallengeManager : MonoBehaviour
         
         yield return new WaitForSecondsRealtime(1.5f);
 
-        GlobalsManager.LevelId = nextLevel.SteamInfo.ItemID.ToString();
-        
+        GlobalsManager.LevelId = nextLevel.BaseLevelData.LevelID;
         ArcadeManager.Inst.CurrentArcadeLevel = nextLevel;
       
         //only needed for singleplayer
@@ -626,7 +655,7 @@ public partial class ChallengeManager : MonoBehaviour
             }
         }
         
-        SceneLoader.Inst.LoadSceneGroup("Arcade_Level");
+        DownloadAndPlayFlow.Play(nextLevel);
     }
 
     IEnumerator InitMultiplayer()
@@ -659,12 +688,14 @@ public partial class ChallengeManager : MonoBehaviour
             yield break;
         }
 
+
         PaMNetworkManager.CallRpc_Multi_UpdateLobbyState((byte)SteamLobbyManager.LobbyState.Challenge);
         SteamLobbyManager.Inst.CurrentLobby.SetData("LobbyState",
             ((ushort)SteamLobbyManager.LobbyState.Challenge).ToString());
-
+        Stopwatch watch = Stopwatch.StartNew();
         yield return PickLevelForVoting();
-
+        watch.Stop();
+        PAM.Logger.LogFatal($"Time To pick and confirm level voting {watch.Elapsed}");
         // yield return new WaitUntil(new Func<bool>(() => _levelsToVote.Count >= 6));
 
         Transform skip = PauseUIManager.Inst.transform.Find("sizer/Pause Menu")?.Find("Skip Queue Level");
@@ -672,24 +703,22 @@ public partial class ChallengeManager : MonoBehaviour
         {
             skip.gameObject.SetActive(false);
         }
-
-        var timer = Stopwatch.StartNew();
    
         _songData.SongDataUpdated += count =>
         {
             SceneLoader.Inst?.manager?.UpdateTaskStatus("Setting up chosen levels", $"<color=#FFD000>[ Prepping ]</color> {count}/6");
         };
         
-        List<ulong> ids = new();
+        List<string> ids = new();
         foreach (var vgLevel in _levelsToVote)
         {
-            ids.Add(vgLevel.SteamInfo.ItemID);
+            ids.Add(vgLevel.BaseLevelData.LevelID);
         }
-
-        yield return _songData.SetupSongData(_levelsToVote);
+        var timer = Stopwatch.StartNew();
+        yield return _songData.SetupSongData(this, _levelsToVote);
 
         timer.Stop();
-        PAM.Logger.LogDebug($"took {timer.ElapsedMilliseconds}ms to get level data");
+        PAM.Logger.LogFatal($"took {timer.Elapsed} to get level data");
 
         SceneLoader.Inst?.manager?.ResetTaskStatus("Setting up chosen levels");
        
@@ -707,7 +736,7 @@ public partial class ChallengeManager : MonoBehaviour
     
     
     [MultiRpc]
-    private static void Multi_CheckLevelIds(List<ulong> levelIds)
+    private static void Multi_CheckLevelIds(List<string> levelIds)
     {
         if (!GlobalsManager.IsHosting)
         {
@@ -715,16 +744,16 @@ public partial class ChallengeManager : MonoBehaviour
         }
     }
 
-    static IEnumerator CheckLevelIds(List<ulong> levelIds)
+    static IEnumerator CheckLevelIds(List<string> levelIds)
     {
-        List<ulong> unknownLevelIds = new();
+        List<string> unknownLevelIds = new();
         for (var i = 0; i < levelIds.Count; i++)
         {
-            ulong levelId = levelIds[i];
+            string levelId = levelIds[i];
             bool hasLevel = false;
             do
             {
-                if (ArcadeLevelDataManager.Inst.GetLocalCustomLevel(levelId.ToString()))
+                if (MPUtility.LookForLevel(levelId))
                 {
                     hasLevel = true;
                     break;
@@ -746,7 +775,7 @@ public partial class ChallengeManager : MonoBehaviour
     }
 
     [ServerRpc]
-    private static void Server_UnknownLevelIds(ClientNetworkConnection conn, List<ulong> levelIds)
+    private static void Server_UnknownLevelIds(ClientNetworkConnection conn, List<string> levelIds)
     {
         if (!Inst)
         {
@@ -787,10 +816,10 @@ public partial class ChallengeManager : MonoBehaviour
     }
 
     private static readonly List<float> AudioDataBuffer = new();
-    private static ulong _lastId;
+    private static string _lastId;
     
     [ClientRpc]
-    private static void Client_AudioData(ulong audioID, int frequency, ReadOnlySpan<short> songData, bool last)
+    private static void Client_AudioData(string audioID, int frequency, ReadOnlySpan<short> songData, bool last)
     {
         PAM.Logger.LogInfo("Received audio data");
     
@@ -820,8 +849,7 @@ public partial class ChallengeManager : MonoBehaviour
             newClip.LoadAudioData();
 
             AudioDataBuffer.Clear();
-
-            Inst._tempClips.Add(newClip);
+            
             Inst.SetLevelSong(audioID, newClip);
         }
     }
@@ -1012,7 +1040,7 @@ public partial class VoterCell : MonoBehaviour
             SetSelected(true);
             if (AudioManager.Inst.CurrentAudioClip != Level.LevelMusic)
             {
-                AudioManager.Inst.PlayMusic(Level.LevelMusic);
+                AudioManager.Inst.ForcePlayMusic(Level.LevelMusic);
 
                 if (Level.PreviewStart <= 0)
                 {
@@ -1033,7 +1061,7 @@ public partial class VoterCell : MonoBehaviour
             return;
         }
         
-        CallRpc_Server_LevelVoted(Level.SteamInfo.ItemID);
+        CallRpc_Server_LevelVoted(Level.BaseLevelData.LevelID);
     }
 
     private void OnTriggerExit2D(Collider2D other)
@@ -1070,7 +1098,7 @@ public partial class VoterCell : MonoBehaviour
     }
 
     [ServerRpc]
-    private static void Server_LevelVoted(ClientNetworkConnection conn, ulong level)
+    private static void Server_LevelVoted(ClientNetworkConnection conn, string level)
     {
         if (!conn.TryGetSteamId(out SteamId id))
         {

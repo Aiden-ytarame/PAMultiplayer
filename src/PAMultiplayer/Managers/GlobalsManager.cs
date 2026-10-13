@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using PAMultiplayer.Data;
 using Steamworks;
 using Systems.SceneManagement;
@@ -46,7 +47,7 @@ namespace PAMultiplayer.Managers
         public static bool IsDownloading = false;
         
         public static readonly List<HitInfo> HitsQueue = new();
-
+        
         public static void PlayQueue(VGLevel fallback)
         {
             if (Queue.Count > 0)
@@ -60,14 +61,14 @@ namespace PAMultiplayer.Managers
                 string id = Queue[0].Id;
                 LevelId = id;
         
-                var level = ArcadeLevelDataManager.Inst.GetLocalCustomLevel(id);
+                var level = MPUtility.LookForLevel(id);
 
                 if (level)
                 {
                     DownloadAndPlayFlow.Play(level);
                     return;
                 }
-
+               
                 if (ulong.TryParse(id, out var longId))
                 {
                     var temp = ScriptableObject.CreateInstance<VGLevel>();
@@ -82,7 +83,7 @@ namespace PAMultiplayer.Managers
 
             if (!fallback)
             {
-                SceneLoader.Inst.LoadSceneGroup("Menu");
+                MPUtility.DelayLoadScene("Menu");
                 return;
             }
             DownloadAndPlayFlow.Play(fallback);

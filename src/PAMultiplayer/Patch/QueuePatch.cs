@@ -112,7 +112,7 @@ public static class LevelEndScreenPatch
                     GameManagerPatch.CallRpc_Multi_OpenChallenge();
                 }
 
-                SceneLoader.Inst.LoadSceneGroup("Challenge");
+                MPUtility.DelayLoadScene("Challenge");
                 return;
             }
 

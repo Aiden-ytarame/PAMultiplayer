@@ -21,6 +21,8 @@ namespace PAMultiplayer.Patch;
 [HarmonyPatch(typeof(SceneLoader))]
 public static class LoadingTipsPatch
 {
+    public static bool IgnoreArcade = false;
+    
     [HarmonyPatch(nameof(SceneLoader.Start))]
     [HarmonyPostfix]
     static void GetterTips(ref SceneLoader __instance)
@@ -61,18 +63,25 @@ public static class LoadingTipsPatch
         {
             try
             {
-                //just in-casse
-                if (scene.name == "Arcade" || scene.name == "Menu")
+                if (!IgnoreArcade)
                 {
-                    ChallengeManager.RecentLevels.Clear();
-                    GlobalsManager.IsChallenge = false;
-                    GlobalsManager.LocalPlayerObjectId = 0;
-                    GlobalsManager.Players.Clear();
-                    VGPlayerManager.Inst.players.Clear();
-                    VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData()
-                        { ControllerID = 0, PlayerID = 0 });
+                    //just in-casse
+                    if (scene.name == "Arcade" || scene.name == "Menu")
+                    {
+                        ChallengeManager.RecentLevels.Clear();
+                        GlobalsManager.IsChallenge = false;
+                        GlobalsManager.LocalPlayerObjectId = 0;
+                        GlobalsManager.Players.Clear();
+                        VGPlayerManager.Inst.players.Clear();
+                        VGPlayerManager.Inst.players.Add(new VGPlayerManager.VGPlayerData()
+                            { ControllerID = 0, PlayerID = 0 });
 
-                    SteamManager.Inst.DisconnectAll();
+                        SteamManager.Inst.DisconnectAll();
+                    }
+                }
+                else
+                {
+                    IgnoreArcade = false;
                 }
             }
             catch (Exception e)
