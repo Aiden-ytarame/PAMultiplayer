@@ -1,3 +1,6 @@
+## 1.4.2
+* Fixed bug where a client loading challenge would never load if some level had a invalid LevelFolder
+
 ## 1.4.1
 * Story mode levels now are playable in Queues and Challenge, both in Multiplayer and Singleplayer
 * Multiplayer Challenge loading time decreased.

@@ -506,6 +506,10 @@ public partial class ChallengeManager : MonoBehaviour
                 SteamInfo = new()
                 {
                     ItemID = steamId
+                },
+                BaseLevelData = new()
+                {
+                    LevelID = id
                 }
             };
             
@@ -566,13 +570,23 @@ public partial class ChallengeManager : MonoBehaviour
     
     public void SetLevelSong(string id, AudioClip clip)
     {
-        var level = _levelsToVote.Find(x => x.BaseLevelData.LevelID == id);
+        var level = _levelsToVote?.Find(x => x?.BaseLevelData?.LevelID == id);
         if (level)
         {
             level.LevelMusic = clip;
-            _loadedLevels[level].AudioLoaded = true;
+            if (_loadedLevels.TryGetValue(level, out var outLevel))
+            {
+                outLevel.AudioLoaded = true;
+            }
+            else
+            {
+                PAM.Logger.LogError($"Couldn't find song load state for id {id}");
+            }
         }
-
+        else
+        {
+            PAM.Logger.LogError($"Couldn't level for voting with id {id}");
+        }
         CheckAllLevelsReady();
     }
     
@@ -843,7 +857,7 @@ public partial class ChallengeManager : MonoBehaviour
 
         if (Inst)
         {
-            var newClip = AudioClip.Create(audioID.ToString(), AudioDataBuffer.Count, 1, frequency, false);
+            var newClip = AudioClip.Create(audioID, AudioDataBuffer.Count, 1, frequency, false);
             newClip.SetData(AudioDataBuffer.ToArray(),
                 0); //this to array is specially bad cuz its making 2 copies, may fix later
             newClip.LoadAudioData();

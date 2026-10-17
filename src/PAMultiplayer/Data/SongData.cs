@@ -39,31 +39,19 @@ public class SongData
 
     public IEnumerator SetupSongData(MonoBehaviour mb, IEnumerable<VGLevel> levels)
     {
-        List<IEnumerator> levelCoroutines = new(6);
-        
+        List<Coroutine> levelCoroutines = new(6);
+
         foreach (var vgLevel in levels)
         {
-            var wrapper = ProcessLevel(vgLevel);
+            var wrapper = mb.StartCoroutine(ProcessLevel(vgLevel));
             levelCoroutines.Add(wrapper);
         }
-
-        while (levelCoroutines.Count > 0)
+        
+        foreach (var curr in levelCoroutines)
         {
-            for (var i = 0; i < levelCoroutines.Count;)
-            {
-                IEnumerator curr = levelCoroutines[i];
-                if (!curr.MoveNext())
-                {
-                    yield return new WaitForUpdate();
-                    levelCoroutines.RemoveAt(i);
-                    SongDataUpdated?.Invoke(_data.Count);
-                    continue;
-                }
-
-                i++;
-            }
+            yield return curr;
         }
-       
+
     }
 
     private IEnumerator ProcessLevel(VGLevel level)
@@ -74,6 +62,7 @@ public class SongData
         if (level.IsBakedLevel)
         {
             _data[id] = new([], 0);
+            SongDataUpdated?.Invoke(_data.Count);
             yield break;
         }
         
@@ -89,8 +78,9 @@ public class SongData
 
         if (string.IsNullOrEmpty(path))
         {
-            PAM.Logger.LogFatal($"{level.name} with id {level.BaseLevelData.LevelID} had no valid song found");
+            PAM.Logger.LogFatal($"{level.name} with id {level.BaseLevelData.LevelID} at {localFolder} had no valid song path found");
             _data[id] = new([], 0);
+            SongDataUpdated?.Invoke(_data.Count);
             yield break;
         }
 
@@ -98,7 +88,16 @@ public class SongData
         using (UnityWebRequest webr = UnityWebRequestMultimedia.GetAudioClip(path, AudioType.OGGVORBIS))
         {
             yield return webr.SendWebRequest(); //cant be inside Try block
-
+            
+            if (webr.result != UnityWebRequest.Result.Success)
+            {
+                PAM.Logger.LogFatal($"{level.name} with id {level.BaseLevelData.LevelID} at {localFolder} failed to get the song request\n" +
+                                    $"result {webr.result.ToString()} with reason {webr.error}");
+                _data[id] = new([], 0);
+                SongDataUpdated?.Invoke(_data.Count);
+                yield break;
+            }
+            
             try
             {
                 clip = DownloadHandlerAudioClip.GetContent(webr);
@@ -106,9 +105,11 @@ public class SongData
             catch (Exception e)
             {
                 PAM.Logger.LogError(e);
-                PAM.Logger.LogFatal($"{level.name} with id {level.BaseLevelData.LevelID} had no valid song found");
+                PAM.Logger.LogFatal(
+                    $"{level.name} with id {level.BaseLevelData.LevelID} at {localFolder} had a problem on getting the audio clip");
                 _data[id] = new([], 0);
-               yield break;
+                SongDataUpdated?.Invoke(_data.Count);
+                yield break;
             }
         }
         
@@ -150,5 +151,6 @@ public class SongData
         
         PAM.Logger.LogInfo($"Level is [{songDataShort.Length * 2}] bytes");
         _data[id] = new(songDataShort, frequency);
+        SongDataUpdated?.Invoke(_data.Count);
     }
 }

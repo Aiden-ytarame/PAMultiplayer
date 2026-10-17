@@ -160,8 +160,6 @@
         <AdditionalPluginsFiles Include="$(TargetDir)AttributeNetworkWrapperV2.dll" />
       
         <AdditionalPatchersFiles Include="$(TargetDir)DiscordRPC.dll" />
-        <AdditionalPatchersFiles Include="$(TargetDir)Facepunch.Steamworks.Win64.dll" />
-        <AdditionalPatchersFiles Include="lib/steam_api64.dll" />
     </ItemGroup>
     
     <Target Name="PackageProduct" AfterTargets="PostBuildEvent">
